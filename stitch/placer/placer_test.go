@@ -31,6 +31,13 @@ func TestPlacers(t *testing.T) {
 			specPlacerGood(aufsPlacer, tmpDir)
 		})
 	}))
+	Convey("Overlay placer spec tests:", t, testutil.Requires(testutil.RequiresCanMountAny, func() {
+		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+			overlayPlacer, err := NewOverlayPlacer(tmpDir.Join(fs.MustRelPath("overlay")))
+			So(err, ShouldBeNil)
+			specPlacerGood(overlayPlacer, tmpDir)
+		})
+	}))
 }
 
 func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
