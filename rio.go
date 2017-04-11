@@ -17,7 +17,7 @@ type WareID struct {
 type WarehouseAddr struct{}
 
 type WarehouseDialer interface {
-	Ping(WarehouseAddr) error
+	Ping(WarehouseAddr) (writable bool, err error)
 	NewAgent(WarehouseAddr) (WarehouseAgent, error)
 }
 
@@ -25,6 +25,8 @@ type Justification struct{}
 
 type WarehouseAgent interface {
 	Has(WareID) (bool, Justification, error)
+
+	CanWrite() bool
 
 	// Modify the warehouse to contain the requested WareID,
 	// tagging it immediately with the given Justification,
@@ -35,3 +37,17 @@ type WarehouseAgent interface {
 	//  `dialer.NewAgent("./mirror/").Put(theWare, reasons, publicMirror)`.
 	Put(WareID, Justification, sources []WarehouseAddr) error
 }
+
+type Transmat interface {
+	Materialize(localPath string, WareID, sources []WarehouseAddr, caches []Depot) error
+	Scan(localPath string, destination WarehouseAddr) (WareID, error)
+}
+
+// A local filesystem area where CAS caching is maintained.
+type Depot struct {
+}
+
+// Helper that yields the path to the ware,
+// getting it directly from the Depot if already present,
+// or invoking the transmat to get it into the Depot if necessary.
+func (d *Depot) YieldFilesystem(WareID, Transmat) (string, error) { return "", nil }
