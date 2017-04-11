@@ -35,12 +35,12 @@ type WarehouseAgent interface {
 	//
 	// Mirroring locally is also just a special case of 'Put':
 	//  `dialer.NewAgent("./mirror/").Put(theWare, reasons, publicMirror)`.
-	Put(WareID, Justification, sources []WarehouseAddr) error
+	Put(WareID, Justification, sources []WarehouseAgent) error
 }
 
 type Transmat interface {
-	Materialize(localPath string, WareID, sources []WarehouseAddr, caches []Depot) error
-	Scan(localPath string, destination WarehouseAddr) (WareID, error)
+	Materialize(localPath string, WareID, sources []WarehouseAgent, caches []Depot) error
+	Scan(localPath string, destination WarehouseAgent) (WareID, error)
 }
 
 // A local filesystem area where CAS caching is maintained.
