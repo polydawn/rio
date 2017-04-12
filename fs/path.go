@@ -64,5 +64,42 @@ func (p RelPath) Join(p2 RelPath) RelPath {
 }
 
 type AbsolutePath struct {
-	path string
+	path      string
+	lastSplit int
+}
+
+func MustAbsolutePath(p string) AbsolutePath {
+	p = path.Clean(p)
+	if p[0] != '/' {
+		panic("nope")
+	}
+	return AbsolutePath{p, strings.LastIndexByte(p, '/')}
+}
+func (p AbsolutePath) String() string {
+	return p.path
+}
+func (p AbsolutePath) Dir() AbsolutePath {
+	if p.path == "/" || p.path == "" {
+		return p
+	} else {
+		p2 := p.path[0:p.lastSplit]
+		return AbsolutePath{p2, strings.LastIndexByte(p2, '/')}
+	}
+}
+func (p AbsolutePath) Last() string {
+	if p.path == "/" || p.path == "" {
+		return "/"
+	} else {
+		return p.path[p.lastSplit+1:]
+	}
+}
+func (p AbsolutePath) Join(p2 RelPath) AbsolutePath {
+	switch {
+	case p2.path == "":
+		return p
+	case p.path == "/" || p.path == "":
+		return AbsolutePath{p2.path[1:], p2.lastSplit - 1}
+	default:
+		return AbsolutePath{p.path + "/" + p2.path, len(p.path) + p2.lastSplit + 1}
+	}
 }
