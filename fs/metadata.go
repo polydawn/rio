@@ -16,4 +16,9 @@ type Metadata struct {
 	Devminor int64       // minor number of character or block device
 	ModTime  time.Time   // modified time
 	Xattrs   map[string]string
+
+	// Notably absent fields:
+	//  - ctime -- it's pointless to keep; you can't set such a thing in any posix filesystem.
+	//  - atime -- similarly pointless; you can set it, but maybe, with asterisks, and it's
+	//     almost certain end up tramped again moments later.
 }
