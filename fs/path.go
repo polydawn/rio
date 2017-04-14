@@ -113,8 +113,14 @@ func (p AbsolutePath) Join(p2 RelPath) AbsolutePath {
 	switch {
 	case p2.path == "":
 		return p
-	//case p.path == "": // Comes out the same as the math below.
+	//case p.path == "": // Comes out the same as the math in the default case.
 	//	return AbsolutePath{"/" + p2.path, p2.lastSplit + 1}
+	case p2.path[0] == '.': // '..' prefix requires cleaning again.
+		pj := path.Clean(p.path + "/" + p2.path)
+		if pj == "/" { // We can't stop people from using the zero value, so, use it.
+			return AbsolutePath{}
+		}
+		return AbsolutePath{pj, strings.LastIndexByte(pj, '/')}
 	default:
 		return AbsolutePath{p.path + "/" + p2.path, len(p.path) + p2.lastSplit + 1}
 	}

@@ -273,6 +273,15 @@ func TestAbsolutePathJoins(t *testing.T) {
 			{"long,long",
 				MustAbsolutePath("/a/bb/ccc"), MustRelPath("dd/e"),
 				MustAbsolutePath("/a/bb/ccc/dd/e")},
+			{"root,up",
+				MustAbsolutePath("/"), MustRelPath(".."),
+				MustAbsolutePath("/")},
+			{"short,up",
+				MustAbsolutePath("/root"), MustRelPath(".."),
+				MustAbsolutePath("/")},
+			{"long,up",
+				MustAbsolutePath("/r/oot/pth"), MustRelPath(".."),
+				MustAbsolutePath("/r/oot")},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Join(tr.p2)
