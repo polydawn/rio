@@ -14,7 +14,7 @@ type Metadata struct {
 	Linkname string      // if symlink: target name of link
 	Devmajor int64       // major number of character or block device
 	Devminor int64       // minor number of character or block device
-	ModTime  time.Time   // modified time
+	Mtime    time.Time   // modified time
 	Xattrs   map[string]string
 
 	// Notably absent fields:

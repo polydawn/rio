@@ -4,14 +4,16 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"strings"
 
 	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
 )
 
 func Extract(
-	tr *tar.Reader,
 	destBasePath fs.AbsolutePath,
+	filters rio.Filters,
+	tr *tar.Reader,
 ) rio.Error {
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
@@ -34,6 +36,14 @@ func Extract(
 				Msg: fmt.Sprintf("corrupt tar: %s", err),
 			}
 		}
+		if strings.HasPrefix(fmeta.Name.String(), "..") {
+			return rio.ErrWareCorrupt{
+				Msg: "corrupt tar: paths that use '../' to leave the base dir are invalid",
+			}
+		}
+
+		// Apply filters.
+		ApplyFilters(&fmeta, filters)
 	}
 	return nil
 }
@@ -54,7 +64,7 @@ func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
 	fmeta.Linkname = hdr.Linkname
 	fmeta.Devmajor = hdr.Devmajor
 	fmeta.Devminor = hdr.Devminor
-	fmeta.ModTime = hdr.ModTime
+	fmeta.Mtime = hdr.ModTime
 	fmeta.Xattrs = hdr.Xattrs
 	return nil
 }
