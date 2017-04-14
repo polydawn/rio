@@ -15,6 +15,7 @@ func Extract(
 ) rio.Error {
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
+		fmeta := fs.Metadata{}
 		thdr, err := tr.Next()
 
 		// Check for done.
@@ -27,8 +28,33 @@ func Extract(
 			}
 		}
 
-		//
-		_ = thdr
+		// Reshuffle metainfo to our default format.
+		if err := TarHdrToMetadata(thdr, &fmeta); err != nil {
+			return rio.ErrWareCorrupt{
+				Msg: fmt.Sprintf("corrupt tar: %s", err),
+			}
+		}
 	}
+	return nil
+}
+
+// Mutate tar.Header fields to match the given fmeta.
+func MetadataToTarHdr(fmeta *fs.Metadata, hdr *tar.Header) {
+
+}
+
+// Mutate fs.Metadata fields to match the given tar header.
+// Does not check for names that go above '.'; caller may want to do that.
+func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
+	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
+	fmeta.Mode = hdr.FileInfo().Mode()
+	fmeta.Uid = hdr.Uid
+	fmeta.Gid = hdr.Gid
+	fmeta.Size = hdr.Size
+	fmeta.Linkname = hdr.Linkname
+	fmeta.Devmajor = hdr.Devmajor
+	fmeta.Devminor = hdr.Devminor
+	fmeta.ModTime = hdr.ModTime
+	fmeta.Xattrs = hdr.Xattrs
 	return nil
 }
