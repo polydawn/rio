@@ -2,3 +2,6 @@
 /bin/
 /.gopath/pkg/
 /.gopath/tmp/
+
+## ignore raceway logs
+/.raceway/

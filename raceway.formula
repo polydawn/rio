@@ -1,0 +1,19 @@
+inputs:
+	"/":
+		type: "tar"
+		hash: "fg6I9ZxtNVHywG_PKhczt6S1btjuwJmGfntr3qY7gF1hPVjcphe4ymSWMIlhpqia"
+		silo: "http+ca://repeatr.s3.amazonaws.com/assets/"
+	"/app/go":
+		type: "tar"
+		hash: "gi0Kpb-VH3TK0UBX6YmpuKsrMAUlxicPrY2YvXPo9sBQm_NsD_hKrn7pmc95zrmM"
+		silo: "https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz"
+action:
+	command:
+		- "/bin/bash"
+		- "-c"
+		- |
+			set -euo pipefail
+			export GOROOT=/app/go/go
+			export PATH=$PATH:/app/go/go/bin
+
+			./goad
