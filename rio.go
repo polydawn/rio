@@ -2,6 +2,7 @@ package rio
 
 import (
 	"context"
+	"time"
 
 	"go.polydawn.net/rio/fs"
 )
@@ -45,16 +46,24 @@ type WarehouseAgent interface {
 }
 
 type Transmat interface {
+	// Unpack a ware into a specified filesystem path.
+	// Returns a WareID, which, in the case of filters, may be different
+	// than the requested WareID.
 	Materialize(
 		ctx context.Context, // Long-running call.  Cancellable.
 		path fs.AbsolutePath, // Where to put a filesystem.
 		wareID WareID, // What filesystem slice ware to unpack.
+		filters *Filters, // Optionally: filters we should apply while unpacking.
 		sources []WarehouseAgent, // Warehouses we can talk to.
 		monitor MaterializeMonitor, // Optionally: callbacks for progress monitoring.
-	) error
+	) (WareID, error)
+
+	// Traverses the specified filesystem path, hashing it,
+	// and optionally packing it into a Warehouse for storage.
 	Scan(
 		ctx context.Context, // Long-running call.  Cancellable.
 		path fs.AbsolutePath, // What path to scan contents of.
+		filters *Filters, // Optionally: filters we should apply while packing.
 		destination WarehouseAgent, // Warehouse to upload to.  (Use mirroring later for multiple warehouses.)
 		monitor ScanMonitor, // Optionally: callbacks for progress monitoring.
 	) (WareID, error)
@@ -64,6 +73,12 @@ type MaterializeMonitor interface {
 }
 type ScanMonitor interface {
 	Progress(at, max int)
+}
+
+type Filters struct {
+	FlattenUID   *int       // If set: use that number; default for pack is to flatten to 1000; default for unpack is to respect packed metadata.
+	FlattenGID   *int       // If set: use that number; default for pack is to flatten to 1000; default for unpack is to respect packed metadata.
+	FlattenMtime *time.Time // If set: use that time; default for pack is to flatten to Jan 2010; default for unpack is to respect packed metadata.
 }
 
 // A local filesystem area where CAS caching is maintained.
