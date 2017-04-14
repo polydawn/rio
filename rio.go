@@ -1,6 +1,8 @@
 package rio
 
 import (
+	"context"
+
 	"go.polydawn.net/rio/fs"
 )
 
@@ -43,8 +45,25 @@ type WarehouseAgent interface {
 }
 
 type Transmat interface {
-	Materialize(path fs.AbsolutePath, WareID, sources []WarehouseAgent, caches []Depot) error
-	Scan(path fs.AbsolutePath, destination WarehouseAgent) (WareID, error)
+	Materialize(
+		ctx context.Context, // Long-running call.  Cancellable.
+		path fs.AbsolutePath, // Where to put a filesystem.
+		wareID WareID, // What filesystem slice ware to unpack.
+		sources []WarehouseAgent, // Warehouses we can talk to.
+		monitor MaterializeMonitor, // Optionally: callbacks for progress monitoring.
+	) error
+	Scan(
+		ctx context.Context, // Long-running call.  Cancellable.
+		path fs.AbsolutePath, // What path to scan contents of.
+		destination WarehouseAgent, // Warehouse to upload to.  (Use mirroring later for multiple warehouses.)
+		monitor ScanMonitor, // Optionally: callbacks for progress monitoring.
+	) (WareID, error)
+}
+type MaterializeMonitor interface {
+	Progress(at, max int)
+}
+type ScanMonitor interface {
+	Progress(at, max int)
 }
 
 // A local filesystem area where CAS caching is maintained.
