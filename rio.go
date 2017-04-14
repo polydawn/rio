@@ -1,5 +1,9 @@
 package rio
 
+import (
+	"go.polydawn.net/rio/fs"
+)
+
 // A content-addressable Ware ID.
 // Serialized as a string "kind:hash" -- Kinds are a whitelist and hashes also must avoid special chars.
 //
@@ -39,15 +43,18 @@ type WarehouseAgent interface {
 }
 
 type Transmat interface {
-	Materialize(localPath string, WareID, sources []WarehouseAgent, caches []Depot) error
-	Scan(localPath string, destination WarehouseAgent) (WareID, error)
+	Materialize(path fs.AbsolutePath, WareID, sources []WarehouseAgent, caches []Depot) error
+	Scan(path fs.AbsolutePath, destination WarehouseAgent) (WareID, error)
 }
 
 // A local filesystem area where CAS caching is maintained.
 type Depot struct {
+	base fs.AbsolutePath
 }
 
 // Helper that yields the path to the ware,
 // getting it directly from the Depot if already present,
 // or invoking the transmat to get it into the Depot if necessary.
-func (d *Depot) YieldFilesystem(WareID, Transmat) (string, error) { return "", nil }
+func (d *Depot) YieldFilesystem(WareID, Transmat) (fs.AbsolutePath, error) {
+	return fs.MustAbsolutePath("/"), nil
+}
