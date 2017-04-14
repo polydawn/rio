@@ -29,6 +29,8 @@ func MustRelPath(p string) RelPath {
 func (p RelPath) String() string {
 	if p.path == "" {
 		return "."
+	} else if p.path[0] == '.' { // a '..' prefix
+		return p.path
 	} else {
 		return "./" + p.path
 	}

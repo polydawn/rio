@@ -30,6 +30,12 @@ func TestRelPath(t *testing.T) {
 			{"long value",
 				MustRelPath("a/bb/ccc"),
 				"./a/bb/ccc"},
+			{"denormalized value",
+				MustRelPath("../a/bb/../ccc"),
+				"../a/ccc"},
+			{"lone doubledot value",
+				MustRelPath("../"),
+				".."},
 		} {
 			Convey(tr.title, func() {
 				v := fmt.Sprintf("%s", tr.p1)
@@ -58,6 +64,15 @@ func TestRelPathDir(t *testing.T) {
 			{"long value",
 				MustRelPath("a/bb/ccc"),
 				MustRelPath("a/bb")},
+			{"denormalized value",
+				MustRelPath("../a/bb/../ccc"),
+				MustRelPath("../a")}, // cleans, then drops
+			{"lone doubledot value",
+				MustRelPath("../"),
+				MustRelPath(".")}, // yep.  matches what stdlib 'path.Dir' does.
+			{"double doubledot value",
+				MustRelPath("../.."),
+				MustRelPath("..")}, // yep.  matches what stdlib 'path.Dir' does.
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Dir()
@@ -86,6 +101,12 @@ func TestRelPathLast(t *testing.T) {
 			{"long value",
 				MustRelPath("a/bb/ccc"),
 				"ccc"},
+			{"denormalized value",
+				MustRelPath("../a/bb/../ccc"),
+				"ccc"},
+			{"lone doubledot value",
+				MustRelPath("../"),
+				".."},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Last()
