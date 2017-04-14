@@ -75,10 +75,25 @@ type ScanMonitor interface {
 	Progress(at, max int)
 }
 
+// For each value:
+//   If set: use that number;
+//   default for pack is to flatten;
+//   default for unpack is to respect packed metadata.
+//   To keep during pack: set the keep bool.
+// If keep is true, the value must be nil or the filter is invalid.
 type Filters struct {
-	FlattenUID   *int       // If set: use that number; default for pack is to flatten to 1000; default for unpack is to respect packed metadata.
-	FlattenGID   *int       // If set: use that number; default for pack is to flatten to 1000; default for unpack is to respect packed metadata.
-	FlattenMtime *time.Time // If set: use that time; default for pack is to flatten to Jan 2010; default for unpack is to respect packed metadata.
+	FlattenUID struct {
+		Keep  bool `json:"keep,omitempty"`
+		Value *int `json:"value,omitempty"`
+	} `json:"uid"`
+	FlattenGID struct {
+		Keep  bool `json:"keep,omitempty"`
+		Value *int `json:"value,omitempty"`
+	} `json:"gid"`
+	FlattenMtime struct {
+		Keep  bool       `json:"keep,omitempty"`
+		Value *time.Time `json:"value,omitempty"`
+	} `json:"mtime"`
 }
 
 // A local filesystem area where CAS caching is maintained.
