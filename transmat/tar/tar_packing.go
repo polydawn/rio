@@ -43,7 +43,7 @@ func Extract(
 		}
 
 		// Apply filters.
-		ApplyFilters(&fmeta, filters)
+		ApplyMaterializeFilters(&fmeta, filters)
 	}
 	return nil
 }
