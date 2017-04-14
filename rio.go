@@ -53,7 +53,7 @@ type Transmat interface {
 		ctx context.Context, // Long-running call.  Cancellable.
 		path fs.AbsolutePath, // Where to put a filesystem.
 		wareID WareID, // What filesystem slice ware to unpack.
-		filters *Filters, // Optionally: filters we should apply while unpacking.
+		filters Filters, // Optionally: filters we should apply while unpacking.
 		sources []WarehouseAgent, // Warehouses we can talk to.
 		monitor MaterializeMonitor, // Optionally: callbacks for progress monitoring.
 	) (WareID, error)
@@ -63,7 +63,7 @@ type Transmat interface {
 	Scan(
 		ctx context.Context, // Long-running call.  Cancellable.
 		path fs.AbsolutePath, // What path to scan contents of.
-		filters *Filters, // Optionally: filters we should apply while packing.
+		filters Filters, // Optionally: filters we should apply while packing.
 		destination WarehouseAgent, // Warehouse to upload to.  (Use mirroring later for multiple warehouses.)
 		monitor ScanMonitor, // Optionally: callbacks for progress monitoring.
 	) (WareID, error)
