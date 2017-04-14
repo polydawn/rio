@@ -60,6 +60,12 @@ func (p RelPath) Join(p2 RelPath) RelPath {
 		return p
 	case p.path == "":
 		return p2
+	case p2.path[0] == '.': // '..' prefix requires cleaning again.
+		pj := path.Clean(p.path + "/" + p2.path)
+		if pj == "." { // We can't stop people from using the zero value, so, use it.
+			return RelPath{}
+		}
+		return RelPath{pj, strings.LastIndexByte(pj, '/')}
 	default:
 		return RelPath{p.path + "/" + p2.path, len(p.path) + p2.lastSplit + 1}
 	}

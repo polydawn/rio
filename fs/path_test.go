@@ -141,6 +141,15 @@ func TestRelPathJoins(t *testing.T) {
 			{"long,long",
 				MustRelPath("a/bb/ccc"), MustRelPath("dd/e"),
 				MustRelPath("a/bb/ccc/dd/e")},
+			{"zero,up",
+				MustRelPath("."), MustRelPath(".."),
+				MustRelPath("..")},
+			{"short,up",
+				MustRelPath("rel"), MustRelPath(".."),
+				MustRelPath(".")},
+			{"long,up",
+				MustRelPath("r/el"), MustRelPath(".."),
+				MustRelPath("r")},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Join(tr.p2)
