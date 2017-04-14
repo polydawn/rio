@@ -96,6 +96,12 @@ type Filters struct {
 	} `json:"mtime"`
 }
 
+var (
+	FilterDefaultUid   = 1000
+	FilterDefaultGid   = 1000
+	FilterDefaultMtime = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+)
+
 // A local filesystem area where CAS caching is maintained.
 type Depot struct {
 	base fs.AbsolutePath
