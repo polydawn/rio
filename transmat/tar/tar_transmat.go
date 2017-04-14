@@ -14,9 +14,10 @@ import (
 func Materialize(
 	ctx context.Context, // Long-running call.  Cancellable.
 	path fs.AbsolutePath, // Where to put a filesystem.
+	filters rio.Filters, // Optionally: filters we should apply while unpacking.
 	wareID rio.WareID, // What filesystem slice ware to unpack.
 	sources []rio.WarehouseAgent, // Warehouses we can talk to.
 	monitor rio.MaterializeMonitor, // Optionally: callbacks for progress monitoring.
-) error {
-	return nil
+) (rio.WareID, error) {
+	return rio.WareID{}, nil
 }
