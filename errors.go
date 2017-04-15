@@ -9,6 +9,17 @@ import "fmt"
 // All `rio.Error` are reasonably serializable as json.
 type Error interface {
 	rioError() // marker method.
+	error
+}
+
+/*
+	Raised when a `context.Context` cancelled a long operation part-way through.
+*/
+type Cancelled struct{}
+
+func (Cancelled) rioError() {}
+func (e Cancelled) Error() string {
+	return "Cancelled"
 }
 
 /*

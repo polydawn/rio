@@ -2,6 +2,7 @@ package tartrans
 
 import (
 	"archive/tar"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -11,6 +12,7 @@ import (
 )
 
 func Extract(
+	ctx context.Context,
 	destBasePath fs.AbsolutePath,
 	filters rio.Filters,
 	tr *tar.Reader,
@@ -28,6 +30,9 @@ func Extract(
 			return rio.ErrWareCorrupt{
 				Msg: fmt.Sprintf("corrupt tar: %s", err),
 			}
+		}
+		if ctx.Err() != nil {
+			return rio.Cancelled{}
 		}
 
 		// Reshuffle metainfo to our default format.
