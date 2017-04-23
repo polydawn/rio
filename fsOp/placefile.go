@@ -14,9 +14,11 @@ import (
 	Places a file on the filesystem.
 	Replicates all attributes described in the metadata.
 
-	The path is the join of `destBasePath` and `hdr.Name`.
+	The path within the filesystem is `hdr.Name` (conventionally, this means
+	the filesystem will join the `hdr.Name` with the absolute base path
+	it was constructed with).
 
-	No changes are allowed to occur outside of `destBasePath`.
+	No changes are allowed to occur outside of the filesystem's base path.
 	Hardlinks may not point outside of the base path.
 	Symlinks may *point* at paths outside of the base path (because you
 	may be about to chroot into this, in which case absolute link paths
@@ -32,23 +34,21 @@ import (
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
 */
-func PlaceFile(destBasePath fs.AbsolutePath, fmeta fs.Metadata, body io.Reader) error {
+func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) error {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
-		target, err := os.Readlink(destBasePath.Join(path).String())
-		if err == nil {
-			// if readlink doesn't error, it's a symlink: reject.
+		target, isSymlink, err := afs.Readlink(path)
+		if isSymlink {
 			return fs.ErrBreakout{
 				OpPath:     fmeta.Name,
 				OpArea:     destBasePath,
 				LinkPath:   path,
 				LinkTarget: target,
 			}
-		}
-		if os.IsNotExist(err) {
+		} else if err == nil {
+			continue // regular paths are fine.
+		} else if _, ok := err.(*fs.ErrNotExists); ok {
 			continue // not existing is fine.
-		} else if err.(*os.PathError).Err == syscall.EINVAL {
-			continue // being invalid is fine: this just means "not a symlink".
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
 		}
