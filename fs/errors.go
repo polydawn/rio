@@ -20,7 +20,8 @@ type ErrFS interface {
 type ErrIOUnknown struct {
 	// The `err.Error()` stringification of the original error.
 	//
-	// We flatten this immediately so that
+	// We flatten this immediately so that if this struct is serialized,
+	// it's round-trippable.
 	Msg string
 }
 
