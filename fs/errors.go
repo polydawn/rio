@@ -29,6 +29,18 @@ func (ErrIOUnknown) _errFS()         {}
 func (e ErrIOUnknown) Error() string { return e.Msg }
 
 /*
+	The normalization of anything matching `os.NotExists`.
+*/
+type ErrNotExists struct {
+	Path RelPath
+}
+
+func (ErrNotExists) _errFS() {}
+func (e ErrNotExists) Error() string {
+	return fmt.Sprintf("path %q does not exist", e.Path)
+}
+
+/*
 	Error returned when operating in a confined filesystem slice and an
 	operation performed would result in effects outside the area, e.g.
 	calling `PlaceFile` with "./reasonable/path" but "./reasonable" happens

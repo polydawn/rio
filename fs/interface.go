@@ -9,4 +9,5 @@ package fs
 	joined with that base path.
 */
 type FS interface {
+	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)
 }

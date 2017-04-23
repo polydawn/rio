@@ -1,4 +1,4 @@
-package normalfs
+package osfs
 
 import (
 	"go.polydawn.net/rio/fs"
