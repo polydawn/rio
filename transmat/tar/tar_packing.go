@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/transmat/mixins/fshash"
 )
 
 func Extract(
@@ -17,6 +19,9 @@ func Extract(
 	filters rio.Filters,
 	tr *tar.Reader,
 ) rio.Error {
+	// Allocate bucket for keeping each metadata entry and content hash;
+	// the full tree hash will be computed from this at the end.
+	bucket := fshash.MemoryBucket{}
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
 		fmeta := fs.Metadata{}
@@ -49,6 +54,27 @@ func Extract(
 
 		// Apply filters.
 		ApplyMaterializeFilters(&fmeta, filters)
+
+		// Infer parents, if necessary.  The tar format allows implicit parent dirs.
+		//
+		// Note that if any of the implicitly conjured dirs is specified later, unpacking won't notice,
+		// but bucket hashing iteration will (correctly) blow up for repeat entries.
+		// It may well be possible to construct a tar like that, but it's already well established that
+		// tars with repeated filenames are just asking for trouble and shall be rejected without
+		// ceremony because they're just a ridiculous idea.
+
+		for parent := fmeta.Name.Dir(); parent != (fs.RelPath{}); parent = parent.Dir() {
+			_, err := os.Lstat(destBasePath.Join(parent).String())
+			// if it already exists, move along; if the error is anything interesting, let PlaceFile decide how to deal with it
+			if err == nil || !os.IsNotExist(err) {
+				continue
+			}
+			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
+			conjuredFmeta := fshash.DefaultDirMetadata()
+			conjuredFmeta.Name = parent
+			fs.PlaceFile(destBasePath, conjuredFmeta, nil)
+			bucket.AddRecord(conjuredFmeta, nil)
+		}
 	}
 	return nil
 }
