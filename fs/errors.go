@@ -3,14 +3,36 @@ package fs
 import "fmt"
 
 /*
-	Catchall error
+	Grouping interface for errors returned from filesystem operations.
+
+	Implementors are assuring you that they will easily `json.Marshal`
+	(or other formats of your choice) AND roundtrip unmarshal
+	by virtue of exporting all their fields.
 */
-type ErrIO struct {
-	Error error // this is not going to be roundtrippable.
+type ErrFS interface {
+	error
+	_errFS()
 }
 
 /*
-	Error returned when operating in a confined filesystem slice, but doing the
+	Catchall error if an underlying layer returned an error we couldn't normalize.
+*/
+type ErrIOUnknown struct {
+	// The `err.Error()` stringification of the original error.
+	//
+	// We flatten this immediately so that
+	Msg string
+}
+
+func (ErrIOUnknown) _errFS()         {}
+func (e ErrIOUnknown) Error() string { return e.Msg }
+
+/*
+	Error returned when operating in a confined filesystem slice and an
+	operation performed would result in effects outside the area, e.g.
+	calling `PlaceFile` with "./reasonable/path" but "./reasonable" happens
+	to be a symlink to "../../.." -- the symlink is valid, but to traverse
+	it would violate confinement.
 
 	Not all functions which do symlink checks will verify if the symlink target
 	is within the operational area; they may return ErrBreakout upon encountering
@@ -29,6 +51,7 @@ type ErrBreakout struct {
 	LinkTarget string
 }
 
+func (ErrBreakout) _errFS() {}
 func (e ErrBreakout) Error() string {
 	return fmt.Sprintf(
 		"breakout error: refusing to traverse symlink at %q->%q while placing %q in %q",

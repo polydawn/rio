@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"

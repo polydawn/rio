@@ -1,4 +1,4 @@
-package fs
+package normalfs
 
 import (
 	"io"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"go.polydawn.net/rio/fs"
 )
 
 /*
@@ -30,13 +32,13 @@ import (
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
 */
-func PlaceFile(destBasePath AbsolutePath, fmeta Metadata, body io.Reader) error {
+func PlaceFile(destBasePath fs.AbsolutePath, fmeta fs.Metadata, body io.Reader) error {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
 		target, err := os.Readlink(destBasePath.Join(path).String())
 		if err == nil {
 			// if readlink doesn't error, it's a symlink: reject.
-			return ErrBreakout{
+			return fs.ErrBreakout{
 				OpPath:     fmeta.Name,
 				OpArea:     destBasePath,
 				LinkPath:   path,
@@ -50,7 +52,7 @@ func PlaceFile(destBasePath AbsolutePath, fmeta Metadata, body io.Reader) error 
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
 		}
-		if path == (RelPath{}) {
+		if path == (fs.RelPath{}) {
 			break // success
 		}
 	}
@@ -60,7 +62,7 @@ func PlaceFile(destBasePath AbsolutePath, fmeta Metadata, body io.Reader) error 
 
 	switch ftype {
 	case os.ModeDir:
-		if fmeta.Name == (RelPath{}) {
+		if fmeta.Name == (fs.RelPath{}) {
 			// for the base dir only:
 			// the dir may exist; we'll just chown+chmod+chtime it.
 			// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
