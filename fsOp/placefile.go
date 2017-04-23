@@ -1,6 +1,7 @@
 package normalfs
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -34,14 +35,14 @@ import (
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
 */
-func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) error {
+func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
 		target, isSymlink, err := afs.Readlink(path)
 		if isSymlink {
 			return fs.ErrBreakout{
 				OpPath:     fmeta.Name,
-				OpArea:     destBasePath,
+				OpArea:     afs.BasePath(),
 				LinkPath:   path,
 				LinkTarget: target,
 			}
@@ -57,11 +58,23 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) error {
 		}
 	}
 
-	destPath := destBasePath.Join(fmeta.Name)
-	ftype := fmeta.Mode & (os.ModeType | os.ModeCharDevice) // REVIEW: stdlib r u serious?  why is char not included here
-
-	switch ftype {
-	case os.ModeDir:
+	// Fill in the content.  (Attribs come later.)
+	switch fmeta.Type {
+	case fs.Type_Invalid:
+		panic(fmt.Errorf("invalid fs.Metadata.Type; partially constructed object?"))
+	case fs.Type_File:
+		file, err := afs.OpenFile(fmeta.Name, os.O_CREATE|os.O_WRONLY, fmeta.Perms)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(file, body); err != nil {
+			file.Close()
+			ioError(err) // REIVEW not sure what to do with this
+			// Putting all the IO shuttling methods on the file would be heavy-handed, to say the least.
+			// But it would let us normalize the errors, AND, bonus, have a shot at using context to control shutdown.
+		}
+		file.Close()
+	case fs.Type_Dir:
 		if fmeta.Name == (fs.RelPath{}) {
 			// for the base dir only:
 			// the dir may exist; we'll just chown+chmod+chtime it.
@@ -73,16 +86,6 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) error {
 		if err := os.Mkdir(destPath, mode); err != nil {
 			ioError(err)
 		}
-	case 0:
-		file, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY, mode)
-		if err != nil {
-			ioError(err)
-		}
-		if _, err := io.Copy(file, body); err != nil {
-			file.Close()
-			ioError(err)
-		}
-		file.Close()
 	case os.ModeSymlink:
 		// linkname can be anything you want.  it can be invalid, it can be absolute, whatever.
 		// the consumer had better know how to jail this filesystem before using;

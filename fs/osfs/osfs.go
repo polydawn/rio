@@ -15,8 +15,17 @@ type osFS struct {
 	basePath fs.AbsolutePath
 }
 
-func (x *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
-	target, err := os.Readlink(x.basePath.Join(path).String())
+func (afs *osFS) BasePath() fs.AbsolutePath {
+	return afs.basePath
+}
+
+func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, fs.ErrFS) {
+	f, err := os.OpenFile(afs.basePath.Join(path).String(), flag, permsToOs(perms))
+	return f, ioError(err)
+}
+
+func (afs *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
+	target, err := os.Readlink(afs.basePath.Join(path).String())
 	switch {
 	case err == nil:
 		return target, true, nil
@@ -30,4 +39,18 @@ func (x *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
 	default:
 		return "", false, ioError(err)
 	}
+}
+
+func permsToOs(perms fs.Perms) (mode os.FileMode) {
+	mode = os.FileMode(perms & 0777)
+	if perms&04000 != 0 {
+		mode |= os.ModeSetuid
+	}
+	if perms&02000 != 0 {
+		mode |= os.ModeSetgid
+	}
+	if perms&01000 != 0 {
+		mode |= os.ModeSticky
+	}
+	return mode
 }
