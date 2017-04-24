@@ -69,10 +69,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		}
 		if _, err := io.Copy(file, body); err != nil {
 			file.Close()
-			ioError(err) // REIVEW not sure what to do with this
-			// Putting all the IO shuttling methods on the file would be heavy-handed, to say the least.
-			// But it would let us normalize the errors, AND, bonus, have a shot at using context to control shutdown.
-			// But yeah, let's not; Library Not Framework heuristic: just export the dang method.
+			return fs.IOError(err)
 		}
 		file.Close()
 	case fs.Type_Dir:
@@ -92,7 +89,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		// any of our normalized `fs.*Path` types because it is perfectly valid (if odd)
 		// to store the string ".///" as a symlink target.
 		if err := afs.Mklink(fmeta.Name, fmeta.Linkname); err != nil {
-			ioError(err)
+			return err
 		}
 	case fs.Type_NamedPipe:
 		if err := syscall.Mkfifo(destPath, uint32(hdr.Mode&07777)); err != nil {

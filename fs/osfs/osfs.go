@@ -21,23 +21,23 @@ func (afs *osFS) BasePath() fs.AbsolutePath {
 
 func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, fs.ErrFS) {
 	f, err := os.OpenFile(afs.basePath.Join(path).String(), flag, permsToOs(perms))
-	return f, ioError(err)
+	return f, fs.IOError(err)
 }
 
 func (afs *osFS) Mkdir(path fs.RelPath, perms fs.Perms) fs.ErrFS {
 	err := os.Mkdir(afs.basePath.Join(path).String(), permsToOs(perms))
-	return ioError(err)
+	return fs.IOError(err)
 }
 
 func (afs *osFS) Mklink(path fs.RelPath, target string) fs.ErrFS {
 	err := os.Symlink(target, afs.basePath.Join(path).String())
-	return ioError(err)
+	return fs.IOError(err)
 }
 
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {
-		return nil, ioError(err)
+		return nil, fs.IOError(err)
 	}
 
 	// Copy over the easy 1-to-1 parts.
@@ -111,14 +111,14 @@ func (afs *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
 	case err == nil:
 		return target, true, nil
 	case os.IsNotExist(err):
-		return "", false, &fs.ErrNotExists{path}
+		return "", false, &fs.ErrNotExists{&path}
 	case err.(*os.PathError).Err == syscall.EINVAL:
 		// EINVAL means "not a symlink".
 		// We return this as false and a nil error because it's frequently useful to use
 		// the readlink syscall blindly with an lstat first in order to save a syscall.
 		return "", false, nil
 	default:
-		return "", false, ioError(err)
+		return "", false, fs.IOError(err)
 	}
 }
 
