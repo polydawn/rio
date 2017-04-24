@@ -66,3 +66,7 @@ const (
 	Type_CharDevice Type = 'c'
 	Type_Hardlink   Type = 'h' // Rare, and may only appear contextually.
 )
+
+// Use this for the accessTime attribute when one is needed but no more
+// obvious value is at hand.
+var DefaultAtime = time.Time{}

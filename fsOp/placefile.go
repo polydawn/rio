@@ -64,6 +64,10 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		if err != nil {
 			return err
 		}
+		if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+			file.Close()
+			return err
+		}
 		if _, err := io.Copy(file, body); err != nil {
 			file.Close()
 			return fs.IOError(err)
@@ -75,6 +79,9 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 			// the dir may exist; we'll just chown+chmod+chtime it.
 			// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
 			if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
+				if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+					return err
+				}
 				break
 			}
 		}
@@ -88,6 +95,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		if err := afs.Mklink(fmeta.Name, fmeta.Linkname); err != nil {
 			return err
 		}
+		// There is no chmod call here, because there is no such thing as 'lchmod' on linux :I
 	case fs.Type_NamedPipe:
 		if err := afs.Mkfifo(fmeta.Name, fmeta.Perms); err != nil {
 			return err
@@ -108,29 +116,23 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		panic(fmt.Sprintf("placefile: unhandled file mode %q", fmeta.Type))
 	}
 
-	if err := os.Lchown(destPath, hdr.Uid, hdr.Gid); err != nil {
-		ioError(err)
+	// Set the UID and GID for all file and dir types.
+	if err := afs.Lchown(fmeta.Name, fmeta.Uid, fmeta.Gid); err != nil {
+		return err
 	}
 
-	for key, value := range hdr.Xattrs {
-		if err := fspatch.Lsetxattr(destPath, key, []byte(value), 0); err != nil {
-			ioError(err)
-		}
+	// Skipping on xattrs for the moment.
+	//	for key, value := range hdr.Xattrs {
+	//		if err := fspatch.Lsetxattr(destPath, key, []byte(value), 0); err != nil {
+	//			ioError(err)
+	//		}
+	//	}
+
+	// Last of all, set times.  (All the earlier mutations like chown would alter them again.)
+	if err := afs.LUtimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+		return err
 	}
 
-	if fmeta.Type == fs.Type_Symlink {
-		// need to use LUtimesNano to avoid traverse symlinks
-		if err := fspatch.LUtimesNano(destPath, hdr.AccessTime, hdr.ModTime); err != nil {
-			ioError(err)
-		}
-	} else {
-		// do this for everything not a symlink, since there's no such thing as `lchmod` on linux -.-
-		if err := os.Chmod(destPath, mode); err != nil {
-			ioError(err)
-		}
-		if err := fspatch.UtimesNano(destPath, hdr.AccessTime, hdr.ModTime); err != nil {
-			ioError(err)
-		}
-
-	}
+	// Success!
+	return nil
 }
