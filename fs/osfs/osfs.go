@@ -51,6 +51,16 @@ func (afs *osFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.P
 	return fs.IOError(err)
 }
 
+func (afs *osFS) Lchown(path fs.RelPath, uid uint32, gid uint32) fs.ErrFS {
+	err := os.Lchown(afs.basePath.Join(path).String(), int(uid), int(gid))
+	return fs.IOError(err)
+}
+
+func (afs *osFS) Chmod(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+	err := os.Chmod(afs.basePath.Join(path).String(), permsToOs(perms))
+	return fs.IOError(err)
+}
+
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {

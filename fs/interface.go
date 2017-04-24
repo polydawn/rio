@@ -30,6 +30,10 @@ type FS interface {
 
 	MkdevChar(path RelPath, major int64, minor int64, perms Perms) ErrFS
 
+	Lchown(path RelPath, uid uint32, gid uint32) ErrFS
+
+	Chmod(path RelPath, perms Perms) ErrFS
+
 	LStat(path RelPath) (*Metadata, ErrFS)
 
 	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)
