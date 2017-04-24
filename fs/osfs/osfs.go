@@ -34,6 +34,23 @@ func (afs *osFS) Mklink(path fs.RelPath, target string) fs.ErrFS {
 	return fs.IOError(err)
 }
 
+func (afs *osFS) Mkfifo(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+	err := syscall.Mkfifo(afs.basePath.Join(path).String(), uint32(perms&07777))
+	return fs.IOError(err)
+}
+
+func (afs *osFS) MkdevBlock(path fs.RelPath, major int64, minor int64, perms fs.Perms) fs.ErrFS {
+	mode := uint32(perms&07777) | syscall.S_IFBLK
+	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
+	return fs.IOError(err)
+}
+
+func (afs *osFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.Perms) fs.ErrFS {
+	mode := uint32(perms&07777) | syscall.S_IFCHR
+	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
+	return fs.IOError(err)
+}
+
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {
@@ -84,10 +101,7 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 		fmeta.Uid = sys.Uid
 		fmeta.Gid = sys.Gid
 		if fmeta.Type == fs.Type_Device || fmeta.Type == fs.Type_CharDevice {
-			// Constants herein are not a joy: they're a
-			// workaround for https://github.com/golang/go/issues/8106 .
-			fmeta.Devmajor = int64((sys.Rdev >> 8) & 0xff)
-			fmeta.Devminor = int64((sys.Rdev & 0xff) | ((sys.Rdev >> 12) & 0xfff00))
+			fmeta.Devmajor, fmeta.Devminor = devModesSplit(sys.Rdev)
 		}
 	}
 
@@ -134,4 +148,14 @@ func permsToOs(perms fs.Perms) (mode os.FileMode) {
 		mode |= os.ModeSticky
 	}
 	return mode
+}
+
+func devModesJoin(major int64, minor int64) uint32 {
+	// Constants herein are not a joy: they're a workaround for https://github.com/golang/go/issues/8106
+	return uint32(((minor & 0xfff00) << 12) | ((major & 0xfff) << 8) | (minor & 0xff))
+}
+
+func devModesSplit(rdev uint64) (major int64, minor int64) {
+	// Constants herein are not a joy: they're a workaround for https://github.com/golang/go/issues/8106
+	return int64((rdev >> 8) & 0xff), int64((rdev & 0xff) | ((rdev >> 12) & 0xfff00))
 }

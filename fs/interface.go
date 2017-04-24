@@ -24,6 +24,12 @@ type FS interface {
 
 	Mklink(path RelPath, target string) ErrFS
 
+	Mkfifo(path RelPath, perms Perms) ErrFS
+
+	MkdevBlock(path RelPath, major int64, minor int64, perms Perms) ErrFS
+
+	MkdevChar(path RelPath, major int64, minor int64, perms Perms) ErrFS
+
 	LStat(path RelPath) (*Metadata, ErrFS)
 
 	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)

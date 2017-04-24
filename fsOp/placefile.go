@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
-	"syscall"
 
 	"go.polydawn.net/rio/fs"
 )
@@ -92,31 +89,23 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 			return err
 		}
 	case fs.Type_NamedPipe:
-		if err := syscall.Mkfifo(destPath, uint32(hdr.Mode&07777)); err != nil {
-			ioError(err)
+		if err := afs.Mkfifo(fmeta.Name, fmeta.Perms); err != nil {
+			return err
 		}
 	case fs.Type_Socket:
 		panic("todo unhandlable type error") // REVIEW is it?  we certainly can't make a *live* socket, but we could make the dead socket file exist.
 	case fs.Type_Device:
-		mode := uint32(hdr.Mode&07777) | syscall.S_IFBLK
-		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
-			ioError(err)
+		if err := afs.MkdevBlock(fmeta.Name, fmeta.Devmajor, fmeta.Devminor, fmeta.Perms); err != nil {
+			return err
 		}
 	case fs.Type_CharDevice:
-		mode := uint32(hdr.Mode&07777) | syscall.S_IFCHR
-		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
-			ioError(err)
+		if err := afs.MkdevChar(fmeta.Name, fmeta.Devmajor, fmeta.Devminor, fmeta.Perms); err != nil {
+			return err
 		}
 	case fs.Type_Hardlink:
-		targetPath := filepath.Join(destBasePath, hdr.Linkname)
-		if !strings.HasPrefix(targetPath, destBasePath) {
-			panic(BreakoutError.New("invalid hardlink %q -> %q", targetPath, hdr.Linkname))
-		}
-		if err := os.Link(targetPath, destPath); err != nil {
-			ioError(err)
-		}
+		panic("todo hardlines not handled")
 	default:
-		panic(errors.ProgrammerError.New("placefile: unhandled file mode %q", fmeta.Type))
+		panic(fmt.Sprintf("placefile: unhandled file mode %q", fmeta.Type))
 	}
 
 	if err := os.Lchown(destPath, hdr.Uid, hdr.Gid); err != nil {
