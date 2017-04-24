@@ -6,8 +6,8 @@ type Metadata struct {
 	Name     RelPath   // filename
 	Type     Type      // type enum
 	Perms    Perms     // permission bits
-	Uid      int       // user id of owner
-	Gid      int       // group id of owner
+	Uid      uint32    // user id of owner
+	Gid      uint32    // group id of owner
 	Size     int64     // length in bytes
 	Linkname string    // if symlink: target name of link
 	Devmajor int64     // major number of character or block device
@@ -46,6 +46,12 @@ type Metadata struct {
 	the linux headers.
 */
 type Perms uint16
+
+const (
+	Perms_Setuid Perms = 0004000
+	Perms_Setgid Perms = 0002000
+	Perms_Sticky Perms = 0001000
+)
 
 type Type uint8
 

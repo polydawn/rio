@@ -20,6 +20,8 @@ type FS interface {
 
 	OpenFile(path RelPath, flag int, perms Perms) (File, ErrFS)
 
+	LStat(path RelPath) (*Metadata, ErrFS)
+
 	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)
 }
 

@@ -79,7 +79,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 			// for the base dir only:
 			// the dir may exist; we'll just chown+chmod+chtime it.
 			// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
-			if fi, err := os.Lstat(destPath.String()); err == nil && fi.IsDir() {
+			if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
 				break
 			}
 		}
