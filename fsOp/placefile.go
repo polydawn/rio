@@ -72,6 +72,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 			ioError(err) // REIVEW not sure what to do with this
 			// Putting all the IO shuttling methods on the file would be heavy-handed, to say the least.
 			// But it would let us normalize the errors, AND, bonus, have a shot at using context to control shutdown.
+			// But yeah, let's not; Library Not Framework heuristic: just export the dang method.
 		}
 		file.Close()
 	case fs.Type_Dir:
@@ -93,7 +94,23 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		if err := afs.Mklink(fmeta.Name, fmeta.Linkname); err != nil {
 			ioError(err)
 		}
-	case -1: // FIXME goddamnit, hardlinks aren't described in the stdlib os.FileMode consts?!
+	case fs.Type_NamedPipe:
+		if err := syscall.Mkfifo(destPath, uint32(hdr.Mode&07777)); err != nil {
+			ioError(err)
+		}
+	case fs.Type_Socket:
+		panic("todo unhandlable type error") // REVIEW is it?  we certainly can't make a *live* socket, but we could make the dead socket file exist.
+	case fs.Type_Device:
+		mode := uint32(hdr.Mode&07777) | syscall.S_IFBLK
+		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
+			ioError(err)
+		}
+	case fs.Type_CharDevice:
+		mode := uint32(hdr.Mode&07777) | syscall.S_IFCHR
+		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
+			ioError(err)
+		}
+	case fs.Type_Hardlink:
 		targetPath := filepath.Join(destBasePath, hdr.Linkname)
 		if !strings.HasPrefix(targetPath, destBasePath) {
 			panic(BreakoutError.New("invalid hardlink %q -> %q", targetPath, hdr.Linkname))
@@ -101,22 +118,8 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		if err := os.Link(targetPath, destPath); err != nil {
 			ioError(err)
 		}
-	case os.ModeDevice:
-		mode := uint32(hdr.Mode&07777) | syscall.S_IFBLK
-		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
-			ioError(err)
-		}
-	case os.ModeDevice | os.ModeCharDevice:
-		mode := uint32(hdr.Mode&07777) | syscall.S_IFCHR
-		if err := syscall.Mknod(destPath, mode, int(fspatch.Mkdev(hdr.Devmajor, hdr.Devminor))); err != nil {
-			ioError(err)
-		}
-	case tar.TypeFifo:
-		if err := syscall.Mkfifo(destPath, uint32(hdr.Mode&07777)); err != nil {
-			ioError(err)
-		}
 	default:
-		panic(errors.ProgrammerError.New("placefile: unhandled file mode %q", hdr.Typeflag))
+		panic(errors.ProgrammerError.New("placefile: unhandled file mode %q", fmeta.Type))
 	}
 
 	if err := os.Lchown(destPath, hdr.Uid, hdr.Gid); err != nil {
@@ -129,7 +132,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 		}
 	}
 
-	if hdr.Typeflag == tar.TypeSymlink {
+	if fmeta.Type == fs.Type_Symlink {
 		// need to use LUtimesNano to avoid traverse symlinks
 		if err := fspatch.LUtimesNano(destPath, hdr.AccessTime, hdr.ModTime); err != nil {
 			ioError(err)

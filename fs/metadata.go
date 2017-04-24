@@ -60,9 +60,9 @@ const (
 	Type_File       Type = 'f'
 	Type_Dir        Type = 'd'
 	Type_Symlink    Type = 'L'
-	Type_Device     Type = 'D'
 	Type_NamedPipe  Type = 'p'
 	Type_Socket     Type = 'S'
+	Type_Device     Type = 'D'
 	Type_CharDevice Type = 'c'
 	Type_Hardlink   Type = 'h' // Rare, and may only appear contextually.
 )
