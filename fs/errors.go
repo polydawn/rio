@@ -29,10 +29,38 @@ func (ErrIOUnknown) _errFS()         {}
 func (e ErrIOUnknown) Error() string { return e.Msg }
 
 /*
-	The normalization of anything matching `os.NotExists`.
+	Convert any error into an ErrFS type.
+	Well-recognized errors will be normalized to a specific type,
+	and all other errors will be converted to an `*ErrIOUnknown`.
+*/
+func IOError(err error) ErrFS {
+	switch {
+	case err == nil:
+		return nil
+	//	case os.IsNotExist(err):
+	//		switch err := err.(type) {
+	//		case *os.PathError:
+	//			return ErrNotExists{err.Path}
+	//		case *os.LinkError:
+	//			return ErrNotExists{err.Old} // REVIEW: we have issues all the way to the kernel here: it's not clear if error regards old or new path.
+	//		case *os.SyscallError:
+	//			return ErrNotExists{} // has no path info :(
+	//		default: // 'os.ErrExist' is stringly typed :(
+	//			return ErrNotExists{} // has no path info :(
+	//		}
+	default:
+		return ErrIOUnknown{err.Error()}
+	}
+}
+
+/*
+	The normalization of anything matching `os.IsNotExist`.
+
+	The 'Path' field is usually set, but may be nil in some cases
+	(not all system errors return the path associated with them).
 */
 type ErrNotExists struct {
-	Path RelPath
+	Path *RelPath
 }
 
 func (ErrNotExists) _errFS() {}
