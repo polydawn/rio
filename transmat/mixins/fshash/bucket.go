@@ -1,8 +1,6 @@
 package fshash
 
 import (
-	"os"
-
 	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/lib/treewalk"
@@ -73,7 +71,8 @@ var DefaultRoot = Record{
 */
 func DefaultDirMetadata() fs.Metadata {
 	return fs.Metadata{
-		Mode:  0755 + os.ModeDir,
+		Type:  fs.Type_Dir,
+		Perms: 0755,
 		Mtime: rio.FilterDefaultMtime,
 	}
 }
