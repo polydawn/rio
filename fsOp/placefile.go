@@ -60,12 +60,8 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 	case fs.Type_Invalid:
 		panic(fmt.Errorf("invalid fs.Metadata.Type; partially constructed object?"))
 	case fs.Type_File:
-		file, err := afs.OpenFile(fmeta.Name, os.O_CREATE|os.O_WRONLY, fmeta.Perms)
+		file, err := afs.OpenFile(fmeta.Name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, fmeta.Perms)
 		if err != nil {
-			return err
-		}
-		if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
-			file.Close()
 			return err
 		}
 		if _, err := io.Copy(file, body); err != nil {
