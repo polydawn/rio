@@ -18,7 +18,7 @@ type MemoryBucket struct {
 
 func (b *MemoryBucket) AddRecord(metadata fs.Metadata, contentHash []byte) {
 	name := metadata.Name.String()
-	if metadata.Mode.IsDir() {
+	if metadata.Type == fs.Type_Dir {
 		name += "/"
 	}
 	b.lines = append(b.lines, Record{name, metadata, contentHash})

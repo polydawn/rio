@@ -83,12 +83,12 @@ type ScanMonitor interface {
 // If keep is true, the value must be nil or the filter is invalid.
 type Filters struct {
 	FlattenUID struct {
-		Keep  bool `json:"keep,omitempty"`
-		Value *int `json:"value,omitempty"`
+		Keep  bool    `json:"keep,omitempty"`
+		Value *uint32 `json:"value,omitempty"`
 	} `json:"uid"`
 	FlattenGID struct {
-		Keep  bool `json:"keep,omitempty"`
-		Value *int `json:"value,omitempty"`
+		Keep  bool    `json:"keep,omitempty"`
+		Value *uint32 `json:"value,omitempty"`
 	} `json:"gid"`
 	FlattenMtime struct {
 		Keep  bool       `json:"keep,omitempty"`
@@ -97,9 +97,9 @@ type Filters struct {
 }
 
 var (
-	FilterDefaultUid   = 1000
-	FilterDefaultGid   = 1000
-	FilterDefaultMtime = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+	FilterDefaultUid   uint32 = 1000
+	FilterDefaultGid   uint32 = 1000
+	FilterDefaultMtime        = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
 )
 
 // A local filesystem area where CAS caching is maintained.

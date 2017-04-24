@@ -1,8 +1,6 @@
 package fshash
 
 import (
-	"os"
-
 	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/lib/treewalk"
@@ -61,22 +59,20 @@ type RecordIterator interface {
 /*
 	Node used for the root (Name = "./") path, if one isn't provided.
 */
-var DefaultRoot Record
-
-func init() {
-	DefaultRoot = DefaultDirRecord()
+var DefaultRoot = Record{
+	"./",
+	DefaultDirMetadata(),
+	nil,
 }
 
 /*
-	Returns a new, consistent, "blank" record for a directory.
+	Returns a new, consistent, "blank" metadata for a directory.
 	You must assign the `Name` metadata.
 */
-func DefaultDirRecord() Record {
-	return Record{
-		Metadata: fs.Metadata{
-			Mode:  0755 + os.ModeDir,
-			Mtime: rio.FilterDefaultMtime,
-		},
-		ContentHash: nil,
+func DefaultDirMetadata() fs.Metadata {
+	return fs.Metadata{
+		Type:  fs.Type_Dir,
+		Perms: 0755,
+		Mtime: rio.FilterDefaultMtime,
 	}
 }
