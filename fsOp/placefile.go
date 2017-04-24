@@ -1,4 +1,4 @@
-package normalfs
+package fsOp
 
 import (
 	"fmt"

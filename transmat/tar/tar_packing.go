@@ -10,6 +10,8 @@ import (
 
 	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fs/osfs"
+	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 )
 
@@ -22,6 +24,10 @@ func Extract(
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
 	bucket := fshash.MemoryBucket{}
+
+	// Construct filesystem wrapper to use for all our ops.
+	afs := osfs.New(destBasePath)
+
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
 		fmeta := fs.Metadata{}
@@ -42,9 +48,7 @@ func Extract(
 
 		// Reshuffle metainfo to our default format.
 		if err := TarHdrToMetadata(thdr, &fmeta); err != nil {
-			return rio.ErrWareCorrupt{
-				Msg: fmt.Sprintf("corrupt tar: %s", err),
-			}
+			return err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
 			return rio.ErrWareCorrupt{
@@ -72,7 +76,7 @@ func Extract(
 			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
-			fs.PlaceFile(destBasePath, conjuredFmeta, nil)
+			fsOp.PlaceFile(afs, conjuredFmeta, nil)
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
 	}
@@ -86,11 +90,17 @@ func MetadataToTarHdr(fmeta *fs.Metadata, hdr *tar.Header) {
 
 // Mutate fs.Metadata fields to match the given tar header.
 // Does not check for names that go above '.'; caller may want to do that.
-func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
+func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) *rio.ErrWareCorrupt {
 	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
-	fmeta.Mode = hdr.FileInfo().Mode()
-	fmeta.Uid = hdr.Uid
-	fmeta.Gid = hdr.Gid
+	fmeta.Type = tarTypeToFsType(hdr.Typeflag)
+	if fmeta.Type == fs.Type_Invalid {
+		return &rio.ErrWareCorrupt{
+			Msg: fmt.Sprintf("corrupt tar: %q is not a known file type", hdr.Typeflag),
+		}
+	}
+	fmeta.Perms = fs.Perms(hdr.Mode & 07777)
+	fmeta.Uid = uint32(hdr.Uid)
+	fmeta.Gid = uint32(hdr.Gid)
 	fmeta.Size = hdr.Size
 	fmeta.Linkname = hdr.Linkname
 	fmeta.Devmajor = hdr.Devmajor
@@ -98,4 +108,26 @@ func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
 	fmeta.Mtime = hdr.ModTime
 	fmeta.Xattrs = hdr.Xattrs
 	return nil
+}
+
+func tarTypeToFsType(tarType byte) fs.Type {
+	switch tarType {
+	case tar.TypeReg, tar.TypeRegA:
+		return fs.Type_File
+	case tar.TypeLink:
+		return fs.Type_Hardlink
+	case tar.TypeSymlink:
+		return fs.Type_Symlink
+	case tar.TypeChar:
+		return fs.Type_CharDevice
+	case tar.TypeBlock:
+		return fs.Type_Device
+	case tar.TypeDir:
+		return fs.Type_Dir
+	case tar.TypeFifo:
+		return fs.Type_NamedPipe
+	// Notice that tar does not have a type for socket files
+	default:
+		return fs.Type_Invalid
+	}
 }
