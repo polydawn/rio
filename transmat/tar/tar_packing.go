@@ -38,7 +38,7 @@ func Extract(
 			return nil // sucess!  end of archive.
 		}
 		if err != nil {
-			return rio.ErrWareCorrupt{
+			return &rio.ErrWareCorrupt{
 				Msg: fmt.Sprintf("corrupt tar: %s", err),
 			}
 		}
@@ -51,7 +51,7 @@ func Extract(
 			return err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
-			return rio.ErrWareCorrupt{
+			return &rio.ErrWareCorrupt{
 				Msg: "corrupt tar: paths that use '../' to leave the base dir are invalid",
 			}
 		}
