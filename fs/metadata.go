@@ -64,4 +64,5 @@ const (
 	Type_NamedPipe  Type = 'p'
 	Type_Socket     Type = 'S'
 	Type_CharDevice Type = 'c'
+	Type_Hardlink   Type = 'h' // Rare, and may only appear contextually.
 )
