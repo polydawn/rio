@@ -20,6 +20,10 @@ type FS interface {
 
 	OpenFile(path RelPath, flag int, perms Perms) (File, ErrFS)
 
+	Mkdir(path RelPath, perms Perms) ErrFS
+
+	Mklink(path RelPath, target string) ErrFS
+
 	LStat(path RelPath) (*Metadata, ErrFS)
 
 	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)

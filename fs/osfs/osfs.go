@@ -24,6 +24,16 @@ func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, f
 	return f, ioError(err)
 }
 
+func (afs *osFS) Mkdir(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+	err := os.Mkdir(afs.basePath.Join(path).String(), permsToOs(perms))
+	return ioError(err)
+}
+
+func (afs *osFS) Mklink(path fs.RelPath, target string) fs.ErrFS {
+	err := os.Symlink(target, afs.basePath.Join(path).String())
+	return ioError(err)
+}
+
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {

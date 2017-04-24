@@ -83,14 +83,14 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 				break
 			}
 		}
-		if err := os.Mkdir(destPath, mode); err != nil {
-			ioError(err)
+		if err := afs.Mkdir(fmeta.Name, fmeta.Perms); err != nil {
+			return err
 		}
-	case os.ModeSymlink:
-		// linkname can be anything you want.  it can be invalid, it can be absolute, whatever.
-		// the consumer had better know how to jail this filesystem before using;
-		// other PlaceFile calls know enough to refuse to traverse this.
-		if err := os.Symlink(hdr.Linkname, destPath); err != nil {
+	case fs.Type_Symlink:
+		// linkname can be anything you want.  It continues to be a string parameter rather than
+		// any of our normalized `fs.*Path` types because it is perfectly valid (if odd)
+		// to store the string ".///" as a symlink target.
+		if err := afs.Mklink(fmeta.Name, fmeta.Linkname); err != nil {
 			ioError(err)
 		}
 	case -1: // FIXME goddamnit, hardlinks aren't described in the stdlib os.FileMode consts?!
