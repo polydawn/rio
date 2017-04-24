@@ -1,6 +1,9 @@
 package fs
 
-import "io"
+import (
+	"io"
+	"time"
+)
 
 /*
 	Interface for all primitive functions we expect to be able to perform
@@ -33,6 +36,10 @@ type FS interface {
 	Lchown(path RelPath, uid uint32, gid uint32) ErrFS
 
 	Chmod(path RelPath, perms Perms) ErrFS
+
+	SetTimesLNano(path RelPath, mtime time.Time, atime time.Time) ErrFS
+
+	SetTimesNano(path RelPath, mtime time.Time, atime time.Time) ErrFS
 
 	LStat(path RelPath) (*Metadata, ErrFS)
 

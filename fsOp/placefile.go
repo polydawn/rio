@@ -125,8 +125,19 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 	//	}
 
 	// Last of all, set times.  (All the earlier mutations like chown would alter them again.)
-	if err := afs.LUtimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
-		return err
+	// We split behavior based whether or not target is a symlink, because it broadens
+	//  our platform support: Mac doesn't support the 'L' version of this call, so refraining
+	//  from using it unless absolutely necessary means we can support unpacking a filesystem
+	//  on Macs as long as it doesn't include symlinks.  (Eyeroll.)
+	switch fmeta.Type {
+	case fs.Type_Symlink:
+		if err := afs.SetTimesLNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+			return err
+		}
+	default:
+		if err := afs.SetTimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+			return err
+		}
 	}
 
 	// Success!
