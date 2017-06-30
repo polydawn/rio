@@ -31,8 +31,17 @@ import (
 	Device files *will* be created, with their maj/min numbers.
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
+
+	If skipChown is true, it does what it says on the tin: skips setting ownership.
+	This will result in UIDs and GIDs from the rio process being in effect;
+	it's also a rough proxy for "don't require priviledged operations".
+	(Ecosystemically: don't combine skipChown=true with content-addressable storage;
+	the result will be collision errors and incorrect behavior.
+	Similarly, Repeatr would *never* use the skipChown option, because
+	it would create consistency issues.  But `rio unpack` is happy to do so,
+	because it is not the unpack command's job to maintain a CAS filesystem.)
 */
-func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
+func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.ErrFS {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
 		target, isSymlink, err := afs.Readlink(path)
@@ -113,8 +122,11 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) fs.ErrFS {
 	}
 
 	// Set the UID and GID for all file and dir types.
-	if err := afs.Lchown(fmeta.Name, fmeta.Uid, fmeta.Gid); err != nil {
-		return err
+	// Unless you asked for us to avoid using that (priviledge-requiring) syscall, of course.
+	if !skipChown {
+		if err := afs.Lchown(fmeta.Name, fmeta.Uid, fmeta.Gid); err != nil {
+			return err
+		}
 	}
 
 	// Skipping on xattrs for the moment.
