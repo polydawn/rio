@@ -5,8 +5,8 @@ inputs:
 		silo: "http+ca://repeatr.s3.amazonaws.com/assets/"
 	"/app/go":
 		type: "tar"
-		hash: "gi0Kpb-VH3TK0UBX6YmpuKsrMAUlxicPrY2YvXPo9sBQm_NsD_hKrn7pmc95zrmM"
-		silo: "https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz"
+		hash: "jZ8NkMmCPUb5rTHtjBLZEe0usTSDjgGfD71hN07wuuPfkoqG6pLB0FR4GKmQRAva"
+		silo: "https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz"
 action:
 	command:
 		- "/bin/bash"
