@@ -83,6 +83,13 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 		fmeta.Type = fs.Type_Dir
 	case os.ModeSymlink:
 		fmeta.Type = fs.Type_Symlink
+		// If it's a symlink, get that info.
+		//  It's an extra syscall, but we almost always want it.
+		if target, _, err := afs.Readlink(path); err == nil {
+			fmeta.Linkname = target
+		} else {
+			return nil, err
+		}
 	case os.ModeNamedPipe:
 		fmeta.Type = fs.Type_NamedPipe
 	case os.ModeSocket:
@@ -113,14 +120,6 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 		if fmeta.Type == fs.Type_Device || fmeta.Type == fs.Type_CharDevice {
 			fmeta.Devmajor, fmeta.Devminor = devModesSplit(sys.Rdev)
 		}
-	}
-
-	// If it's a symlink, get that info.  It's an extra syscall, but
-	//  we almost always want it.
-	if target, _, err := afs.Readlink(path); err == nil {
-		fmeta.Linkname = target
-	} else {
-		return nil, err
 	}
 
 	// Xattrs are not set by this method, because they require an unbounded
