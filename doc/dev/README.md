@@ -8,12 +8,16 @@ developer readme
 big picture
 -----------
 
+### Filesets and packed Wares
+
 `rio` handles data in two catagorically different ways:
 
 - Sets of files, unpacked on a real filesystem on your host
 - Packed "wares", which represent sets of files and all their metadata, but are organized in (furious handwaving and abstractions) some other way.
 
 Packed "wares" are content-addressable: `WareID`s are hashes.
+
+Filesets are often cached by the content-addressable WareID they were unpacked from, but aren't exactly themselves considered content-addressable, because...
 
 ### universal IDs
 
@@ -27,6 +31,26 @@ Example: `"git:asdf"` and `"ipfs:qwer"` are both valid WareIDs, and may even ref
 
 *There is also no single hash which defines the WareID of an unpacked filesystem*.  This is just the other side of the same coin.
 You can only compute a hash of a fileset by picking which packing format you want to use.
+
+### storing and transfering packed Wares
+
+In addition to this Fileset/Ware dichotomy, we have "Warehouses", which define a place to store Wares, and also implicitly some of their protocol.
+
+#### mixing warehouses and pack formats
+
+Warehouses tend to come in two types: things that grok key/value storage, and things that are... more complicated than that.
+
+Key/value-style warehouses are often reusable.
+Local filesystem dirs, S3 buckets, GCS buckets, and more can be used as k/v warehouses.
+Transmats like 'tar' can use any of these k/v warehouses interchangably: just call the transmat with the appropriate URL style and hand over the relevant auth tokens.
+You can mirror the exact same 'tar'-packed Ware between a local filesystem warehouse and an S3 warehouse, and it will keep the same WareID.
+
+Other warehouses are more tightly tied to a specific pack format.
+For example, git: git repositories only store git objects.  You have to be using git trees and commits as a packing format in order to use a git repo as a warehouse for your data.
+
+Sometimes things can be hybridized even further: for example, you can use a 'tar' transmat to pack tarball files, then
+turn around and place those files in a git commit!
+Whether or not this is a good idea is a whole different question of course.
 
 
 
