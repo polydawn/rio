@@ -76,7 +76,7 @@ func Extract(
 			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
-			fsOp.PlaceFile(afs, conjuredFmeta, nil)
+			fsOp.PlaceFile(afs, conjuredFmeta, nil, false)
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
 	}
