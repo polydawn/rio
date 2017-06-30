@@ -4,6 +4,32 @@ developer readme
 (This document is for someone hacking on the `rio` code itself.  Go up one dir for user-facing documentation!)
 
 
+
+big picture
+-----------
+
+`rio` handles data in two catagorically different ways:
+
+- Sets of files, unpacked on a real filesystem on your host
+- Packed "wares", which represent sets of files and all their metadata, but are organized in (furious handwaving and abstractions) some other way.
+
+Packed "wares" are content-addressable: `WareID`s are hashes.
+
+### universal IDs
+
+... don't exist.  It's not a thing.  We give up.
+
+Git hashes are content-addressable, and IPFS hashes are content-addressable, and they're not the same, and *that's okay*.
+
+`rio.WareID` is a two-part object: it expresses the pack format, and the hash, *which is only defined within the namespace of that pack format*.
+
+Example: `"git:asdf"` and `"ipfs:qwer"` are both valid WareIDs, and may even refer to the same files and metadata when unpacked.
+
+*There is also no single hash which defines the WareID of an unpacked filesystem*.  This is just the other side of the same coin.
+You can only compute a hash of a fileset by picking which packing format you want to use.
+
+
+
 code layout
 -----------
 
