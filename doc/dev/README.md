@@ -15,6 +15,7 @@ code layout
 - `go.polydawn.net/transmat/*` -- implementations of filesystem packing formats.  E.g. `tar`.
   - REVIEW: so is this name a bug and the whole package should be `s/transmat/packing/`??  Probably
 - `go.polydawn.net/transmat/mixins/fshash` -- helper functions for accumulating a hash for a fileset.  Used in some of the transmat implementations.
+- `go.polydawn.net/lib/*` -- grabbag library functions; these are things that *probably* make sense even more broadly than rio, but are vendored here for simplicity's sake.
 
 Overall, seen from the outside (as a consumer of `rio`-as-a-library):
 
@@ -25,3 +26,11 @@ Overall, seen from the outside (as a consumer of `rio`-as-a-library):
 - Plug together a `packing` and a `warehouse` sytem to get a transmat.
   - for example `tar`+`s3`, or `tar`+`fs`: both construct valid transmats.
 - And from the perspective of library consumers: that's it, no more details should need to leak.
+
+### the fs vs fsOp split
+
+Where 'fs' ends and 'fsOp' begins can be difficult to define, so here are some examples.
+
+1. `Chown()` belongs in `fs`, because it's basically proxying a syscall.
+2. `PlaceFile()` belongs in `fsOp` because it composes multiple syscalls...
+3. More importantly, `PlaceFile()` belongs in `fsOp` because it implements some application-level sandboxing logic!  It has *opinions*.
