@@ -84,3 +84,26 @@ Where 'fs' ends and 'fsOp' begins can be difficult to define, so here are some e
 1. `Chown()` belongs in `fs`, because it's basically proxying a syscall.
 2. `PlaceFile()` belongs in `fsOp` because it composes multiple syscalls...
 3. More importantly, `PlaceFile()` belongs in `fsOp` because it implements some application-level sandboxing logic!  It has *opinions*.
+
+
+
+when filesystems are insane^W fun
+---------------------------------
+
+The one place we're *not* offering infinte pluggable flexibility is around the basic file set and filesystem attributes themselves.
+Here are some opinions we have:
+
+- 'atime' and 'ctime' don't exist.
+  - 'ctime' is impossible to set without a kernel hook or being a filesystem driver yourself; so it's out of bounds by virtue of being ridiculously inconvenient to work with.  Fortunately, it's also rarely used.
+  - 'atime' properties are ridiculous to maintain, because nearly every operation in the universe may alter them anyway.  The behavior of 'atime' updates also varies *wildly* across modern filesystems, making it a very silly property indeed.  Fortunately, like with ctimes, nearly no applications in the wild look use atimes anyway (for the same reasons!).
+- 'mtime' properties do exist.
+  - Some programs do refer to them and make behavioral choices on mtime properties, so `rio` functions do honor mtime.
+  - But do note `rio` transmats will default to flattening mtime properties them unless otherwise instructed, because they're usually useless noise.
+    - So theologically speaking: `rio` transmats will honor Wares which are packed with noise included; but will try to reduce the amount of noise in the universe by not producing new Wares with noise included, unless you explicit ask for that.
+- The order of entries in the filesystem doesn't matter.
+  - In reality, on some filesystems, listing directory contents results in sorted order results; in others, it's mostly stable between read-only calls; in others yet, things may be even more random.  This is a bummer, and whenever relevant, `rio` will sort things to normalize behaviors.
+- *Symlinks have mtimes.*
+  - This is a controvertial one.  Mac filesystems are notable for disagreeing.  `rio` **errors** when given a symlink on Mac systems rather than having silently divergent behavior on Mac vs Linux systems.  `rio` prioritizes consistent precision and correctness over portability in this case.
+
+These opinions can all be seen in the `fsOp` package, and the behaviors of transmats.
+These opinions are *not* expressed in the `fs/*` packages, so if you need to reach in deeper, you can.
