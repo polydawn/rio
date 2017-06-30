@@ -18,7 +18,7 @@ type Metadata struct {
 	// Notably absent fields:
 	//  - ctime -- it's pointless to keep; you can't set such a thing in any posix filesystem.
 	//  - atime -- similarly pointless; you can set it, but maybe, with asterisks, and it's
-	//     almost certain end up tramped again moments later.
+	//     almost certain end up trampled again moments later.
 }
 
 /*
