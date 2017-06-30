@@ -28,6 +28,9 @@ type WarehouseDialer interface {
 	NewAgent(WarehouseAddr) (WarehouseAgent, error)
 }
 
+// Placeholder: a data object describing why a Warehouse is storing a WareID.
+// (This will evolve along with the `hitch` project, and is probably mostly
+// hitch's problem to define.)
 type Justification struct{}
 
 type WarehouseAgent interface {
