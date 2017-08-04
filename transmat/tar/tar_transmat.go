@@ -9,18 +9,26 @@ import (
 	"context"
 	"io"
 
-	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/timeless-api"
+	"go.polydawn.net/timeless-api/rio"
 )
 
-func Materialize(
+var (
+	_ rio.UnpackFunc = Unpack
+)
+
+func Unpack(
 	ctx context.Context, // Long-running call.  Cancellable.
-	path fs.AbsolutePath, // Where to put a filesystem.
-	filters rio.Filters, // Optionally: filters we should apply while unpacking.
-	wareID rio.WareID, // What filesystem slice ware to unpack.
-	sources []rio.WarehouseAgent, // Warehouses we can talk to.
-	monitor rio.MaterializeMonitor, // Optionally: callbacks for progress monitoring.
-) (rio.WareID, error) {
+	wareID api.WareID, // What wareID to fetch for unpacking.
+	path string, // Where to unpack the fileset (absolute path).
+	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
+	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
+) (api.WareID, error) {
+	// Sanitize arguments.
+	path2 := fs.MustAbsolutePath(path)
+
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".
 
@@ -39,9 +47,9 @@ func Materialize(
 	tarReader := tar.NewReader(reader)
 
 	// Extract.
-	err := Extract(ctx, path, filters, tarReader)
+	err := Extract(ctx, path2, filters, tarReader)
 	if err != nil {
-		return rio.WareID{}, err
+		return api.WareID{}, err
 	}
-	return rio.WareID{}, nil
+	return api.WareID{}, nil
 }

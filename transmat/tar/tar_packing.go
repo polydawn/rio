@@ -3,24 +3,25 @@ package tartrans
 import (
 	"archive/tar"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"go.polydawn.net/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
+	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/timeless-api"
+	"go.polydawn.net/timeless-api/rio"
 )
 
 func Extract(
 	ctx context.Context,
 	destBasePath fs.AbsolutePath,
-	filters rio.Filters,
+	filters api.FilesetFilters,
 	tr *tar.Reader,
-) rio.Error {
+) error {
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
 	bucket := fshash.MemoryBucket{}
@@ -38,12 +39,10 @@ func Extract(
 			return nil // sucess!  end of archive.
 		}
 		if err != nil {
-			return &rio.ErrWareCorrupt{
-				Msg: fmt.Sprintf("corrupt tar: %s", err),
-			}
+			return Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
 		}
 		if ctx.Err() != nil {
-			return rio.Cancelled{}
+			return Errorf(rio.ErrCancelled, "cancelled")
 		}
 
 		// Reshuffle metainfo to our default format.
@@ -51,9 +50,7 @@ func Extract(
 			return err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
-			return &rio.ErrWareCorrupt{
-				Msg: "corrupt tar: paths that use '../' to leave the base dir are invalid",
-			}
+			return Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
 		}
 
 		// Apply filters.
@@ -90,13 +87,11 @@ func MetadataToTarHdr(fmeta *fs.Metadata, hdr *tar.Header) {
 
 // Mutate fs.Metadata fields to match the given tar header.
 // Does not check for names that go above '.'; caller may want to do that.
-func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) *rio.ErrWareCorrupt {
+func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
 	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
 	fmeta.Type = tarTypeToFsType(hdr.Typeflag)
 	if fmeta.Type == fs.Type_Invalid {
-		return &rio.ErrWareCorrupt{
-			Msg: fmt.Sprintf("corrupt tar: %q is not a known file type", hdr.Typeflag),
-		}
+		return Errorf(rio.ErrWareCorrupt, "corrupt tar: %q is not a known file type", hdr.Typeflag)
 	}
 	fmeta.Perms = fs.Perms(hdr.Mode & 07777)
 	fmeta.Uid = uint32(hdr.Uid)
