@@ -62,7 +62,11 @@ type Monitor struct {
 	NotifyFn func(phase, desc string, totalProg, totalWork int)
 }
 
+type ErrorCategory string
+
 const (
-	ErrWareCorrupt = "rio-ware-corrupt"
-	ErrCancelled   = "rio-cancelled"
+	ErrUsage               ErrorCategory = "rio-usage-error" // Indicates some piece of user input to a command was invalid and unrunnable.
+	ErrWareCorrupt         ErrorCategory = "rio-ware-corrupt"
+	ErrWarehouseUnwritable ErrorCategory = "rio-warehouse-unwritable" // Indicates a warehouse failed to accept a write operation.  The Warehouse is having a bad day.  ("unauthorized" is a different error category.)
+	ErrCancelled           ErrorCategory = "rio-cancelled"
 )
