@@ -9,6 +9,7 @@ import (
 	"go.polydawn.net/rio/fs"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/lib/guid"
+	"go.polydawn.net/rio/warehouse/util"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )
@@ -75,7 +76,47 @@ func (whCtrl Controller) OpenWriter() (wc WriteController, err error) {
 }
 
 type WriteController struct {
-	stream    io.Writer       // Write to this.
+	stream    io.WriteCloser  // Write to this.
 	whCtrl    Controller      // Needed for the final move-into-place.
 	stagePath fs.AbsolutePath // Needed for the final move-into-place.
+}
+
+/*
+	Cancel the current write.  Close the stream, and remove any temporary files.
+*/
+func (wc *WriteController) Close() error {
+	wc.stream.Close()
+	return os.Remove(wc.stagePath.String())
+}
+
+/*
+	Commit the current data as the given hash.
+	Caller must be an adult and specify the hash truthfully.
+	Closes the writer and invalidates any future use.
+*/
+func (wc *WriteController) Commit(wareID api.WareID) error {
+	// Close the file.
+	if err := wc.stream.Close(); err != nil {
+		return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
+	}
+	// Compute final path.
+	// Make parent dirs if necessary in content-addr mode.
+	finalPath := wc.whCtrl.basePath
+	if wc.whCtrl.ctntAddr {
+		chunkA, chunkB, _ := util.ChunkifyHash(wareID)
+		finalPath = finalPath.Join(fs.MustRelPath(chunkA))
+		if err := os.Mkdir(finalPath.String(), 0755); err != nil {
+			return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
+		}
+		finalPath = finalPath.Join(fs.MustRelPath(chunkB))
+		if err := os.Mkdir(finalPath.String(), 0755); err != nil {
+			return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
+		}
+		finalPath = finalPath.Join(fs.MustRelPath(wareID.Hash))
+	}
+	// Move into place.
+	if err := os.Rename(wc.stagePath.String(), finalPath.String()); err != nil {
+		return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
+	}
+	return nil
 }
