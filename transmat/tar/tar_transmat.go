@@ -8,8 +8,11 @@ import (
 	"archive/tar"
 	"context"
 	"io"
+	"net/url"
 
 	"go.polydawn.net/rio/fs"
+	. "go.polydawn.net/rio/lib/errcat"
+	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )
@@ -31,13 +34,38 @@ func Unpack(
 
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".
-
-	// TODO Warehouse APIs need to get more concrete.  You need an `Open()` method that yields an io.ReadCloser.
-	// The current 'warehouseAgent' concept doesn't express that, because it's trying to be generalized (probably to a farcical degree, honestly).
-	// Do we really want to accept a range of agents here?  Shouldn't the transmat have an earlier opinion about whether that URL can possibly represent something that makes sense to ping?
-	// Are WarehouseAgents a read/write duplex, or does it make more sense to keep those separate?
-	// Might it make sense to actually have the transmat interface expose dialing methods?
 	var reader io.ReadCloser
+	for _, addr := range warehouses {
+		// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
+		u, err := url.Parse(string(addr))
+		if err != nil {
+			return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
+		}
+		switch u.Scheme {
+		case "file", "file+ca":
+			whCtrl, err := kvfs.NewController(addr)
+			switch Category(err) {
+			case rio.ErrWarehouseUnavailable:
+				// TODO log something to the monitor
+				continue // okay!  skip to the next one.
+			default:
+				return api.WareID{}, err
+			}
+			reader, err = whCtrl.OpenReader(wareID)
+			switch Category(err) {
+			case rio.ErrWareNotFound:
+				// TODO log something to the monitor
+				continue // okay!  skip to the next one.
+			default:
+				return api.WareID{}, err
+			}
+		default:
+			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file' or 'file+ca')", u.Scheme)
+		}
+	}
+	if reader == nil { // aka if no warehouses available:
+		return api.WareID{}, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
+	}
 
 	// Wrap input stream with decompression as necessary.
 	//  Which kind of decompression to use can be autodetected by magic bytes.

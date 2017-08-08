@@ -23,9 +23,10 @@ type Controller struct {
 /*
 	Initialize a new warehouse controller that operates on a local filesystem.
 
-	If any errors are returned, they're of category `rio.ErrUsage`.
-	Other potential errors regarding readability and writability are raised
-	at the time of usage.
+	May return errors of category:
+
+	  - `rio.ErrUsage` -- for unsupported addressses
+	  - `rio.ErrWarehouseUnavailable` -- if the warehouse doesn't exist
 */
 func NewController(addr api.WarehouseAddr) (whCtrl Controller, err error) {
 	// Stamp out a warehouse handle.
@@ -45,14 +46,55 @@ func NewController(addr api.WarehouseAddr) (whCtrl Controller, err error) {
 	case "file+ca":
 		whCtrl.ctntAddr = true
 	default:
-		return whCtrl, Errorf(rio.ErrUsage, "unsupported scheme in warehouse addr: %q (valid options are 'file' or 'file+ca'", u.Scheme)
+		return whCtrl, Errorf(rio.ErrUsage, "unsupported scheme in warehouse addr: %q (valid options are 'file' or 'file+ca')", u.Scheme)
 	}
 	absPth, err := filepath.Abs(filepath.Join(u.Host, u.Path))
 	if err != nil {
 		panic(err)
 	}
 	whCtrl.basePath = fs.MustAbsolutePath(absPth)
-	return
+
+	// Check that the warehouse exists.
+	//  If it does, we're good: return happily.
+	checkPath := whCtrl.basePath
+	if !whCtrl.ctntAddr {
+		// In non-CA mode, the check for warehouse existence is a little strange;
+		//  for reading, we coul* declare 404 if the path doesn't exist... but we don't
+		//  know whether this is going to be used for reading or writing yet!
+		//  So we have to look at the path segment above it to see if a write might be valid.
+		checkPath = checkPath.Dir()
+	}
+	stat, err := os.Stat(whCtrl.basePath.Dir().String())
+	switch {
+	case err == nil:
+		return whCtrl, nil
+	case os.IsNotExist(err):
+		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s)", err)
+	case !stat.IsDir():
+		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s is not a dir)")
+	default:
+		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable (%s)", err)
+	}
+}
+
+func (whCtrl Controller) OpenReader(wareID api.WareID) (io.ReadCloser, error) {
+	finalPath := whCtrl.basePath
+	if whCtrl.ctntAddr {
+		chunkA, chunkB, _ := util.ChunkifyHash(wareID)
+		finalPath = finalPath.
+			Join(fs.MustRelPath(chunkA)).
+			Join(fs.MustRelPath(chunkB)).
+			Join(fs.MustRelPath(wareID.Hash))
+	}
+	file, err := os.OpenFile(finalPath.String(), os.O_RDONLY, 0)
+	switch {
+	case err == nil:
+		return file, nil
+	case os.IsNotExist(err):
+		return file, Errorf(rio.ErrWareNotFound, "ware %s not found in warehouse %s", wareID, whCtrl.addr)
+	default:
+		return file, Errorf(rio.ErrWarehouseUnavailable, "ware %s could not be retrieved from warehouse %s: %s", wareID, whCtrl.addr, err)
+	}
 }
 
 func (whCtrl Controller) OpenWriter() (wc WriteController, err error) {
