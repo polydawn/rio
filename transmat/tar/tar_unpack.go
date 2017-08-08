@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 
@@ -12,11 +13,77 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )
 
-func Extract(
+var (
+	_ rio.UnpackFunc = Unpack
+)
+
+func Unpack(
+	ctx context.Context, // Long-running call.  Cancellable.
+	wareID api.WareID, // What wareID to fetch for unpacking.
+	path string, // Where to unpack the fileset (absolute path).
+	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
+	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
+) (api.WareID, error) {
+	// Sanitize arguments.
+	path2 := fs.MustAbsolutePath(path)
+
+	// Pick a warehouse.
+	//  With K/V warehouses, this takes the form of "pick the first one that answers".
+	var reader io.ReadCloser
+	for _, addr := range warehouses {
+		// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
+		u, err := url.Parse(string(addr))
+		if err != nil {
+			return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
+		}
+		switch u.Scheme {
+		case "file", "file+ca":
+			whCtrl, err := kvfs.NewController(addr)
+			switch Category(err) {
+			case rio.ErrWarehouseUnavailable:
+				// TODO log something to the monitor
+				continue // okay!  skip to the next one.
+			default:
+				return api.WareID{}, err
+			}
+			reader, err = whCtrl.OpenReader(wareID)
+			switch Category(err) {
+			case rio.ErrWareNotFound:
+				// TODO log something to the monitor
+				continue // okay!  skip to the next one.
+			default:
+				return api.WareID{}, err
+			}
+		default:
+			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file' or 'file+ca')", u.Scheme)
+		}
+	}
+	if reader == nil { // aka if no warehouses available:
+		return api.WareID{}, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
+	}
+
+	// Wrap input stream with decompression as necessary.
+	//  Which kind of decompression to use can be autodetected by magic bytes.
+	// TODO
+
+	// Convert the raw byte reader to a tar stream.
+	tarReader := tar.NewReader(reader)
+
+	// Extract.
+	err := unpackTar(ctx, path2, filters, tarReader)
+	if err != nil {
+		return api.WareID{}, err
+	}
+	return api.WareID{}, nil
+}
+
+func unpackTar(
 	ctx context.Context,
 	destBasePath fs.AbsolutePath,
 	filters api.FilesetFilters,
@@ -78,51 +145,4 @@ func Extract(
 		}
 	}
 	return nil
-}
-
-// Mutate tar.Header fields to match the given fmeta.
-func MetadataToTarHdr(fmeta *fs.Metadata, hdr *tar.Header) {
-
-}
-
-// Mutate fs.Metadata fields to match the given tar header.
-// Does not check for names that go above '.'; caller may want to do that.
-func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
-	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
-	fmeta.Type = tarTypeToFsType(hdr.Typeflag)
-	if fmeta.Type == fs.Type_Invalid {
-		return Errorf(rio.ErrWareCorrupt, "corrupt tar: %q is not a known file type", hdr.Typeflag)
-	}
-	fmeta.Perms = fs.Perms(hdr.Mode & 07777)
-	fmeta.Uid = uint32(hdr.Uid)
-	fmeta.Gid = uint32(hdr.Gid)
-	fmeta.Size = hdr.Size
-	fmeta.Linkname = hdr.Linkname
-	fmeta.Devmajor = hdr.Devmajor
-	fmeta.Devminor = hdr.Devminor
-	fmeta.Mtime = hdr.ModTime
-	fmeta.Xattrs = hdr.Xattrs
-	return nil
-}
-
-func tarTypeToFsType(tarType byte) fs.Type {
-	switch tarType {
-	case tar.TypeReg, tar.TypeRegA:
-		return fs.Type_File
-	case tar.TypeLink:
-		return fs.Type_Hardlink
-	case tar.TypeSymlink:
-		return fs.Type_Symlink
-	case tar.TypeChar:
-		return fs.Type_CharDevice
-	case tar.TypeBlock:
-		return fs.Type_Device
-	case tar.TypeDir:
-		return fs.Type_Dir
-	case tar.TypeFifo:
-		return fs.Type_NamedPipe
-	// Notice that tar does not have a type for socket files
-	default:
-		return fs.Type_Invalid
-	}
 }
