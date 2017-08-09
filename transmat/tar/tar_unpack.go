@@ -3,10 +3,13 @@ package tartrans
 import (
 	"archive/tar"
 	"context"
+	"crypto/sha512"
 	"io"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/polydawn/refmt/misc"
 
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
@@ -46,6 +49,8 @@ func Unpack(
 		case "file", "file+ca":
 			whCtrl, err := kvfs.NewController(addr)
 			switch Category(err) {
+			case nil:
+				// pass
 			case rio.ErrWarehouseUnavailable:
 				// TODO log something to the monitor
 				continue // okay!  skip to the next one.
@@ -54,6 +59,8 @@ func Unpack(
 			}
 			reader, err = whCtrl.OpenReader(wareID)
 			switch Category(err) {
+			case nil:
+				// pass
 			case rio.ErrWareNotFound:
 				// TODO log something to the monitor
 				continue // okay!  skip to the next one.
@@ -76,11 +83,7 @@ func Unpack(
 	tarReader := tar.NewReader(reader)
 
 	// Extract.
-	err := unpackTar(ctx, path2, filters, tarReader)
-	if err != nil {
-		return api.WareID{}, err
-	}
-	return api.WareID{}, nil
+	return unpackTar(ctx, path2, filters, tarReader)
 }
 
 func unpackTar(
@@ -88,10 +91,10 @@ func unpackTar(
 	destBasePath fs.AbsolutePath,
 	filters api.FilesetFilters,
 	tr *tar.Reader,
-) error {
+) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
-	bucket := fshash.MemoryBucket{}
+	bucket := &fshash.MemoryBucket{}
 
 	// Construct filesystem wrapper to use for all our ops.
 	afs := osfs.New(destBasePath)
@@ -103,21 +106,21 @@ func unpackTar(
 
 		// Check for done.
 		if err == io.EOF {
-			return nil // sucess!  end of archive.
+			break // sucess!  end of archive.
 		}
 		if err != nil {
-			return Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
+			return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
 		}
 		if ctx.Err() != nil {
-			return Errorf(rio.ErrCancelled, "cancelled")
+			return api.WareID{}, Errorf(rio.ErrCancelled, "cancelled")
 		}
 
 		// Reshuffle metainfo to our default format.
 		if err := TarHdrToMetadata(thdr, &fmeta); err != nil {
-			return err
+			return api.WareID{}, err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
-			return Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
+			return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
 		}
 
 		// Apply filters.
@@ -144,5 +147,8 @@ func unpackTar(
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
 	}
-	return nil
+
+	// Hash the thing!
+	hash := fshash.HashBucket(bucket, sha512.New384)
+	return api.WareID{"tar", misc.Base58Encode(hash)}, nil
 }
