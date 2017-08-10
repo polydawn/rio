@@ -8,7 +8,7 @@ tar fixtures notes
 - two entries: `ab` and `cd/` -- a file and dir, respectively
   - note the lack of `./` prefix
 - ownership is 7000/7000.  user and group *name* are also included: both are "hash".
-- dates are 2015-05-30 14:53:35 -0500
+- dates are 2015-05-30 14:11:26 -0500
 
 ### `tar_withBase.tgz`
 
@@ -18,7 +18,7 @@ tar fixtures notes
   - careful: some graphical tar tools may not show you that root dir.
   - note the presense of `./` prefix
 - ownership is 7000/7000.  user and group *name* are also included: both are "hash".
-- dates are 2015-05-30 14:11:26 -0500
+- dates are 2015-05-30 14:53:35 -0500
 - so, compared to `tar_sansBase.tgz`:
   - they diverge in timestamps, and filenames, and...
   - and the `./` entry: rio normalization will add a base dir placeholder, but it won't have those ownership bits!
