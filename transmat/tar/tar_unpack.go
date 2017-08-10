@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"crypto/sha512"
+	"fmt"
 	"io"
 	"net/url"
 	"os"
@@ -95,7 +96,14 @@ func Unpack(
 	// Check for hash mismatch before returning, because that IS an error,
 	//  but also return the hash we got either way.
 	if gotWare != wareID {
-		return gotWare, Errorf(rio.ErrWareHashMismatch, "tsk tsk")
+		return gotWare, Error{
+			rio.ErrWareHashMismatch,
+			fmt.Sprintf("hash mismatch: expected %q, got %q", wareID, gotWare),
+			map[string]string{
+				"expected": wareID.String(),
+				"actual":   gotWare.String(),
+			},
+		}
 	}
 	return gotWare, nil
 }
