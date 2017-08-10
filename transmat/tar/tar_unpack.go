@@ -17,6 +17,7 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/transmat/util"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
@@ -155,7 +156,6 @@ func unpackTar(
 		// It may well be possible to construct a tar like that, but it's already well established that
 		// tars with repeated filenames are just asking for trouble and shall be rejected without
 		// ceremony because they're just a ridiculous idea.
-
 		for parent := fmeta.Name.Dir(); parent != (fs.RelPath{}); parent = parent.Dir() {
 			_, err := os.Lstat(destBasePath.Join(parent).String())
 			// if it already exists, move along; if the error is anything interesting, let PlaceFile decide how to deal with it
@@ -167,6 +167,17 @@ func unpackTar(
 			conjuredFmeta.Name = parent
 			fsOp.PlaceFile(afs, conjuredFmeta, nil, false)
 			bucket.AddRecord(conjuredFmeta, nil)
+		}
+
+		// Place the file.
+		switch fmeta.Type {
+		case fs.Type_File:
+			reader := &util.HashingReader{tr, sha512.New384()}
+			fsOp.PlaceFile(afs, fmeta, reader, false)
+			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
+		default:
+			fsOp.PlaceFile(afs, fmeta, nil, false)
+			bucket.AddRecord(fmeta, nil)
 		}
 	}
 
