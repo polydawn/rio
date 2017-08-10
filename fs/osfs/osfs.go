@@ -71,7 +71,7 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	fmeta := &fs.Metadata{
 		Name:  path,
 		Size:  fi.Size(),
-		Mtime: fi.ModTime(),
+		Mtime: fi.ModTime().UTC(),
 	}
 
 	// Munge perms and mode to our types.
