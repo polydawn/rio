@@ -165,7 +165,9 @@ func unpackTar(
 			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
-			fsOp.PlaceFile(afs, conjuredFmeta, nil, false)
+			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
+				return api.WareID{}, err
+			}
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
 
@@ -173,10 +175,14 @@ func unpackTar(
 		switch fmeta.Type {
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
-			fsOp.PlaceFile(afs, fmeta, reader, false)
+			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
+				return api.WareID{}, err
+			}
 			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 		default:
-			fsOp.PlaceFile(afs, fmeta, nil, false)
+			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
+				return api.WareID{}, err
+			}
 			bucket.AddRecord(fmeta, nil)
 		}
 	}
