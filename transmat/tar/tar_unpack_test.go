@@ -41,6 +41,8 @@ func TestTarFixtureUnpack(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(fmeta.Name, ShouldResemble, fs.MustRelPath("ab"))
 				So(fmeta.Type, ShouldResemble, fs.Type_File)
+				So(fmeta.Uid, ShouldEqual, 7000)
+				So(fmeta.Gid, ShouldEqual, 7000)
 				So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
 				body, err := ioutil.ReadAll(reader)
 				So(string(body), ShouldResemble, "")
