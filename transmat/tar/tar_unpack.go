@@ -87,7 +87,17 @@ func Unpack(
 	tarReader := tar.NewReader(reader2)
 
 	// Extract.
-	return unpackTar(ctx, path2, filters, tarReader)
+	gotWare, err := unpackTar(ctx, path2, filters, tarReader)
+	if err != nil {
+		return gotWare, err
+	}
+
+	// Check for hash mismatch before returning, because that IS an error,
+	//  but also return the hash we got either way.
+	if gotWare != wareID {
+		return gotWare, Errorf(rio.ErrWareHashMismatch, "tsk tsk")
+	}
+	return gotWare, nil
 }
 
 func unpackTar(
