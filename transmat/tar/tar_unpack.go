@@ -74,13 +74,17 @@ func Unpack(
 	if reader == nil { // aka if no warehouses available:
 		return api.WareID{}, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
 	}
+	defer reader.Close()
 
 	// Wrap input stream with decompression as necessary.
 	//  Which kind of decompression to use can be autodetected by magic bytes.
-	// TODO
+	reader2, err := Decompress(reader)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
+	}
 
 	// Convert the raw byte reader to a tar stream.
-	tarReader := tar.NewReader(reader)
+	tarReader := tar.NewReader(reader2)
 
 	// Extract.
 	return unpackTar(ctx, path2, filters, tarReader)
