@@ -100,7 +100,7 @@ func packTar(
 	afs := osfs.New(srcBasePath)
 
 	// Walk the filesystem, emitting tar entries and filling the bucket as we go.
-	var tarHeader *tar.Header
+	tarHeader := &tar.Header{}
 	preVisit := func(filenode *fs.FilewalkNode) error {
 		if filenode.Err != nil {
 			return filenode.Err
