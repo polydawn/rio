@@ -91,6 +91,24 @@ var FixtureGamma = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("./var/fun"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
 }
 
+var AllFixtures = []struct {
+	Name  string
+	Files []FixtureFile
+}{
+	{"Alpha", FixtureAlpha},
+	{"AlphaDiffContent", FixtureAlphaDiffContent},
+	{"AlphaDiffTime", FixtureAlphaDiffTime},
+	{"AlphaDiffPerm", FixtureAlphaDiffPerm},
+	{"AlphaDiffPerm2", FixtureAlphaDiffPerm2},
+	{"AlphaDiffUidGid", FixtureAlphaDiffUidGid},
+	{"Empty", FixtureEmpty},
+	{"Multifile", FixtureMultifile},
+	{"Depth1", FixtureDepth1},
+	{"Depth3", FixtureDepth3},
+	{"Symlinks", FixtureSymlinks},
+	{"Gamma", FixtureGamma},
+}
+
 /*
 	Create files described by the fixtures on the filesystem given.
 	Any errors will be panicked, since this is meant to be used in test setup.
