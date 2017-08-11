@@ -97,7 +97,7 @@ func (whCtrl Controller) OpenReader(wareID api.WareID) (io.ReadCloser, error) {
 	}
 }
 
-func (whCtrl Controller) OpenWriter() (wc WriteController, err error) {
+func (whCtrl Controller) OpenWriter() (wc *WriteController, err error) {
 	// Pick a random upload path.
 	if whCtrl.ctntAddr {
 		tmpName := fs.MustRelPath(".tmp.upload." + guid.New())
@@ -117,10 +117,16 @@ func (whCtrl Controller) OpenWriter() (wc WriteController, err error) {
 	return
 }
 
+var _ io.WriteCloser = &WriteController{}
+
 type WriteController struct {
 	stream    io.WriteCloser  // Write to this.
 	whCtrl    Controller      // Needed for the final move-into-place.
 	stagePath fs.AbsolutePath // Needed for the final move-into-place.
+}
+
+func (wc *WriteController) Write(bs []byte) (int, error) {
+	return wc.stream.Write(bs)
 }
 
 /*
