@@ -2,6 +2,7 @@ package tartrans
 
 import (
 	"archive/tar"
+	"fmt"
 
 	"go.polydawn.net/rio/fs"
 	. "go.polydawn.net/rio/lib/errcat"
@@ -10,7 +11,44 @@ import (
 
 // Mutate tar.Header fields to match the given fmeta.
 func MetadataToTarHdr(fmeta *fs.Metadata, hdr *tar.Header) {
-	// TODO
+	hdr.Name = fmeta.Name.String()
+	if fmeta.Type == fs.Type_Dir {
+		hdr.Name += "/"
+	}
+	hdr.Typeflag = fsTypeToTarType(fmeta.Type)
+	hdr.Mode = int64(fmeta.Perms)
+	hdr.Uid = int(fmeta.Uid)
+	hdr.Gid = int(fmeta.Gid)
+	hdr.Size = fmeta.Size
+	hdr.Linkname = fmeta.Linkname
+	hdr.Devmajor = fmeta.Devmajor
+	hdr.Devminor = fmeta.Devminor
+	hdr.ModTime = fmeta.Mtime
+	hdr.Xattrs = fmeta.Xattrs
+}
+
+func fsTypeToTarType(fsType fs.Type) byte {
+	switch fsType {
+	case fs.Type_File:
+		return tar.TypeReg
+	case fs.Type_Hardlink:
+		return tar.TypeLink
+	case fs.Type_Symlink:
+		return tar.TypeSymlink
+	case fs.Type_CharDevice:
+		return tar.TypeChar
+	case fs.Type_Device:
+		return tar.TypeBlock
+	case fs.Type_Dir:
+		return tar.TypeDir
+	case fs.Type_NamedPipe:
+		return tar.TypeFifo
+	case fs.Type_Socket:
+		panic(fmt.Errorf("can't pack sockets into tar"))
+	default:
+		panic(fmt.Errorf("invalid fs.Type %q", fsType))
+
+	}
 }
 
 // Mutate fs.Metadata fields to match the given tar header.
