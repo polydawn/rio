@@ -16,6 +16,7 @@ import (
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
+	"go.polydawn.net/rio/lib/treewalk"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/util"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
@@ -166,7 +167,7 @@ func unpackTar(
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
 			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
-				return api.WareID{}, err
+				return api.WareID{}, err // FIXME these errors should be category'd here
 			}
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
@@ -176,24 +177,35 @@ func unpackTar(
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
 			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
-				return api.WareID{}, err
+				return api.WareID{}, err // FIXME these errors should be category'd here
 			}
 			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 		default:
 			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
-				return api.WareID{}, err
+				return api.WareID{}, err // FIXME these errors should be category'd here
 			}
 			bucket.AddRecord(fmeta, nil)
 		}
 	}
 
+	// Cleanup dir times with a post-order traversal over the bucket.
+	//  Files and dirs placed inside dirs cause the parent's mtime to update, so we have to re-pave them.
+	if err := treewalk.Walk(bucket.Iterator(), nil, func(node treewalk.Node) error {
+		record := node.(fshash.RecordIterator).Record()
+		if record.Metadata.Type != fs.Type_Dir {
+			return nil
+		}
+		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultAtime)
+	}); err != nil {
+		return api.WareID{}, err // FIXME these errors should be category'd here
+	}
+	// Bucket processing may have created a root node if missing.  If so, make sure we apply its props (all of them, not just time).
+	if err := fsOp.PlaceFile(afs, bucket.Root().Metadata, nil, false); err != nil {
+		return api.WareID{}, err // FIXME these errors should be category'd here
+	}
+
 	// Hash the thing!
 	hash := fshash.HashBucket(bucket, sha512.New384)
-
-	// Bucket processing may have created a root node if missing.  If so, make sure we apply its props.
-	if err := fsOp.PlaceFile(afs, bucket.Root().Metadata, nil, false); err != nil {
-		return api.WareID{}, err
-	}
 
 	return api.WareID{"tar", misc.Base58Encode(hash)}, nil
 }

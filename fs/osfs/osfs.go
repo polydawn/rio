@@ -128,6 +128,19 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	return fmeta, nil
 }
 
+func (afs *osFS) ReadDirNames(path fs.RelPath) ([]string, fs.ErrFS) {
+	f, err := os.Open(afs.basePath.Join(path).String())
+	if err != nil {
+		return nil, fs.IOError(err)
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return names, fs.IOError(err)
+	}
+	return names, nil
+}
+
 func (afs *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
 	target, err := os.Readlink(afs.basePath.Join(path).String())
 	switch {

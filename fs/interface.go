@@ -43,6 +43,8 @@ type FS interface {
 
 	LStat(path RelPath) (*Metadata, ErrFS)
 
+	ReadDirNames(path RelPath) ([]string, ErrFS)
+
 	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)
 }
 
