@@ -16,6 +16,7 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
@@ -29,23 +30,24 @@ func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	path string, // The fileset to scan and pack (absolute path).
 	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
-	warehouse api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
+	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
 
 	// Connect to warehouse, and get write controller opened.
-	// FUTURE : this write controller abstraction should be a reusable interface.
-	var wc *kvfs.WriteController
+	var wc warehouse.BlobstoreWriteController
 	// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
-	u, err := url.Parse(string(warehouse))
+	u, err := url.Parse(string(warehouseAddr))
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
 	}
 	switch u.Scheme {
+	case "":
+		wc = warehouse.NullBlobstoreWriteController{}
 	case "file", "file+ca":
-		whCtrl, err := kvfs.NewController(warehouse)
+		whCtrl, err := kvfs.NewController(warehouseAddr)
 		switch Category(err) {
 		case nil:
 			// pass

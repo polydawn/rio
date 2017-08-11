@@ -9,9 +9,15 @@ import (
 	"go.polydawn.net/rio/fs"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/lib/guid"
+	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/util"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
+)
+
+var (
+	_ warehouse.BlobstoreController      = Controller{}
+	_ warehouse.BlobstoreWriteController = &WriteController{}
 )
 
 type Controller struct {
@@ -28,10 +34,12 @@ type Controller struct {
 	  - `rio.ErrUsage` -- for unsupported addressses
 	  - `rio.ErrWarehouseUnavailable` -- if the warehouse doesn't exist
 */
-func NewController(addr api.WarehouseAddr) (whCtrl Controller, err error) {
+func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error) {
 	// Stamp out a warehouse handle.
 	//  More values will be accumulated in shortly.
-	whCtrl.addr = addr
+	whCtrl := Controller{
+		addr: addr,
+	}
 
 	// Verify that the addr is sensible up front, and extract features.
 	//  - We parse things mostly like URLs.
@@ -97,7 +105,8 @@ func (whCtrl Controller) OpenReader(wareID api.WareID) (io.ReadCloser, error) {
 	}
 }
 
-func (whCtrl Controller) OpenWriter() (wc *WriteController, err error) {
+func (whCtrl Controller) OpenWriter() (warehouse.BlobstoreWriteController, error) {
+	wc := &WriteController{whCtrl: whCtrl}
 	// Pick a random upload path.
 	if whCtrl.ctntAddr {
 		tmpName := fs.MustRelPath(".tmp.upload." + guid.New())
@@ -114,10 +123,8 @@ func (whCtrl Controller) OpenWriter() (wc *WriteController, err error) {
 	}
 	wc.stream = file
 	// Return the controller -- which has methods to either commit+close, or cancel+close.
-	return
+	return wc, nil
 }
-
-var _ io.WriteCloser = &WriteController{}
 
 type WriteController struct {
 	stream    io.WriteCloser  // Write to this.
