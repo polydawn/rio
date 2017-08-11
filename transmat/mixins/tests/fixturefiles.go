@@ -30,10 +30,15 @@ var FixtureAlphaDiffTime = []FixtureFile{
 
 var FixtureAlphaDiffPerm = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0600}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm2 = []FixtureFile{
+	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664}, []byte("zyx")},
+}
+
+var FixtureAlphaDiffPerm3 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
 	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 07777}, []byte("zyx")},
 }
@@ -100,6 +105,7 @@ var AllFixtures = []struct {
 	{"AlphaDiffTime", FixtureAlphaDiffTime},
 	{"AlphaDiffPerm", FixtureAlphaDiffPerm},
 	{"AlphaDiffPerm2", FixtureAlphaDiffPerm2},
+	{"AlphaDiffPerm3", FixtureAlphaDiffPerm3},
 	{"AlphaDiffUidGid", FixtureAlphaDiffUidGid},
 	{"Empty", FixtureEmpty},
 	{"Multifile", FixtureMultifile},

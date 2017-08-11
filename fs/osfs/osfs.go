@@ -7,6 +7,10 @@ import (
 	"go.polydawn.net/rio/fs"
 )
 
+func init() {
+	syscall.Umask(0)
+}
+
 func New(basePath fs.AbsolutePath) fs.FS {
 	return &osFS{basePath}
 }
