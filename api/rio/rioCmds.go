@@ -62,7 +62,14 @@ type Monitor struct {
 	NotifyFn func(phase, desc string, totalProg, totalWork int)
 }
 
+type ErrorCategory string
+
 const (
-	ErrWareCorrupt = "rio-ware-corrupt"
-	ErrCancelled   = "rio-cancelled"
+	ErrUsage                ErrorCategory = "rio-usage-error"           // Indicates some piece of user input to a command was invalid and unrunnable.
+	ErrWarehouseUnavailable ErrorCategory = "rio-warehouse-unavailable" // Warehouse 404.
+	ErrWarehouseUnwritable  ErrorCategory = "rio-warehouse-unwritable"  // Indicates a warehouse failed to accept a write operation.  The Warehouse is having a bad day.  ("unauthorized" is a different error category.)
+	ErrWareNotFound         ErrorCategory = "rio-ware-not-found"        // Ware 404 -- warehouse appeared online, but the requested ware isn't in it.
+	ErrWareCorrupt          ErrorCategory = "rio-ware-corrupt"          // Incidates a ware retreival started, but during unpacking it was found to be malformed.
+	ErrWareHashMismatch     ErrorCategory = "rio-hash-mismatch"         // Returned when fetching and unpacking a ware gets results in a different content hash than we requested.  (This is distinct from ErrWareCorrupt because a full fileset *was* able to be unpacked; it's just not the one we asked for.)
+	ErrCancelled            ErrorCategory = "rio-cancelled"
 )

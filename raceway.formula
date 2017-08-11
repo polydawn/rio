@@ -8,6 +8,7 @@ inputs:
 		hash: "jZ8NkMmCPUb5rTHtjBLZEe0usTSDjgGfD71hN07wuuPfkoqG6pLB0FR4GKmQRAva"
 		silo: "https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz"
 action:
+	policy: governor
 	command:
 		- "/bin/bash"
 		- "-c"

@@ -44,6 +44,9 @@ import (
 func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.ErrFS {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
+		if path == (fs.RelPath{}) {
+			break // success
+		}
 		target, isSymlink, err := afs.Readlink(path)
 		if isSymlink {
 			return fs.ErrBreakout{
@@ -58,9 +61,6 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 			continue // not existing is fine.
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
-		}
-		if path == (fs.RelPath{}) {
-			break // success
 		}
 	}
 

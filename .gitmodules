@@ -10,3 +10,9 @@
 [submodule ".gopath/src/github.com/polydawn/refmt"]
 	path = .gopath/src/github.com/polydawn/refmt
 	url = https://github.com/polydawn/refmt
+[submodule ".gopath/src/xi2.org/x/xz"]
+	path = .gopath/src/xi2.org/x/xz
+	url = https://github.com/xi2/xz
+[submodule ".gopath/src/github.com/syndtr/gocapability"]
+	path = .gopath/src/github.com/syndtr/gocapability
+	url = https://github.com/syndtr/gocapability
