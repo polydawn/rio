@@ -127,7 +127,9 @@ func packTar(
 
 		// Flip our metadata to tar header format, and flush it.
 		MetadataToTarHdr(fmeta, tarHeader)
-		tw.WriteHeader(tarHeader)
+		if err := tw.WriteHeader(tarHeader); err != nil {
+			return err // FIXME categorize
+		}
 
 		// If it's a file, stream the body into the tar while hashing; for all,
 		//  record the metadata in the bucket for the total hash.
