@@ -76,14 +76,22 @@ func Pack(
 	//  decompression time does not vary with compression level.
 	// Save a gzip reference just to close it; tar.Writer doesn't passthru its own close.
 	gzWriter := gzip.NewWriter(wc)
-	defer gzWriter.Close()
 
 	// Construct tar writer.
 	tarWriter := tar.NewWriter(gzWriter)
-	defer tarWriter.Close()
 
 	// Scan and tarify!
-	return packTar(ctx, path2, filters, tarWriter)
+	wareID, err := packTar(ctx, path2, filters, tarWriter)
+	if err != nil {
+		return wareID, err
+	}
+	// Close all the intermediate writer layers to ensure they've flushed.
+	tarWriter.Close()
+	gzWriter.Close()
+
+	// If we made it all the way with no errors, commit.
+	//  (Otherwise, the write controller will be closed by default by our defers.)
+	return wareID, wc.Commit(wareID)
 }
 
 func packTar(
@@ -127,7 +135,9 @@ func packTar(
 
 		// Flip our metadata to tar header format, and flush it.
 		MetadataToTarHdr(fmeta, tarHeader)
-		tw.WriteHeader(tarHeader)
+		if err := tw.WriteHeader(tarHeader); err != nil {
+			return err // FIXME categorize
+		}
 
 		// If it's a file, stream the body into the tar while hashing; for all,
 		//  record the metadata in the bucket for the total hash.

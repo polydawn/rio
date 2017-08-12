@@ -127,6 +127,13 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 		if err := afs.Lchown(fmeta.Name, fmeta.Uid, fmeta.Gid); err != nil {
 			return err
 		}
+		// Chown'ing may clear the setuid and setgid bits, if they were present!
+		//  Reinstate them.
+		if fmeta.Perms&(fs.Perms_Setuid|fs.Perms_Setgid) != 0 {
+			if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Skipping on xattrs for the moment.

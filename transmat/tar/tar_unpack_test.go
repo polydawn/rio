@@ -2,6 +2,7 @@ package tartrans
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -13,9 +14,28 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/testutil"
 	"go.polydawn.net/rio/transmat/mixins/defaults"
+	"go.polydawn.net/rio/transmat/mixins/tests"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )
+
+func TestTarUnpack(t *testing.T) {
+	Convey("Spec compliance: Tar unpack", t,
+		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
+			Convey("Using kvfs warehouse, in content-addressable mode:", func() {
+				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+					osfs.New(tmpDir).Mkdir(fs.MustRelPath("bounce"), 0755)
+					tests.CheckRoundTrip(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
+				})
+			})
+			Convey("Using kvfs warehouse, in *non*-content-addressable mode:", func() {
+				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+					tests.CheckRoundTrip(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file://%s/bounce", tmpDir)))
+				})
+			})
+		}),
+	)
+}
 
 /*
 	Tests against pre-generated, known fixtures of tar binary blobs.

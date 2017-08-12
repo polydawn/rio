@@ -7,6 +7,10 @@ import (
 	"go.polydawn.net/rio/fs"
 )
 
+func init() {
+	syscall.Umask(0)
+}
+
 func New(basePath fs.AbsolutePath) fs.FS {
 	return &osFS{basePath}
 }
@@ -70,7 +74,6 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	// Copy over the easy 1-to-1 parts.
 	fmeta := &fs.Metadata{
 		Name:  path,
-		Size:  fi.Size(),
 		Mtime: fi.ModTime(),
 	}
 
@@ -110,6 +113,13 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	}
 	if fm&os.ModeSticky != 0 {
 		fmeta.Perms |= fs.Perms_Sticky
+	}
+
+	// Copy over the size info... but only for file types.
+	//  This is "system dependent" for others.  Knowing how many blocks a dir takes
+	//  up is very rarely what we want...
+	if fmeta.Type == fs.Type_File {
+		fmeta.Size = fi.Size()
 	}
 
 	// Munge UID and GID bits.  These are platform dependent.

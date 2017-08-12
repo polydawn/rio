@@ -48,3 +48,52 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 		}
 	})
 }
+
+func CheckPackHashVariesOnVariations(pack rio.PackFunc) {
+	// Compute the alpha fixture hash once up front; we compare to it
+	//  for each other variation fixture.
+	var wareIDAlpha api.WareID
+	testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+		afs := osfs.New(tmpDir)
+		PlaceFixture(afs, FixtureAlpha)
+		wareIDAlpha, _ = pack(
+			context.Background(),
+			tmpDir.String(),
+			api.FilesetFilters{},
+			"",
+			rio.Monitor{},
+		)
+	})
+	Convey("SPEC: Applying the PackFunc to a fileset with different attributes should vary in result hash", func() {
+		for _, fixture := range []struct {
+			Name  string
+			Files []FixtureFile
+		}{
+			{"AlphaDiffContent", FixtureAlphaDiffContent},
+			{"AlphaDiffTime", FixtureAlphaDiffTime},
+			{"AlphaDiffPerm", FixtureAlphaDiffPerm},
+			{"AlphaDiffPerm2", FixtureAlphaDiffPerm2},
+			{"AlphaDiffPerm3", FixtureAlphaDiffPerm3},
+			{"AlphaDiffUidGid", FixtureAlphaDiffUidGid},
+		} {
+			Convey(fmt.Sprintf("- Fixture %q vs %q", "Alpha", fixture.Name), func() {
+				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+					afs := osfs.New(tmpDir)
+					// Set up fixture.
+					PlaceFixture(afs, fixture.Files)
+					// Pack (to /dev/null).
+					wareID, err := pack(
+						context.Background(),
+						tmpDir.String(),
+						api.FilesetFilters{},
+						"",
+						rio.Monitor{},
+					)
+					So(err, ShouldBeNil)
+					// All of these filesystems vary, so they should have different hashes.
+					So(wareID, ShouldNotResemble, wareIDAlpha)
+				})
+			})
+		}
+	})
+}
