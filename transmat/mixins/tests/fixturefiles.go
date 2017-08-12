@@ -79,7 +79,8 @@ var FixtureDepth3 = []FixtureFile{
 var FixtureSymlinks = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
 	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: defaultTime, Size: 3}, []byte("zyx")},
-	{fs.Metadata{Name: fs.MustRelPath("./ln"), Type: fs.Type_Symlink, Perms: 0644, Mtime: defaultTime, Linkname: "./a"}, nil},
+	// Perms on the link are set to 777, not because that works, but because *that's what you get* on a linux system.
+	{fs.Metadata{Name: fs.MustRelPath("./ln"), Type: fs.Type_Symlink, Perms: 0777, Mtime: defaultTime, Linkname: "./a"}, nil},
 }
 
 // deep and varied structures.  files and dirs.
