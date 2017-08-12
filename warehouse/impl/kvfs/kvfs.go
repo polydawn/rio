@@ -67,7 +67,7 @@ func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error
 	checkPath := whCtrl.basePath
 	if !whCtrl.ctntAddr {
 		// In non-CA mode, the check for warehouse existence is a little strange;
-		//  for reading, we coul* declare 404 if the path doesn't exist... but we don't
+		//  for reading, we could declare 404 if the path doesn't exist... but we don't
 		//  know whether this is going to be used for reading or writing yet!
 		//  So we have to look at the path segment above it to see if a write might be valid.
 		checkPath = checkPath.Dir()
