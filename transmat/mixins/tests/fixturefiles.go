@@ -15,37 +15,37 @@ type FixtureFile struct {
 
 var FixtureAlpha = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffContent = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("qwe")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("qwe")},
 }
 
 var FixtureAlphaDiffTime = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: time.Date(1004, 10, 14, 4, 3, 2, 0, time.UTC)}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: time.Date(1004, 10, 14, 4, 3, 2, 0, time.UTC), Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0600}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0600, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm2 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm3 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 07777}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 07777, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffUidGid = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Uid: 444, Gid: 444}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Size: 3, Uid: 444, Gid: 444}, []byte("zyx")},
 }
 
 var FixtureEmpty = []FixtureFile{
@@ -54,28 +54,28 @@ var FixtureEmpty = []FixtureFile{
 
 var FixtureMultifile = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
-	{fs.Metadata{Name: fs.MustRelPath("./b"), Type: fs.Type_File, Perms: 0644}, []byte("qwe")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./b"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("qwe")},
 }
 
 var FixtureDepth1 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
 	{fs.Metadata{Name: fs.MustRelPath("./d"), Type: fs.Type_Dir, Perms: 0750}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./d/c"), Type: fs.Type_File, Perms: 0664}, []byte("asdf")},
+	{fs.Metadata{Name: fs.MustRelPath("./d/c"), Type: fs.Type_File, Perms: 0664, Size: 4}, []byte("asdf")},
 }
 
 var FixtureDepth3 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
 	{fs.Metadata{Name: fs.MustRelPath("./d"), Type: fs.Type_Dir, Perms: 0750}, nil},
 	{fs.Metadata{Name: fs.MustRelPath("./d/d2"), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./d/d2/c"), Type: fs.Type_File, Perms: 0664}, []byte("asdf")},
+	{fs.Metadata{Name: fs.MustRelPath("./d/d2/c"), Type: fs.Type_File, Perms: 0664, Size: 4}, []byte("asdf")},
 }
 
 var FixtureSymlinks = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
 	{fs.Metadata{Name: fs.MustRelPath("./ln"), Type: fs.Type_Symlink, Perms: 0644, Linkname: "./a"}, nil},
 }
 
@@ -86,14 +86,14 @@ var FixtureGamma = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755}, nil},
 	{fs.Metadata{Name: fs.MustRelPath("./etc"), Type: fs.Type_Dir, Perms: 0755}, nil},
 	{fs.Metadata{Name: fs.MustRelPath("./etc/init.d/"), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./etc/init.d/service-p"), Type: fs.Type_File, Perms: 0644}, []byte("p!")},
-	{fs.Metadata{Name: fs.MustRelPath("./etc/init.d/service-q"), Type: fs.Type_File, Perms: 0644}, []byte("q!")},
+	{fs.Metadata{Name: fs.MustRelPath("./etc/init.d/service-p"), Type: fs.Type_File, Perms: 0644, Size: 2}, []byte("p!")},
+	{fs.Metadata{Name: fs.MustRelPath("./etc/init.d/service-q"), Type: fs.Type_File, Perms: 0644, Size: 2}, []byte("q!")},
 	{fs.Metadata{Name: fs.MustRelPath("./etc/init/"), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./etc/init/zed"), Type: fs.Type_File, Perms: 0644}, []byte("grue")},
-	{fs.Metadata{Name: fs.MustRelPath("./etc/trick"), Type: fs.Type_File, Perms: 0644}, []byte("sib")},
-	{fs.Metadata{Name: fs.MustRelPath("./etc/tricky"), Type: fs.Type_File, Perms: 0644}, []byte("sob")},
+	{fs.Metadata{Name: fs.MustRelPath("./etc/init/zed"), Type: fs.Type_File, Perms: 0644, Size: 4}, []byte("grue")},
+	{fs.Metadata{Name: fs.MustRelPath("./etc/trick"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("sib")},
+	{fs.Metadata{Name: fs.MustRelPath("./etc/tricky"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("sob")},
 	{fs.Metadata{Name: fs.MustRelPath("./var"), Type: fs.Type_Dir, Perms: 0755}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./var/fun"), Type: fs.Type_File, Perms: 0644}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./var/fun"), Type: fs.Type_File, Perms: 0644, Size: 3}, []byte("zyx")},
 }
 
 var AllFixtures = []struct {
