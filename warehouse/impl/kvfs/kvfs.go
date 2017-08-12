@@ -72,7 +72,7 @@ func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error
 		//  So we have to look at the path segment above it to see if a write might be valid.
 		checkPath = checkPath.Dir()
 	}
-	stat, err := os.Stat(whCtrl.basePath.Dir().String())
+	stat, err := os.Stat(checkPath.String())
 	switch {
 	case err == nil:
 		return whCtrl, nil
