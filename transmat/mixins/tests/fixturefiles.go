@@ -28,7 +28,7 @@ var FixtureAlphaDiffContent = []FixtureFile{
 
 var FixtureAlphaDiffTime = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: time.Date(1004, 10, 14, 4, 3, 2, 0, time.UTC), Size: 3}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: time.Date(2004, 10, 14, 4, 3, 2, 0, time.UTC), Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm = []FixtureFile{
