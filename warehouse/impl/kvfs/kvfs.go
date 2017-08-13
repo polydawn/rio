@@ -74,14 +74,14 @@ func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error
 	}
 	stat, err := os.Stat(checkPath.String())
 	switch {
-	case err == nil:
-		return whCtrl, nil
 	case os.IsNotExist(err):
 		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s)", err)
-	case !stat.IsDir():
-		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s is not a dir)")
-	default:
+	case err != nil: // normally we'd style this as the default cause, but, we must check it before the IsDir option
 		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable (%s)", err)
+	case !stat.IsDir():
+		return whCtrl, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s is not a dir)", checkPath)
+	default: // only thing left is err == nil
+		return whCtrl, nil
 	}
 }
 
