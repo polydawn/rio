@@ -13,10 +13,10 @@ import (
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/testutil"
-	"go.polydawn.net/rio/transmat/mixins/defaults"
 	"go.polydawn.net/rio/transmat/mixins/tests"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
+	"go.polydawn.net/timeless-api/util"
 )
 
 func TestTarUnpack(t *testing.T) {
@@ -110,7 +110,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(fmeta.Name, ShouldResemble, fs.MustRelPath("."))
 					So(fmeta.Type, ShouldResemble, fs.Type_Dir)
-					So(fmeta.Mtime.UTC(), ShouldResemble, defaults.FilterDefaultMtime)
+					So(fmeta.Mtime.UTC(), ShouldResemble, apiutil.DefaultMtime)
 					So(reader, ShouldBeNil)
 				})
 			})

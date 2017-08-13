@@ -27,7 +27,11 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 					wareID, err := pack(
 						context.Background(),
 						fixturePath.String(),
-						api.FilesetFilters{},
+						api.FilesetFilters{
+							Uid:   "keep",
+							Gid:   "keep",
+							Mtime: "keep",
+						},
 						warehouseAddr,
 						rio.Monitor{},
 					)
@@ -38,7 +42,9 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 						context.Background(),
 						wareID,
 						unpackPath.String(),
-						api.FilesetFilters{},
+						api.FilesetFilters{
+							Sticky: true,
+						},
 						[]api.WarehouseAddr{warehouseAddr},
 						rio.Monitor{},
 					)

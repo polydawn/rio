@@ -38,17 +38,20 @@ var FixtureAlphaDiffPerm = []FixtureFile{
 
 var FixtureAlphaDiffPerm2 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
+	// Perms+=0020  makes a good test that umasks aren't screwing with us.
 	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Mtime: defaultTime, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffPerm3 = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 07777, Mtime: defaultTime, Size: 3}, []byte("zyx")},
+	// Add in all sticky (setuid,setgid,sticky) bits.  These sometimes get stripped in weird places;
+	//  keep 0644 underneath, so if they do, we fail the collision test on pack (in addition to obviously failing the roundtrip test).
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 07644, Mtime: defaultTime, Size: 3}, []byte("zyx")},
 }
 
 var FixtureAlphaDiffUidGid = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Mtime: defaultTime, Size: 3, Uid: 444, Gid: 444}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: defaultTime, Size: 3, Uid: 444, Gid: 444}, []byte("zyx")},
 }
 
 var FixtureEmpty = []FixtureFile{

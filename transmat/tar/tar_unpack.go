@@ -17,11 +17,13 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/lib/treewalk"
+	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/util"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
+	"go.polydawn.net/timeless-api/util"
 )
 
 var (
@@ -32,12 +34,16 @@ func Unpack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	wareID api.WareID, // What wareID to fetch for unpacking.
 	path string, // Where to unpack the fileset (absolute path).
-	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
+	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
+	}
 
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".
@@ -90,7 +96,7 @@ func Unpack(
 	tarReader := tar.NewReader(reader2)
 
 	// Extract.
-	gotWare, err := unpackTar(ctx, path2, filters, tarReader)
+	gotWare, err := unpackTar(ctx, path2, filt2, tarReader)
 	if err != nil {
 		return gotWare, err
 	}
@@ -113,7 +119,7 @@ func Unpack(
 func unpackTar(
 	ctx context.Context,
 	destBasePath fs.AbsolutePath,
-	filters api.FilesetFilters,
+	filt apiutil.FilesetFilters,
 	tr *tar.Reader,
 ) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
@@ -148,7 +154,7 @@ func unpackTar(
 		}
 
 		// Apply filters.
-		ApplyMaterializeFilters(&fmeta, filters)
+		filters.Apply(filt, &fmeta)
 
 		// Infer parents, if necessary.  The tar format allows implicit parent dirs.
 		//
