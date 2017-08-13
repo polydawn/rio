@@ -160,11 +160,11 @@ func (wc *WriteController) Commit(wareID api.WareID) error {
 	if wc.whCtrl.ctntAddr {
 		chunkA, chunkB, _ := util.ChunkifyHash(wareID)
 		finalPath = finalPath.Join(fs.MustRelPath(chunkA))
-		if err := os.Mkdir(finalPath.String(), 0755); err != nil {
+		if err := os.Mkdir(finalPath.String(), 0755); err != nil && !os.IsExist(err) {
 			return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
 		}
 		finalPath = finalPath.Join(fs.MustRelPath(chunkB))
-		if err := os.Mkdir(finalPath.String(), 0755); err != nil {
+		if err := os.Mkdir(finalPath.String(), 0755); err != nil && !os.IsExist(err) {
 			return Errorf(rio.ErrWarehouseUnwritable, "failed to commit to file: %s", err)
 		}
 		finalPath = finalPath.Join(fs.MustRelPath(wareID.Hash))
