@@ -8,7 +8,6 @@ package api
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/polydawn/refmt/obj/atlas"
 )
@@ -89,24 +88,43 @@ type (
 	FilesetFilters define how certain filesystem metadata should be treated
 	when packing or unpacking files.
 
-		For each value:
-		  If set: use that number;
-		    default for pack is to flatten;
-		    default for unpack is to respect packed metadata.
-		  To keep during pack: set the keep bool.
-		If keep is true, the value must be nil or the filter is invalid.
+	They are stored as strings for simplicity of API, but are more like enums:
+
+	UID and GID can be one of:
+
+		- blank -- meaning "default behavior" (differs for pack and unpack;
+		   it's like "1000" for pack and "mine" for unpack).
+		   (When Repeatr drives Rio, it defaults to "keep" for unpack.)
+		- "keep" -- meaning preserve the attributes of the fileset (in packing)
+		   or manifest exactly what the ware specifies (in unpacking).
+		- "mine" -- which means to ignore the ware attributes and use the current
+		   uid/gid instead (this is only valid for unpacking).
+		- an integer -- which means to treat everything as having exactly that
+		   numeric uid/gid.
+
+	Mtime can be one of:
+
+		- blank -- meaning "default behavior" (differs for pack and unpack;
+		   it's like "@25000" for pack and "keep" for unpack).
+		- "keep" -- meaning preserve the attributes of the fileset (in packing)
+		   or manifest exactly what the ware specifies (in unpacking).
+		- "@" + an integer -- which means to set all times to the integer,
+		   interpreted as a unix timestamp.
+		- an RFC3339 date -- which means to set all times to that date
+		   (and note that this will *not* survive serialization as such again;
+		   it will be converted to the "@unix" format).
+
+	Sticky is a simple bool: if true, setuid/setgid/sticky bits will be preserved
+	on unpack.  The sticky bool has no meaning on pack; those bits are always packed.
+	Repeatr always sets the sticky bool to true when using Rio,
+	but it defaults to false when using Rio's command line.
+	(For comparison, your system tar command tends to do the same:
+	sticky bits are not unpacked by default because of the security implications
+	if the user is unwary.)
 */
 type FilesetFilters struct {
-	FlattenUID struct {
-		Keep  bool    `json:"keep,omitempty"`
-		Value *uint32 `json:"value,omitempty"`
-	} `json:"uid"`
-	FlattenGID struct {
-		Keep  bool    `json:"keep,omitempty"`
-		Value *uint32 `json:"value,omitempty"`
-	} `json:"gid"`
-	FlattenMtime struct {
-		Keep  bool       `json:"keep,omitempty"`
-		Value *time.Time `json:"value,omitempty"`
-	} `json:"mtime"`
+	Uid    string `refmt:"uid,omitempty"`
+	Gid    string `refmt:"gid,omitempty"`
+	Mtime  string `refmt:"mtime,omitempty"`
+	Sticky bool   `refmt:"sticky,omitempty"`
 }
