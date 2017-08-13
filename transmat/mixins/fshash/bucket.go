@@ -3,7 +3,7 @@ package fshash
 import (
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/lib/treewalk"
-	"go.polydawn.net/rio/transmat/mixins/defaults"
+	"go.polydawn.net/timeless-api/util"
 )
 
 /*
@@ -73,6 +73,6 @@ func DefaultDirMetadata() fs.Metadata {
 	return fs.Metadata{
 		Type:  fs.Type_Dir,
 		Perms: 0755,
-		Mtime: defaults.FilterDefaultMtime,
+		Mtime: apiutil.DefaultMtime,
 	}
 }

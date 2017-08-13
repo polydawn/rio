@@ -20,12 +20,6 @@ const (
 	FilterMine = -2
 )
 
-var (
-	FilterDefaultUid   int = 1000
-	FilterDefaultGid   int = 1000
-	FilterDefaultMtime     = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
-)
-
 /*
 	Process the serializable API FilesetFilters into a more easily-used format,
 	and return any errors with validating the API strings.
@@ -36,7 +30,7 @@ func ProcessFilters(ff api.FilesetFilters, mode FilterPurpose) (uf FilesetFilter
 	case "":
 		switch mode {
 		case FilterPurposePack:
-			uf.Uid = FilterDefaultUid
+			uf.Uid = DefaultUid
 		case FilterPurposeUnpack:
 			uf.Uid = FilterMine
 		}
@@ -61,7 +55,7 @@ func ProcessFilters(ff api.FilesetFilters, mode FilterPurpose) (uf FilesetFilter
 	case "":
 		switch mode {
 		case FilterPurposePack:
-			uf.Gid = FilterDefaultGid
+			uf.Gid = DefaultGid
 		case FilterPurposeUnpack:
 			uf.Gid = FilterMine
 		}
@@ -86,7 +80,7 @@ func ProcessFilters(ff api.FilesetFilters, mode FilterPurpose) (uf FilesetFilter
 	case ff.Mtime == "":
 		switch mode {
 		case FilterPurposePack:
-			uf.Mtime = &FilterDefaultMtime
+			uf.Mtime = &DefaultMtime
 		case FilterPurposeUnpack:
 			uf.Mtime = nil // 'keep'
 		}
