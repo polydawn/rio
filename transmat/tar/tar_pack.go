@@ -15,11 +15,13 @@ import (
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	. "go.polydawn.net/rio/lib/errcat"
+	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
+	"go.polydawn.net/timeless-api/util"
 )
 
 var (
@@ -29,12 +31,16 @@ var (
 func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	path string, // The fileset to scan and pack (absolute path).
-	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
+	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposePack)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
+	}
 
 	// Connect to warehouse, and get write controller opened.
 	var wc warehouse.BlobstoreWriteController
@@ -81,7 +87,7 @@ func Pack(
 	tarWriter := tar.NewWriter(gzWriter)
 
 	// Scan and tarify!
-	wareID, err := packTar(ctx, path2, filters, tarWriter)
+	wareID, err := packTar(ctx, path2, filt2, tarWriter)
 	if err != nil {
 		return wareID, err
 	}
@@ -97,7 +103,7 @@ func Pack(
 func packTar(
 	ctx context.Context,
 	srcBasePath fs.AbsolutePath,
-	filters api.FilesetFilters,
+	filt apiutil.FilesetFilters,
 	tw *tar.Writer,
 ) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
@@ -126,7 +132,7 @@ func packTar(
 		}
 
 		// Apply filters.
-		ApplyMaterializeFilters(fmeta, filters)
+		filters.Apply(filt, fmeta)
 
 		// Flatten time to seconds.  The tar writer impl doesn't do subsecond precision.
 		//  The writer will always flatten it internally, but we need to do it here as well
