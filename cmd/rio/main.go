@@ -15,59 +15,42 @@ import (
 	"go.polydawn.net/timeless-api/rio"
 )
 
-// pack filters
-// ---
-// UID (mine, *keep, uint32)
-// GID (mine, *keep, uint32)
-// mtime (keep, *<@UNIX>. <RFC3339>)
-// ===
-
-// unpack filters
-// ---
-// UID (*mine, keep, uint32)
-// GID (*mine, keep, uint32)
-// mtime (*keep, <@UNIX>. <RFC3339>)
-// ===
-
 type baseCLI struct {
-	Deadline       *string        // Deadline time (RFC3339 or @UNIX)
-	Timeout        *time.Duration // Timeout duration (exclusive with deadline) eg. "60s"
-	Format         *string        // Output api format, eg. json
-	ProgressRate   *time.Duration // How frequently to emit progress notification
-	ProgressEnable *bool          // Emit progress notification yes/no
-	Test           *string        // Testmode
+	Deadline       string        // Deadline time (RFC3339 or @UNIX)
+	Format         string        // Output api format, eg. json
+	ProgressEnable bool          // Emit progress notification yes/no
+	ProgressRate   time.Duration // How frequently to emit progress notification
+	Test           string        // Testmode
+	Timeout        time.Duration // Timeout duration (exclusive with deadline) eg. "60s"
 	PackCLI        struct {
-		TargetWarehouseAddr *string            // Warehouse address to push to
 		Filters             api.FilesetFilters // TODO: file filters for pack/unpack
-		Path                *string            // Pack target path
-		UID                 *string            // UID (mine, *keep, uint32)
-		GID                 *string            // GID (mine, *keep, uint32)
-		Mtime               *string            // mtime (keep, *<@UNIX>. <RFC3339>)
+		Path                string             // Pack target path
+		TargetWarehouseAddr string             // Warehouse address to push to
 	}
 	UnpackCLI struct {
-		WareID               *string   // Ware id string "<kind>:<hash>"
-		SourcesWarehouseAddr *[]string // Warehouse address to push to
-		Path                 *string   // Unpack target path
 		Filters              api.FilesetFilters
+		Path                 string   // Unpack target path
+		SourcesWarehouseAddr []string // Warehouse address to push to
+		WareID               string   // Ware id string "<kind>:<hash>"
 	}
 	MirrorCLI struct {
-		WareID               *string   // Ware id string "<kind>:<hash>"
-		TargetWarehouseAddr  *string   // Warehouse address to push to
-		SourcesWarehouseAddr *[]string // Warehouse addresses to fetch from
+		SourcesWarehouseAddr []string // Warehouse addresses to fetch from
+		TargetWarehouseAddr  string   // Warehouse address to push to
+		WareID               string   // Ware id string "<kind>:<hash>"
 	}
 }
 
 func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 	// Non-filter flags
 	appPack.Flag("path", "Target path").
-		StringVar(cli.PackCLI.Path)
+		StringVar(&cli.PackCLI.Path)
 	appPack.Flag("target", "Warehouse in which to place the ware").
-		StringVar(cli.PackCLI.TargetWarehouseAddr)
+		StringVar(&cli.PackCLI.TargetWarehouseAddr)
 
 	// Filter flags
-	appPack.Flag("uid", "Set UID filter [keep, mine, <int>]").
+	appPack.Flag("uid", "Set UID filter [keep, <int>]").
 		StringVar(&cli.PackCLI.Filters.Uid)
-	appPack.Flag("gid", "Set GID filter [keep, mine, <int>]").
+	appPack.Flag("gid", "Set GID filter [keep, <int>]").
 		StringVar(&cli.PackCLI.Filters.Gid)
 	appPack.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
 		StringVar(&cli.PackCLI.Filters.Mtime)
@@ -77,11 +60,11 @@ func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 	// Non-filter flags
 	appUnpack.Flag("path", "Target path").
-		StringVar(cli.UnpackCLI.Path)
+		StringVar(&cli.UnpackCLI.Path)
 	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
-		StringsVar(cli.UnpackCLI.SourcesWarehouseAddr)
+		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
 	appUnpack.Flag("ware", "Ware ID").
-		StringVar(cli.UnpackCLI.WareID)
+		StringVar(&cli.UnpackCLI.WareID)
 
 	// Filter flags
 	appUnpack.Flag("uid", "Set UID filter [keep, mine, <int>]").
@@ -99,11 +82,11 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 
 func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
 	appMirror.Flag("ware", "Ware ID").
-		StringVar(cli.MirrorCLI.WareID)
+		StringVar(&cli.MirrorCLI.WareID)
 	appMirror.Flag("target", "Warehouse in which to place the ware").
-		StringVar(cli.MirrorCLI.TargetWarehouseAddr)
+		StringVar(&cli.MirrorCLI.TargetWarehouseAddr)
 	appMirror.Flag("source", "Warehouses from which to fetch the ware").
-		StringsVar(cli.MirrorCLI.SourcesWarehouseAddr)
+		StringsVar(&cli.MirrorCLI.SourcesWarehouseAddr)
 }
 
 /*
@@ -134,12 +117,12 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	app.UsageWriter(stderr)
 	app.ErrorWriter(stderr)
 
-	app.Flag("deadline", "Deadline (RFC3339)").StringVar(cli.Deadline)
-	app.Flag("timeout", "Timeout for command").DurationVar(cli.Timeout)
-	app.Flag("format", "Output api format").EnumVar(cli.Format, "json") // TODO: Have output formats
-	app.Flag("progress-rate", "How frequently to emit progress notification").DurationVar(cli.ProgressRate)
-	app.Flag("progress", "Emit progress notification").BoolVar(cli.ProgressEnable)
-	app.Flag("test", "Testmodes").StringVar(cli.Test)
+	app.Flag("deadline", "Deadline (RFC3339)").StringVar(&cli.Deadline)
+	app.Flag("timeout", "Timeout for command").DurationVar(&cli.Timeout)
+	app.Flag("format", "Output api format").EnumVar(&cli.Format, "json") // TODO: Have output formats
+	app.Flag("progress-rate", "How frequently to emit progress notification").DurationVar(&cli.ProgressRate)
+	app.Flag("progress", "Emit progress notification").BoolVar(&cli.ProgressEnable)
+	app.Flag("test", "Testmodes").StringVar(&cli.Test)
 
 	appPack := app.Command("pack", "pack a fileset into a ware")
 	configurePack(&cli, appPack)
@@ -150,8 +133,16 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	appMirror := app.Command("mirror", "mirror a ware to another warehouse")
 	configureUnpack(&cli, appMirror)
 
+	var termErr error
+	app.Terminate(func(status int) {
+		termErr = fmt.Errorf("parsing error: %d\n", status)
+	})
 	cmd, err := app.Parse(args[1:])
 	if err != nil {
+		return rio.ExitUsage
+	}
+	if termErr != nil {
+		fmt.Fprintln(stderr, termErr)
 		return rio.ExitUsage
 	}
 	var wareID api.WareID
@@ -169,14 +160,14 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 		fmt.Fprintln(stderr, err)
 		return rio.ExitTODO
 	} else {
-		fmt.Println(wareID)
+		fmt.Fprintln(stdout, wareID)
 	}
 	return exitCode
 }
 
-func convertWarehouseSlice(slice *[]string) []api.WarehouseAddr {
-	result := make([]api.WarehouseAddr, len(*slice))
-	for idx, item := range *slice {
+func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
+	result := make([]api.WarehouseAddr, len(slice))
+	for idx, item := range slice {
 		result[idx] = api.WarehouseAddr(item)
 	}
 	return result
@@ -184,18 +175,18 @@ func convertWarehouseSlice(slice *[]string) []api.WarehouseAddr {
 
 func executeUnpack(ctx context.Context, cli baseCLI, unpackFn rio.UnpackFunc) (api.WareID, error) {
 	monitor := rio.Monitor{}
-	wareID, err := api.ParseWareID(*cli.UnpackCLI.WareID)
+	wareID, err := api.ParseWareID(cli.UnpackCLI.WareID)
 	if err != nil {
 		return api.WareID{}, err
 	}
-	path := *cli.UnpackCLI.Path
+	path := cli.UnpackCLI.Path
 	warehouses := convertWarehouseSlice(cli.UnpackCLI.SourcesWarehouseAddr)
 	return unpackFn(ctx, wareID, path, cli.UnpackCLI.Filters, warehouses, monitor)
 }
 
 func executePack(ctx context.Context, cli baseCLI, packFn rio.PackFunc) (api.WareID, error) {
 	monitor := rio.Monitor{}
-	warehouse := api.WarehouseAddr(*cli.PackCLI.TargetWarehouseAddr)
+	warehouse := api.WarehouseAddr(cli.PackCLI.TargetWarehouseAddr)
 
-	return packFn(ctx, *cli.PackCLI.Path, cli.PackCLI.Filters, warehouse, monitor)
+	return packFn(ctx, cli.PackCLI.Path, cli.PackCLI.Filters, warehouse, monitor)
 }
