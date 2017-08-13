@@ -8,11 +8,21 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/polydawn/refmt"
+	"github.com/polydawn/refmt/json"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	tar "go.polydawn.net/rio/transmat/tar"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
+)
+
+/*
+	Output serialization formats
+*/
+const (
+	FmtJson = "json"
+	FmtDumb = "dumb"
 )
 
 type baseCLI struct {
@@ -117,12 +127,19 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	app.UsageWriter(stderr)
 	app.ErrorWriter(stderr)
 
-	app.Flag("deadline", "Deadline (RFC3339)").StringVar(&cli.Deadline)
-	app.Flag("timeout", "Timeout for command").DurationVar(&cli.Timeout)
-	app.Flag("format", "Output api format").EnumVar(&cli.Format, "json") // TODO: Have output formats
-	app.Flag("progress-rate", "How frequently to emit progress notification").DurationVar(&cli.ProgressRate)
-	app.Flag("progress", "Emit progress notification").BoolVar(&cli.ProgressEnable)
-	app.Flag("test", "Testmodes").StringVar(&cli.Test)
+	app.Flag("deadline", "Deadline (RFC3339)").
+		StringVar(&cli.Deadline)
+	app.Flag("timeout", "Timeout for command").
+		DurationVar(&cli.Timeout)
+	app.Flag("format", "Output api format").
+		Default(FmtDumb).
+		EnumVar(&cli.Format, FmtJson, FmtDumb)
+	app.Flag("progress-rate", "How frequently to emit progress notification").
+		DurationVar(&cli.ProgressRate)
+	app.Flag("progress", "Emit progress notification").
+		BoolVar(&cli.ProgressEnable)
+	app.Flag("test", "Testmodes").
+		StringVar(&cli.Test)
 
 	appPack := app.Command("pack", "pack a fileset into a ware")
 	configurePack(&cli, appPack)
@@ -150,19 +167,36 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	switch cmd {
 	case appPack.FullCommand():
 		wareID, err = executePack(ctx, cli, rio.PackFunc(tar.Pack))
+		SerializeResult(cli.Format, wareID, err, stdout, stderr)
 	case appUnpack.FullCommand():
 		wareID, err = executeUnpack(ctx, cli, rio.UnpackFunc(tar.Unpack))
+		SerializeResult(cli.Format, wareID, err, stdout, stderr)
 	case appMirror.FullCommand():
 		fmt.Fprintln(stderr, "not implemented")
 		return rio.ExitNotImplemented
 	}
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return rio.ExitTODO
-	} else {
-		fmt.Fprintln(stdout, wareID)
-	}
+
 	return exitCode
+}
+
+func SerializeResult(format string, wareID api.WareID, resultErr error, stdout io.Writer, stderr io.Writer) {
+	ev := rio.Event{Result: &rio.Event_Result{WareID: wareID, Error: resultErr}}
+	switch format {
+	case FmtJson:
+		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, stdout, rio.Atlas)
+		err := marshaller.Marshal(&ev)
+		if err != nil {
+			panic(err)
+		}
+	case FmtDumb:
+		if resultErr != nil {
+			fmt.Fprintln(stderr, resultErr)
+		} else {
+			fmt.Fprintln(stdout, wareID)
+		}
+	default:
+		panic(fmt.Errorf("rio: invalid format %s", format))
+	}
 }
 
 func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
