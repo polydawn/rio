@@ -48,7 +48,7 @@ var FixtureAlphaDiffPerm3 = []FixtureFile{
 
 var FixtureAlphaDiffUidGid = []FixtureFile{
 	{fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Perms: 0755, Mtime: defaultTime}, nil},
-	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0664, Mtime: defaultTime, Size: 3, Uid: 444, Gid: 444}, []byte("zyx")},
+	{fs.Metadata{Name: fs.MustRelPath("./a"), Type: fs.Type_File, Perms: 0644, Mtime: defaultTime, Size: 3, Uid: 444, Gid: 444}, []byte("zyx")},
 }
 
 var FixtureEmpty = []FixtureFile{
