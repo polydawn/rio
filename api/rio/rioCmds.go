@@ -42,9 +42,44 @@ type MirrorFunc func(
 	monitor Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error)
 
-type Monitor struct {
+/*
+	Monitoring configuration structs, and message types used.
+*/
+type (
+	// REVIEW ... it's rather generalizing to use the same monitor and event union
+	//  for all these different functions, isn't it?
+
 	/*
-		Callback for notifications about progress updates.
+		Configuration for what intermediate progress reports a process should send,
+		and slot for the channel the caller wishes them to be sent to.
+	*/
+	Monitor struct {
+		// FUTURE: may add options for how many things we'd like to be sent to us
+
+		// Channel to which events will be sent as the process proceeds.
+		// The channel will be closed when the process is done or cancelled.
+		// A nil channel will disable all intermediate progress reporting.
+		Chan chan<- Event
+	}
+
+	/*
+		A "union" type of all the kinds of event that may be generated in the
+		course of any of the functions.
+
+		The "Result" message is never sent to Monitor.Chan --
+		its values are converted into the function returns --
+		but *is* seen in the serial form on the wire.
+
+		(This type may be replaced by an interface in the future when the refmt
+		library's union message support becomes available.)
+	*/
+	Event struct {
+		Progress *Event_Progress `refmt:"prog,omitempty"`
+		Result   *Event_Result   `refmt:"result,omitempty"`
+	}
+
+	/*
+		Notifications about progress updates.
 
 		Imagine it being used to draw the following:
 
@@ -59,8 +94,16 @@ type Monitor struct {
 		'desc' is used to communicate a more specific contextual info
 		than the 'total*' ints and like the ints may likely change on each call.
 	*/
-	NotifyFn func(phase, desc string, totalProg, totalWork int)
-}
+	Event_Progress struct {
+		Phase, Desc          string
+		TotalProg, TotalWork int
+	}
+
+	Event_Result struct {
+		WareID api.WareID
+		Error  error // FIXME resolution needed on how we want to serialize these... mainly because... do we really want to import errcat in our api packages?  not so much.
+	}
+)
 
 type ErrorCategory string
 
