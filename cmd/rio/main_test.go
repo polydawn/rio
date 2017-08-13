@@ -17,12 +17,23 @@ import (
 	"go.polydawn.net/timeless-api/rio"
 )
 
+func stdBuffers() (stdin, stdout, stderr *bytes.Buffer) {
+	return &bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}
+}
+
+type unpackTest struct {
+	Name           string
+	Args           []string
+	ExpectedExit   rio.ExitCode
+	ExpectedStdout string
+	ExpectedStderr string
+}
+
 func TestWithoutArgs(t *testing.T) {
 	Convey("rio: usage printed to stderr", t, func() {
 		args := []string{"rio"}
-		stdout := &bytes.Buffer{}
-		stderr := &bytes.Buffer{}
-		stdin := &bytes.Buffer{}
+		stdin, stdout, stderr := stdBuffers()
+
 		ctx := context.Background()
 		exitCode := Main(ctx, args, stdin, stdout, stderr)
 		t.Log(string(stdout.Bytes()))
@@ -50,48 +61,66 @@ func TestTarFixtureUnpack(t *testing.T) {
 					ctx := context.Background()
 					wareID := "tar:5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"
 					source := "file://../../transmat/tar/fixtures/tar_withBase.tgz"
-					args := []string{
-						"rio",
-						"unpack",
-						fmt.Sprintf("--ware=%s", wareID),
-						fmt.Sprintf("--source=%s", source),
-						fmt.Sprintf("--path=%s", tmpDir.String()),
+					for _, fixture := range []unpackTest{
+						{"UnpackBasic", []string{
+							"rio",
+							"unpack",
+							fmt.Sprintf("--ware=%s", wareID),
+							fmt.Sprintf("--source=%s", source),
+							fmt.Sprintf("--path=%s", tmpDir.String()),
+						}, rio.ExitSuccess, wareID + "\n", ""},
+						{"UnpackJsonFormat", []string{
+							"rio",
+							"unpack",
+							fmt.Sprintf("--ware=%s", wareID),
+							fmt.Sprintf("--source=%s", source),
+							fmt.Sprintf("--path=%s", tmpDir.String()),
+							fmt.Sprintf("--format=%s", FmtJson),
+						}, rio.ExitSuccess, fmt.Sprintf(`{"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
+					} {
+						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
+							stdin, stdout, stderr := stdBuffers()
+							exitCode := Main(ctx, fixture.Args, stdin, stdout, stderr)
+							So(string(stdout.Bytes()), ShouldEqual, fixture.ExpectedStdout)
+							So(string(stderr.Bytes()), ShouldEqual, fixture.ExpectedStderr)
+							So(exitCode, ShouldEqual, fixture.ExpectedExit)
+							if fixture.ExpectedExit != rio.ExitSuccess {
+								Convey("The filesystem should not have things", func() {
+									afs := osfs.New(tmpDir)
+									_, err := afs.LStat(fs.MustRelPath("."))
+									So(err, ShouldNotBeNil)
+								})
+							} else {
+								Convey("The filesystem contains the correct unpacked fixture", func() {
+									var err error
+									fmeta, reader, err := fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("ab"))
+									So(err, ShouldBeNil)
+									So(fmeta.Name, ShouldResemble, fs.MustRelPath("ab"))
+									So(fmeta.Type, ShouldResemble, fs.Type_File)
+									So(fmeta.Uid, ShouldEqual, 7000)
+									So(fmeta.Gid, ShouldEqual, 7000)
+									So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
+									body, err := ioutil.ReadAll(reader)
+									So(string(body), ShouldResemble, "")
+
+									fmeta, reader, err = fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("bc"))
+									So(err, ShouldBeNil)
+									So(fmeta.Name, ShouldResemble, fs.MustRelPath("bc"))
+									So(fmeta.Type, ShouldResemble, fs.Type_Dir)
+									So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
+									So(reader, ShouldBeNil)
+
+									fmeta, reader, err = fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("."))
+									So(err, ShouldBeNil)
+									So(fmeta.Name, ShouldResemble, fs.MustRelPath("."))
+									So(fmeta.Type, ShouldResemble, fs.Type_Dir)
+									So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
+									So(reader, ShouldBeNil)
+								})
+							}
+						})
 					}
-					stdout := &bytes.Buffer{}
-					stderr := &bytes.Buffer{}
-					stdin := &bytes.Buffer{}
-					exitCode := Main(ctx, args, stdin, stdout, stderr)
-					t.Log(string(stdout.Bytes()))
-					t.Log(string(stderr.Bytes()))
-					So(exitCode, ShouldEqual, rio.ExitSuccess)
-					So(string(stdout.Bytes()), ShouldEqual, wareID+"\n")
 
-					Convey("The filesystem contains the correct unpacked fixture", func() {
-						var err error
-						fmeta, reader, err := fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("ab"))
-						So(err, ShouldBeNil)
-						So(fmeta.Name, ShouldResemble, fs.MustRelPath("ab"))
-						So(fmeta.Type, ShouldResemble, fs.Type_File)
-						So(fmeta.Uid, ShouldEqual, 7000)
-						So(fmeta.Gid, ShouldEqual, 7000)
-						So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
-						body, err := ioutil.ReadAll(reader)
-						So(string(body), ShouldResemble, "")
-
-						fmeta, reader, err = fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("bc"))
-						So(err, ShouldBeNil)
-						So(fmeta.Name, ShouldResemble, fs.MustRelPath("bc"))
-						So(fmeta.Type, ShouldResemble, fs.Type_Dir)
-						So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
-						So(reader, ShouldBeNil)
-
-						fmeta, reader, err = fsOp.ScanFile(osfs.New(tmpDir), fs.MustRelPath("."))
-						So(err, ShouldBeNil)
-						So(fmeta.Name, ShouldResemble, fs.MustRelPath("."))
-						So(fmeta.Type, ShouldResemble, fs.Type_Dir)
-						So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC))
-						So(reader, ShouldBeNil)
-					})
 				})
 			})
 		}),
