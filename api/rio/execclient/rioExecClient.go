@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"time"
 
+	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )
@@ -34,10 +35,10 @@ func UnpackFunc(
 	cmd := exec.Command("rio", args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		panic(err) // FIXME needs rpc-breakdown error category
+		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: failed to start: %s", err)
 	}
 	if err = cmd.Start(); err != nil {
-		panic(err) // FIXME needs rpc-breakdown error category
+		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: failed to start: %s", err)
 	}
 
 	// Set up reaction to ctx.done: send a sig to the child proc.
@@ -62,7 +63,7 @@ func UnpackFunc(
 	//  We don't actually have much use for the exit code,
 	//  because we already got the serialized form of error.
 	if err := cmd.Wait(); err != nil {
-		panic(err) // FIXME needs rpc-breakdown error category
+		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s", err)
 	}
 	return api.WareID{}, nil
 }
