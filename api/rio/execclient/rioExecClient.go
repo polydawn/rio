@@ -6,6 +6,9 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/polydawn/refmt"
+	"github.com/polydawn/refmt/json"
+
 	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
@@ -24,7 +27,11 @@ func UnpackFunc(
 	filters api.FilesetFilters,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
-) (api.WareID, error) {
+) (gotWareID api.WareID, err error) {
+	if monitor.Chan != nil {
+		defer close(monitor.Chan)
+	}
+
 	// Marshal args.
 	args, err := UnpackArgs(wareID, path, filters, warehouses, monitor)
 	if err != nil {
@@ -54,9 +61,28 @@ func UnpackFunc(
 	// Consume stdout, converting it to Monitor.Chan sends.
 	//  (We're relying on the child proc getting signal'd to close the stdout pipe
 	//  and in turn release us here in case of ctx.done.)
+	unmarshaller := refmt.NewUnmarshallerAtlased(json.DecodeOptions{}, stdout, rio.Atlas)
+	var msgSlot rio.Event
 	for {
-		_ = stdout
-		// TODO
+		// Peel off a message.
+		if err := unmarshaller.Unmarshal(&msgSlot); err != nil {
+			return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: API parse error: %s", err)
+		}
+		// If it's the final "result" message, prepare to return.
+		if msgSlot.Result != nil {
+			gotWareID = msgSlot.Result.WareID
+			err = msgSlot.Result.Error
+			break
+		}
+		// For all other messages: forward to the monitor channel (if it exists!)
+		if monitor.Chan != nil {
+			select {
+			case <-ctx.Done():
+				break
+			case monitor.Chan <- msgSlot:
+				// continue
+			}
+		}
 	}
 
 	// Wait for process complete.
@@ -65,7 +91,7 @@ func UnpackFunc(
 	if err := cmd.Wait(); err != nil {
 		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s", err)
 	}
-	return api.WareID{}, nil
+	return
 }
 
 func PackFunc(
