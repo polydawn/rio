@@ -53,8 +53,10 @@ type baseCLI struct {
 func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 	// Non-filter flags
 	appPack.Flag("path", "Target path").
+		Required().
 		StringVar(&cli.PackCLI.Path)
 	appPack.Flag("target", "Warehouse in which to place the ware").
+		Required().
 		StringVar(&cli.PackCLI.TargetWarehouseAddr)
 
 	// Filter flags
@@ -70,10 +72,13 @@ func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 	// Non-filter flags
 	appUnpack.Flag("path", "Target path").
+		Required().
 		StringVar(&cli.UnpackCLI.Path)
 	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
+		Required().
 		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
 	appUnpack.Flag("ware", "Ware ID").
+		Required().
 		StringVar(&cli.UnpackCLI.WareID)
 
 	// Filter flags
@@ -92,10 +97,13 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 
 func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
 	appMirror.Flag("ware", "Ware ID").
+		Required().
 		StringVar(&cli.MirrorCLI.WareID)
 	appMirror.Flag("target", "Warehouse in which to place the ware").
+		Required().
 		StringVar(&cli.MirrorCLI.TargetWarehouseAddr)
 	appMirror.Flag("source", "Warehouses from which to fetch the ware").
+		Required().
 		StringsVar(&cli.MirrorCLI.SourcesWarehouseAddr)
 }
 
@@ -152,9 +160,11 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	appMirror := app.Command("mirror", "mirror a ware to another warehouse")
 	configureUnpack(&cli, appMirror)
 
-	cmd, err := Parse(app, args)
+	cmd, err, terminated := Parse(app, args)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
+		return rio.ExitUsage
+	} else if terminated {
 		return rio.ExitUsage
 	}
 	var wareID api.WareID
@@ -178,18 +188,16 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	Kingpin really expects terminate to terminate.
 	So we make it panic and handle it. Passing errors back up.
 */
-func Parse(app *kingpin.Application, args []string) (cmd string, err error) {
+func Parse(app *kingpin.Application, args []string) (cmd string, err error, terminated bool) {
 	defer func() {
-		r := recover()
-		if e, ok := r.(error); ok {
-			err = e
-		}
+		recover()
 	}()
 	app.Terminate(func(status int) {
-		termErr := fmt.Errorf("rio: parse error %d\n", status)
-		panic(termErr)
+		terminated = true
+		panic("")
 	})
-	return app.Parse(args[1:])
+	cmd, err = app.Parse(args[1:])
+	return
 }
 
 func SerializeResult(format string, wareID api.WareID, resultErr error, stdout io.Writer, stderr io.Writer) {
