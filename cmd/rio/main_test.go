@@ -48,6 +48,22 @@ func TestWithoutArgs(t *testing.T) {
 	})
 }
 
+func TestUnpackBogusFlag(t *testing.T) {
+	Convey("rio: usage printed to stderr", t, func() {
+		args := []string{"rio", "unpack", "--bogus"}
+		stdin, stdout, stderr := stdBuffers()
+
+		ctx := context.Background()
+		exitCode := Main(ctx, args, stdin, stdout, stderr)
+		t.Log(string(stdout.Bytes()))
+		t.Log(string(stderr.Bytes()))
+		So(string(stdout.Bytes()), ShouldBeBlank)
+		So(string(stderr.Bytes()), ShouldNotBeBlank)
+		So(string(stderr.Bytes()), ShouldEqual, "unknown long flag '--bogus'\n")
+		So(exitCode, ShouldEqual, rio.ExitUsage)
+	})
+}
+
 /*
 	Tests against pre-generated, known fixtures of tar binary blobs.
 
