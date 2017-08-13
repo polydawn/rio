@@ -9,7 +9,7 @@ import (
 
 func WithTmpdir(fn func(tmpDir fs.AbsolutePath)) {
 	tmpBase := "/tmp/rio-test/"
-	err := os.MkdirAll(tmpBase, os.FileMode(0755)|os.ModeSticky)
+	err := os.MkdirAll(tmpBase, os.FileMode(0777)|os.ModeSticky)
 	if err != nil {
 		panic(err)
 	}
