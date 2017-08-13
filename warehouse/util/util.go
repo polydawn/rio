@@ -12,5 +12,5 @@ import (
 	cozy density for storing many many thousands of objects:
 */
 func ChunkifyHash(wareID api.WareID) (string, string, string) {
-	return wareID.Hash[0:3], wareID.Hash[4:6], wareID.Hash[7:]
+	return wareID.Hash[0:3], wareID.Hash[3:6], wareID.Hash[6:]
 }
