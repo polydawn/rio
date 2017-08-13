@@ -119,5 +119,6 @@ const (
 	ExitHashMismatch, ErrWareHashMismatch             = ExitCode(7), ErrorCategory("rio-hash-mismatch")         // Returned when fetching and unpacking a ware gets results in a different content hash than we requested.  (This is distinct from ErrWareCorrupt because a full fileset *was* able to be unpacked; it's just not the one we asked for.)
 	ExitCancelled, ErrCancelled                       = ExitCode(8), ErrorCategory("rio-cancelled")             // The operation timed out or was cancelled
 	ExitNotImplemented, ErrNotImplemented             = ExitCode(9), ErrorCategory("rio-not-implemented")       // The operation is not implemented, PRs welcome
+	ExitRPCBreakdown, ErrRPCBreakdown                 = ExitCode(120), ErrorCategory("rio-rpc-breakdown")       // Raised when running a remote rio process and the control channel is lost, the process fails to start, or unrecognized messages are received.
 	ExitTODO                                          = ExitCode(254)                                           // This exit code should be replaced with something more specific
 )
