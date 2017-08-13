@@ -106,13 +106,18 @@ type (
 )
 
 type ErrorCategory string
+type ExitCode int
 
 const (
-	ErrUsage                ErrorCategory = "rio-usage-error"           // Indicates some piece of user input to a command was invalid and unrunnable.
-	ErrWarehouseUnavailable ErrorCategory = "rio-warehouse-unavailable" // Warehouse 404.
-	ErrWarehouseUnwritable  ErrorCategory = "rio-warehouse-unwritable"  // Indicates a warehouse failed to accept a write operation.  The Warehouse is having a bad day.  ("unauthorized" is a different error category.)
-	ErrWareNotFound         ErrorCategory = "rio-ware-not-found"        // Ware 404 -- warehouse appeared online, but the requested ware isn't in it.
-	ErrWareCorrupt          ErrorCategory = "rio-ware-corrupt"          // Incidates a ware retreival started, but during unpacking it was found to be malformed.
-	ErrWareHashMismatch     ErrorCategory = "rio-hash-mismatch"         // Returned when fetching and unpacking a ware gets results in a different content hash than we requested.  (This is distinct from ErrWareCorrupt because a full fileset *was* able to be unpacked; it's just not the one we asked for.)
-	ErrCancelled            ErrorCategory = "rio-cancelled"
+	ExitSuccess                                       = ExitCode(0)
+	ExitUsage, ErrUsage                               = ExitCode(1), ErrorCategory("rio-usage-error")           // Indicates some piece of user input to a command was invalid and unrunnable.
+	ExitPanic                                         = ExitCode(2)                                             // Placeholder.  We don't use this.  '2' happens when golang exits due to panic.
+	ExitWarehouseUnavailable, ErrWarehouseUnavailable = ExitCode(3), ErrorCategory("rio-warehouse-unavailable") // Warehouse 404.
+	ExitWarehouseUnwritable, ErrWarehouseUnwritable   = ExitCode(4), ErrorCategory("rio-warehouse-unwritable")  // Indicates a warehouse failed to accept a write operation.  The Warehouse is having a bad day.  ("unauthorized" is a different error category.)
+	ExitWareNotFound, ErrWareNotFound                 = ExitCode(5), ErrorCategory("rio-ware-not-found")        // Ware 404 -- warehouse appeared online, but the requested ware isn't in it.
+	ExitWareCorrupt, ErrWareCorrupt                   = ExitCode(6), ErrorCategory("rio-ware-corrupt")          // Incidates a ware retreival started, but during unpacking it was found to be malformed.
+	ExitHashMismatch, ErrWareHashMismatch             = ExitCode(7), ErrorCategory("rio-hash-mismatch")         // Returned when fetching and unpacking a ware gets results in a different content hash than we requested.  (This is distinct from ErrWareCorrupt because a full fileset *was* able to be unpacked; it's just not the one we asked for.)
+	ExitCancelled, ErrCancelled                       = ExitCode(8), ErrorCategory("rio-cancelled")             // The operation timed out or was cancelled
+	ExitNotImplemented, ErrNotImplemented             = ExitCode(9), ErrorCategory("rio-not-implemented")       // The operation is not implemented, PRs welcome
+	ExitTODO                                          = ExitCode(254)                                           // This exit code should be replaced with something more specific
 )
