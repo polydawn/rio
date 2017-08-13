@@ -25,7 +25,9 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 					wareID1, err := pack(
 						context.Background(),
 						tmpDir.String(),
-						api.FilesetFilters{},
+						api.FilesetFilters{
+							Mtime: "keep",
+						},
 						"",
 						rio.Monitor{},
 					)
@@ -34,7 +36,9 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 					wareID2, err := pack(
 						context.Background(),
 						tmpDir.String(),
-						api.FilesetFilters{},
+						api.FilesetFilters{
+							Mtime: "keep",
+						},
 						"",
 						rio.Monitor{},
 					)
