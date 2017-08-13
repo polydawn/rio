@@ -1,8 +1,4 @@
-/*
-	"Hal, prena meme!"
-	"I'm sorry Dave, I can't do that"
-*/
-package halprenameme
+package apiutil
 
 import (
 	"fmt"
@@ -12,42 +8,46 @@ import (
 	"go.polydawn.net/timeless-api"
 )
 
-type UnfuckMode bool
+type FilterPurpose bool
 
 const (
-	PackMode   UnfuckMode = false
-	UnpackMode UnfuckMode = true
+	FilterPurposePack   FilterPurpose = false
+	FilterPurposeUnpack FilterPurpose = true
 )
 
 const (
-	Keep = -1
-	Mine = -2
+	FilterKeep = -1
+	FilterMine = -2
 )
 
 var (
-	DefaultUid   int = 1000
-	DefaultGid   int = 1000
-	DefaultMtime     = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
+	FilterDefaultUid   int = 1000
+	FilterDefaultGid   int = 1000
+	FilterDefaultMtime     = time.Date(2010, time.January, 1, 0, 0, 0, 0, time.UTC)
 )
 
-func UnfuckFilters(ff api.FilesetFilters, mode UnfuckMode) (uf UsableFilters, err error) {
+/*
+	Process the serializable API FilesetFilters into a more easily-used format,
+	and return any errors with validating the API strings.
+*/
+func ProcessFilters(ff api.FilesetFilters, mode FilterPurpose) (uf FilesetFilters, err error) {
 	// Parse UID.
 	switch ff.Uid {
 	case "":
 		switch mode {
-		case PackMode:
-			uf.Uid = DefaultUid
-		case UnpackMode:
-			uf.Uid = Mine
+		case FilterPurposePack:
+			uf.Uid = FilterDefaultUid
+		case FilterPurposeUnpack:
+			uf.Uid = FilterMine
 		}
 	case "keep":
-		uf.Uid = Keep
+		uf.Uid = FilterKeep
 	case "mine":
 		switch mode {
-		case PackMode:
+		case FilterPurposePack:
 			return uf, fmt.Errorf("filter UID cannot use 'mine' mode: only makes sense when unpacking")
-		case UnpackMode:
-			uf.Uid = Mine
+		case FilterPurposeUnpack:
+			uf.Uid = FilterMine
 		}
 	default:
 		uf.Uid, err = strconv.Atoi(ff.Uid)
@@ -60,19 +60,19 @@ func UnfuckFilters(ff api.FilesetFilters, mode UnfuckMode) (uf UsableFilters, er
 	switch ff.Gid {
 	case "":
 		switch mode {
-		case PackMode:
-			uf.Gid = DefaultGid
-		case UnpackMode:
-			uf.Gid = Mine
+		case FilterPurposePack:
+			uf.Gid = FilterDefaultGid
+		case FilterPurposeUnpack:
+			uf.Gid = FilterMine
 		}
 	case "keep":
-		uf.Gid = Keep
+		uf.Gid = FilterKeep
 	case "mine":
 		switch mode {
-		case PackMode:
+		case FilterPurposePack:
 			return uf, fmt.Errorf("filter GID cannot use 'mine' mode: only makes sense when unpacking")
-		case UnpackMode:
-			uf.Gid = Mine
+		case FilterPurposeUnpack:
+			uf.Gid = FilterMine
 		}
 	default:
 		uf.Gid, err = strconv.Atoi(ff.Gid)
@@ -85,9 +85,9 @@ func UnfuckFilters(ff api.FilesetFilters, mode UnfuckMode) (uf UsableFilters, er
 	switch {
 	case ff.Mtime == "":
 		switch mode {
-		case PackMode:
-			uf.Mtime = &DefaultMtime
-		case UnpackMode:
+		case FilterPurposePack:
+			uf.Mtime = &FilterDefaultMtime
+		case FilterPurposeUnpack:
 			uf.Mtime = nil // 'keep'
 		}
 	case ff.Mtime == "keep":
@@ -111,7 +111,15 @@ func UnfuckFilters(ff api.FilesetFilters, mode UnfuckMode) (uf UsableFilters, er
 	return
 }
 
-type UsableFilters struct {
+/*
+	This is analogous to the serializable API FilesetFilters struct,
+	but uses fields of more useful types instead of worrying about being serializable.
+
+	Instances are produced by the `ProcessFilters()` function,
+	which rejects any values that are out of range -- so
+	code is free to presume fields only exist within their valid ranges when using this type.
+*/
+type FilesetFilters struct {
 	Uid    int        // -1 for "keep", -2 for "mine"
 	Gid    int        // -1 for "keep", -2 for "mine"
 	Mtime  *time.Time // nil for "keep"
