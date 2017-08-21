@@ -1,6 +1,7 @@
 package rioexecclient
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -44,6 +45,8 @@ func UnpackFunc(
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: failed to start: %s", err)
 	}
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
 	if err = cmd.Start(); err != nil {
 		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: failed to start: %s", err)
 	}
@@ -89,7 +92,7 @@ func UnpackFunc(
 	//  We don't actually have much use for the exit code,
 	//  because we already got the serialized form of error.
 	if err := cmd.Wait(); err != nil {
-		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s (stderr: %q)", err, string(err.(*exec.ExitError).Stderr))
+		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s (stderr: %q)", err, stderrBuf.String())
 	}
 	return
 }
