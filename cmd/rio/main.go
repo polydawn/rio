@@ -52,7 +52,7 @@ type baseCLI struct {
 
 func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 	// Non-filter flags
-	appPack.Flag("path", "Target path").
+	appPack.Arg("path", "Target path").
 		Required().
 		StringVar(&cli.PackCLI.Path)
 	appPack.Flag("target", "Warehouse in which to place the ware").
@@ -70,14 +70,14 @@ func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 
 func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 	// Non-filter flags
-	appUnpack.Flag("path", "Target path").
+	appUnpack.Arg("path", "Target path").
 		Required().
 		StringVar(&cli.UnpackCLI.Path)
-	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
-		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
-	appUnpack.Flag("ware", "Ware ID").
+	appUnpack.Arg("ware", "Ware ID").
 		Required().
 		StringVar(&cli.UnpackCLI.WareID)
+	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
+		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
 
 	// Filter flags
 	appUnpack.Flag("uid", "Set UID filter [keep, mine, <int>]").
@@ -94,10 +94,10 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 }
 
 func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
-	appMirror.Flag("ware", "Ware ID").
+	appMirror.Arg("ware", "Ware ID").
 		Required().
 		StringVar(&cli.MirrorCLI.WareID)
-	appMirror.Flag("target", "Warehouse in which to place the ware").
+	appMirror.Arg("target", "Warehouse in which to place the ware").
 		Required().
 		StringVar(&cli.MirrorCLI.TargetWarehouseAddr)
 	appMirror.Flag("source", "Warehouses from which to fetch the ware").

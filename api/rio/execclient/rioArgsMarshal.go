@@ -14,7 +14,7 @@ func UnpackArgs(
 ) ([]string, error) {
 	// Required args.
 	args := []string{
-		"unpack", wareID.String(), path,
+		"unpack", path, wareID.String(),
 	}
 	// Append filters if specified.
 	//  (We could just pass 'em all even when emptystr, but let's be nice to readers of 'ps'.)
