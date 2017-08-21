@@ -89,7 +89,7 @@ func UnpackFunc(
 	//  We don't actually have much use for the exit code,
 	//  because we already got the serialized form of error.
 	if err := cmd.Wait(); err != nil {
-		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s", err)
+		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s (stderr: %q)", err, string(err.(*exec.ExitError).Stderr))
 	}
 	return
 }
