@@ -56,7 +56,6 @@ func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 		Required().
 		StringVar(&cli.PackCLI.Path)
 	appPack.Flag("target", "Warehouse in which to place the ware").
-		Required().
 		StringVar(&cli.PackCLI.TargetWarehouseAddr)
 
 	// Filter flags
@@ -75,7 +74,6 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 		Required().
 		StringVar(&cli.UnpackCLI.Path)
 	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
-		Required().
 		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
 	appUnpack.Flag("ware", "Ware ID").
 		Required().
@@ -103,7 +101,6 @@ func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
 		Required().
 		StringVar(&cli.MirrorCLI.TargetWarehouseAddr)
 	appMirror.Flag("source", "Warehouses from which to fetch the ware").
-		Required().
 		StringsVar(&cli.MirrorCLI.SourcesWarehouseAddr)
 }
 
