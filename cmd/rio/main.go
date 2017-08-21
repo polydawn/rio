@@ -160,11 +160,17 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	appMirror := app.Command("mirror", "mirror a ware to another warehouse")
 	configureUnpack(&cli, appMirror)
 
-	cmd, err, terminated := Parse(app, args)
+	var termErr error
+	app.Terminate(func(status int) {
+		termErr = fmt.Errorf("parsing error: %d\n", status)
+	})
+	cmd, err := app.Parse(args[1:])
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return rio.ExitUsage
-	} else if terminated {
+	}
+	if termErr != nil {
+		fmt.Fprintln(stderr, termErr)
 		return rio.ExitUsage
 	}
 	var wareID api.WareID
@@ -182,22 +188,6 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 	}
 
 	return exitCode
-}
-
-/*
-	Kingpin really expects terminate to terminate.
-	So we make it panic and handle it. Passing errors back up.
-*/
-func Parse(app *kingpin.Application, args []string) (cmd string, err error, terminated bool) {
-	defer func() {
-		recover()
-	}()
-	app.Terminate(func(status int) {
-		terminated = true
-		panic("")
-	})
-	cmd, err = app.Parse(args[1:])
-	return
 }
 
 func SerializeResult(format string, wareID api.WareID, resultErr error, stdout io.Writer, stderr io.Writer) {
