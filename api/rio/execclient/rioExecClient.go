@@ -68,12 +68,10 @@ func UnpackFunc(
 	var msgSlot rio.Event
 	for {
 		// Peel off a message.
-		// FIXME refmt needs better behaviors on EOF...
-		//	if err := unmarshaller.Unmarshal(&msgSlot); err != nil {
-		//		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: API parse error: %s", err)
-		//	}
-		_ = unmarshaller
-		break
+		if err := unmarshaller.Unmarshal(&msgSlot); err != nil {
+			return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: API parse error: %s", err)
+		}
+
 		// If it's the final "result" message, prepare to return.
 		if msgSlot.Result != nil {
 			gotWareID = msgSlot.Result.WareID
