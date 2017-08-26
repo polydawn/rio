@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	. "github.com/smartystreets/goconvey/convey"
+
 	"go.polydawn.net/rio/fs" // todo problematic for extraction
 	"go.polydawn.net/rio/testutil"
 	"go.polydawn.net/timeless-api"
@@ -28,17 +30,21 @@ func Test(t *testing.T) {
 		panic(err)
 	}
 
-	testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-		_, err := rioexecclient.UnpackFunc(
-			context.Background(),
-			api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-			tmpDir.String(),
-			api.FilesetFilters{},
-			[]api.WarehouseAddr{"file://../../../transmat/tar/fixtures/tar_withBase.tgz"},
-			rio.Monitor{},
-		)
-		if err != nil {
-			t.Error(err)
-		}
-	})
+	Convey("Tar transmat: unpacking of fixtures", t,
+		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
+			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+				_, err := rioexecclient.UnpackFunc(
+					context.Background(),
+					api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+					tmpDir.String(),
+					api.FilesetFilters{},
+					[]api.WarehouseAddr{"file://../../../transmat/tar/fixtures/tar_withBase.tgz"},
+					rio.Monitor{},
+				)
+				if err != nil {
+					t.Error(err)
+				}
+			})
+		}),
+	)
 }
