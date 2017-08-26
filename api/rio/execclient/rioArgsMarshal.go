@@ -14,7 +14,8 @@ func UnpackArgs(
 ) ([]string, error) {
 	// Required args.
 	args := []string{
-		"unpack", wareID.String(), path,
+		"unpack", path, wareID.String(),
+		"--format=json",
 	}
 	// Append filters if specified.
 	//  (We could just pass 'em all even when emptystr, but let's be nice to readers of 'ps'.)
@@ -33,7 +34,7 @@ func UnpackArgs(
 	// Append warehouses.
 	//  Giving this argument repeatedly forms a list in the rio CLI.
 	for _, wh := range warehouses {
-		args = append(args, "--warehouse="+string(wh))
+		args = append(args, "--source="+string(wh))
 	}
 	// Append monitor options.
 	//  (Of which there are currently none meaningful implemented.)
