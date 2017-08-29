@@ -31,3 +31,42 @@
 [submodule ".gopath/src/go.polydawn.net/go-timeless-api"]
 	path = .gopath/src/go.polydawn.net/go-timeless-api
 	url = https://github.com/polydawn/go-timeless-api
+[submodule ".gopath/src/gopkg.in/warnings.v0"]
+	path = .gopath/src/gopkg.in/warnings.v0
+	url = https://gopkg.in/warnings.v0
+[submodule ".gopath/src/gopkg.in/check.v1"]
+	path = .gopath/src/gopkg.in/check.v1
+	url = https://gopkg.in/check.v1
+[submodule ".gopath/src/gopkg.in/src-d/go-billy.v3"]
+	path = .gopath/src/gopkg.in/src-d/go-billy.v3
+	url = https://gopkg.in/src-d/go-billy.v3
+[submodule ".gopath/src/gopkg.in/src-d/go-git.v4"]
+	path = .gopath/src/gopkg.in/src-d/go-git.v4
+	url = https://gopkg.in/src-d/go-git.v4
+[submodule ".gopath/src/golang.org/x/crypto"]
+	path = .gopath/src/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
+[submodule ".gopath/src/golang.org/x/net"]
+	path = .gopath/src/golang.org/x/net
+	url = https://go.googlesource.com/net
+[submodule ".gopath/src/github.com/sergi/go-diff"]
+	path = .gopath/src/github.com/sergi/go-diff
+	url = https://github.com/sergi/go-diff
+[submodule ".gopath/src/github.com/xanzy/ssh-agent"]
+	path = .gopath/src/github.com/xanzy/ssh-agent
+	url = https://github.com/xanzy/ssh-agent
+[submodule ".gopath/src/github.com/alcortesm/tgz"]
+	path = .gopath/src/github.com/alcortesm/tgz
+	url = https://github.com/alcortesm/tgz
+[submodule ".gopath/src/github.com/jessevdk/go-flags"]
+	path = .gopath/src/github.com/jessevdk/go-flags
+	url = https://github.com/jessevdk/go-flags
+[submodule ".gopath/src/github.com/jbenet/go-context"]
+	path = .gopath/src/github.com/jbenet/go-context
+	url = https://github.com/jbenet/go-context
+[submodule ".gopath/src/github.com/src-d/go-git-fixtures"]
+	path = .gopath/src/github.com/src-d/go-git-fixtures
+	url = https://github.com/src-d/go-git-fixtures
+[submodule ".gopath/src/github.com/src-d/gcfg"]
+	path = .gopath/src/github.com/src-d/gcfg
+	url = https://github.com/src-d/gcfg
