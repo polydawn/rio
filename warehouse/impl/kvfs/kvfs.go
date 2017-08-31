@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/rio/fs"
-	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/lib/guid"
 	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/util"
