@@ -25,3 +25,6 @@
 [submodule ".gopath/src/github.com/alecthomas/units"]
 	path = .gopath/src/github.com/alecthomas/units
 	url = https://github.com/alecthomas/units
+[submodule ".gopath/src/github.com/polydawn/go-errcat"]
+	path = .gopath/src/github.com/polydawn/go-errcat
+	url = https://github.com/polydawn/go-errcat

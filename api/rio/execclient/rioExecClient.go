@@ -10,7 +10,7 @@ import (
 	"github.com/polydawn/refmt"
 	"github.com/polydawn/refmt/json"
 
-	. "go.polydawn.net/rio/lib/errcat"
+	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/timeless-api"
 	"go.polydawn.net/timeless-api/rio"
 )

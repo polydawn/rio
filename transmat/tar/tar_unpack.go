@@ -12,10 +12,10 @@ import (
 
 	"github.com/polydawn/refmt/misc"
 
+	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
-	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/lib/treewalk"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
@@ -104,14 +104,14 @@ func Unpack(
 	// Check for hash mismatch before returning, because that IS an error,
 	//  but also return the hash we got either way.
 	if gotWare != wareID {
-		return gotWare, Error{
+		return gotWare, ErrorDetailed(
 			rio.ErrWareHashMismatch,
 			fmt.Sprintf("hash mismatch: expected %q, got %q", wareID, gotWare),
 			map[string]string{
 				"expected": wareID.String(),
 				"actual":   gotWare.String(),
 			},
-		}
+		)
 	}
 	return gotWare, nil
 }

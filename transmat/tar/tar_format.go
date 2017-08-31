@@ -4,8 +4,8 @@ import (
 	"archive/tar"
 	"fmt"
 
+	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/rio/fs"
-	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/timeless-api/rio"
 )
 

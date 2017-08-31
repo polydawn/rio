@@ -11,10 +11,10 @@ import (
 
 	"github.com/polydawn/refmt/misc"
 
+	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
-	. "go.polydawn.net/rio/lib/errcat"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/warehouse"
