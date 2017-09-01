@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
 	"github.com/polydawn/refmt/json"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -188,7 +189,22 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 }
 
 func SerializeResult(format string, wareID api.WareID, resultErr error, stdout io.Writer, stderr io.Writer) {
-	ev := rio.Event{Result: &rio.Event_Result{WareID: wareID, Error: resultErr}}
+	var serialErr *rio.Error
+	if resultErr != nil {
+		serialErr = &rio.Error{}
+		if e2, ok := resultErr.(errcat.Error); ok {
+			serialErr.Category_ = errcat.Category(resultErr).(rio.ErrorCategory)
+			serialErr.Message_ = e2.Message()
+			serialErr.Details_ = e2.Details()
+		} else {
+			serialErr.Category_ = rio.ErrRPCBreakdown // :/
+			serialErr.Message_ = resultErr.Error()
+		}
+	}
+	ev := rio.Event{Result: &rio.Event_Result{
+		WareID: wareID,
+		Error:  serialErr,
+	}}
 	switch format {
 	case FmtJson:
 		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, stdout, rio.Atlas)
