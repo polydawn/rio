@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	. "github.com/polydawn/go-errcat"
+	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/timeless-api/rio"
 )
 
 // Mutate tar.Header fields to match the given fmeta.

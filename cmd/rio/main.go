@@ -13,9 +13,9 @@ import (
 	"github.com/polydawn/refmt/json"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
 	tar "go.polydawn.net/rio/transmat/tar"
-	"go.polydawn.net/timeless-api"
-	"go.polydawn.net/timeless-api/rio"
 )
 
 /*

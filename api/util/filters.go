@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"go.polydawn.net/timeless-api"
+	"go.polydawn.net/go-timeless-api"
 )
 
 type FilterPurpose bool

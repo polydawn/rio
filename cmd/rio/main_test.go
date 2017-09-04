@@ -10,11 +10,11 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/testutil"
-	"go.polydawn.net/timeless-api/rio"
 )
 
 func stdBuffers() (stdin, stdout, stderr *bytes.Buffer) {
