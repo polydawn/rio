@@ -101,9 +101,26 @@ type (
 
 	Event_Result struct {
 		WareID api.WareID
-		Error  error // FIXME resolution needed on how we want to serialize these... mainly because... do we really want to import errcat in our api packages?  not so much.
+		Error  *Error
 	}
 )
+
+/*
+	`errcat.Error` implementor with `rio.ErrorCategory` concrete category.
+
+	This is necessary for deserialization in client APIs to yield correctly typed categories.
+	It does not
+*/
+type Error struct {
+	Category_ ErrorCategory     `json:"category"          refmt:"category"`
+	Message_  string            `json:"message"           refmt:"message"`
+	Details_  map[string]string `json:"details,omitempty" refmt:"details,omitempty"`
+}
+
+func (e *Error) Category() interface{}      { return e.Category_ }
+func (e *Error) Message() string            { return e.Message_ }
+func (e *Error) Details() map[string]string { return e.Details_ }
+func (e *Error) Error() string              { return e.Message_ }
 
 type ErrorCategory string
 type ExitCode int

@@ -30,21 +30,37 @@ func Test(t *testing.T) {
 		panic(err)
 	}
 
-	Convey("Tar transmat: unpacking of fixtures", t,
-		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
-			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-				_, err := rioexecclient.UnpackFunc(
-					context.Background(),
-					api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-					tmpDir.String(),
-					api.FilesetFilters{},
-					[]api.WarehouseAddr{"file://../../../transmat/tar/fixtures/tar_withBase.tgz"},
-					rio.Monitor{},
-				)
-				if err != nil {
-					t.Error(err)
-				}
-			})
-		}),
-	)
+	Convey("exec client tests", t, func() {
+		Convey("unpacking tar fixtures (happy path)",
+			testutil.Requires(testutil.RequiresCanManageOwnership, func() {
+				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+					_, err := rioexecclient.UnpackFunc(
+						context.Background(),
+						api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+						tmpDir.String(),
+						api.FilesetFilters{},
+						[]api.WarehouseAddr{"file://../../../transmat/tar/fixtures/tar_withBase.tgz"},
+						rio.Monitor{},
+					)
+					So(err, ShouldBeNil)
+				})
+			}),
+		)
+		Convey("unpacking with a lack of warehouses (error path)",
+			func() {
+				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+					_, err := rioexecclient.UnpackFunc(
+						context.Background(),
+						api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+						tmpDir.String(),
+						api.FilesetFilters{},
+						nil,
+						rio.Monitor{},
+					)
+					So(err, ShouldNotBeNil)
+					So(err, ShouldResemble, &rio.Error{rio.ErrWarehouseUnavailable, "no warehouses were available!", nil})
+				})
+			},
+		)
+	})
 }
