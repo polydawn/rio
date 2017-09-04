@@ -3,7 +3,7 @@ package warehouse
 import (
 	"io"
 
-	"go.polydawn.net/timeless-api"
+	"go.polydawn.net/go-timeless-api"
 )
 
 /*

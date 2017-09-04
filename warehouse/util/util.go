@@ -1,7 +1,7 @@
 package util
 
 import (
-	"go.polydawn.net/timeless-api"
+	"go.polydawn.net/go-timeless-api"
 )
 
 /*

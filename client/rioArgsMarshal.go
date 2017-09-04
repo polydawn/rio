@@ -1,8 +1,8 @@
 package rioexecclient
 
 import (
-	"go.polydawn.net/timeless-api"
-	"go.polydawn.net/timeless-api/rio"
+	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
 )
 
 func UnpackArgs(

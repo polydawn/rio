@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 
 	. "github.com/polydawn/go-errcat"
+	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/lib/guid"
 	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/util"
-	"go.polydawn.net/timeless-api"
-	"go.polydawn.net/timeless-api/rio"
 )
 
 var (

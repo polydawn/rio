@@ -11,8 +11,8 @@ import (
 	"github.com/polydawn/refmt/json"
 
 	. "github.com/polydawn/go-errcat"
-	"go.polydawn.net/timeless-api"
-	"go.polydawn.net/timeless-api/rio"
+	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
 )
 
 var (

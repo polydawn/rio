@@ -1,8 +1,8 @@
 package filters
 
 import (
+	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/timeless-api/util"
 )
 
 /*

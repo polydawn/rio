@@ -9,14 +9,14 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/testutil"
 	"go.polydawn.net/rio/transmat/mixins/tests"
-	"go.polydawn.net/timeless-api"
-	"go.polydawn.net/timeless-api/rio"
-	"go.polydawn.net/timeless-api/util"
 )
 
 func TestTarUnpack(t *testing.T) {
