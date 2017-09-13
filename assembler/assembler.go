@@ -1,48 +1,58 @@
 package assembler
 
 import (
-	"context"
-
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 )
 
-type Assembler struct {
-	targetBase     fs.AbsolutePath
-	cacheDir       fs.AbsolutePath
-	unpackTool     rio.UnpackFunc
-	placerTool     func( /*todo*/ )
-	fillerDirProps fs.Metadata
+type AssemblyPart struct {
+	// Path to use as source for mounting or copy.
+	//
+	// When assembly is invoked, a source root is required; this
+	// path will be relative to that.
+	// (Typically the source root with be the CAS cache storage area
+	// when this is used by repeatr to launch containers.)
+	SourcePath fs.RelPath
+
+	// Path to fill via mounting or copy.
+	//
+	// When assembly is invoked, a target root is required; this
+	// path will be relative to that.
+	// (Typically the target root is the path a container will be chroot'd
+	// into when this is used by repeatr to launch containers.)
+	TargetPath fs.RelPath
+
+	// Toggles whether or not any mounts should be writable.
+	// Default is false/read-only.
+	//
+	// If using a "copy" placer, this will be *ignored*: the paths
+	// WILL be writable.  Do not use copy placers if this is an
+	// issue; they do not have the power to respect this property.
+	//
+	// If `Writable && BareMount` are both true, then
+	// *this will allow modifications to the source path*.
+	// (This is used by repeatr to allow mounts through to the host.
+	//
+	// TODO REVIEW: host mounts require that the source root not be the
+	// CAS cache root path :/  maybe we shoud allow a root per entry...?
+	//
+	// TODO REVIEW: the behavior for copy placers.  I'd rather they errored loudly.
+	// It would be a change from historic repeatr, but probably a worthy one.
+	Writable bool
+
+	// BareMount requests direct passthrough -- what this means varies based on writability:
+	// if writable==false, this means continuing changes in sourcepath are visible realtime;
+	// if writable==true, the placer will employ a bind mount *without* COW or isolation,
+	// **meaning mutations will be applied to the sourcepath**.
+	BareMount bool
 }
 
-/*
-	Unpacking with an assembler proxies the unpack command,
-	but transforms the unpack path into one relative to the assembler's configured base path,
-	then runs the unpack in its own goroutine,
-	performs the unpack into a CAS cache area,
-	and finally uses a 'placer' to get the now-cached content
-	to appear in the (translated) target path.
+// TODO REVIEW: overall, above: yeah, maybe we need some more usage-specific enums,
+// rather than this hash of bools.
 
-	Since the work is done in parallel, the wareID returned is always zero,
-	and any errors will be usage and args errors;
-	the caller must check the error returned by `Wait`,
-	which will return any other gathered errors.
-
-	If the unpack path is deep, the assembler will create parent dirs as necessary.
-	TODO finish defining ordering behavior and mounts and such.
-*/
-func (a *Assembler) Unpack(
-	ctx context.Context, // Long-running call.  Cancellable.
-	wareID api.WareID, // What wareID to fetch for unpacking.
-	path string, // Where to unpack the fileset (absolute path).
-	filters api.FilesetFilters, // Optionally: filters we should apply while unpacking.
-	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
-	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
-) (api.WareID, error) {
-	return api.WareID{}, nil
-}
-
-func (a *Assembler) Wait() error {
-	return nil
-}
+//type Assembler struct {
+//	targetBase     fs.AbsolutePath
+//	cacheDir       fs.AbsolutePath
+//	unpackTool     rio.UnpackFunc
+//	placerTool     func( /*todo*/ )
+//	fillerDirProps fs.Metadata
+//}
