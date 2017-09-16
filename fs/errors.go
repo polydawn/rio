@@ -1,100 +1,93 @@
 package fs
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"os"
+
+	. "github.com/polydawn/go-errcat"
+)
+
+type ErrorCategory string
+
+const (
+	/*
+		The catch-all for errors we haven't particularly mapped.
+	*/
+	ErrMisc ErrorCategory = "fs-misc"
+
+	ErrUnexpectedEOF ErrorCategory = "fs-unexpected-eof"
+	ErrNotExists     ErrorCategory = "fs-not-exists"
+	ErrAlreadyExists ErrorCategory = "fs-already-exists"
+	ErrShortWrite    ErrorCategory = "fs-shortwrite"
+
+	/*
+		Error returned when operating in a confined filesystem slice and an
+		operation performed would result in effects outside the area, e.g.
+		calling `PlaceFile` with "./reasonable/path" but "./reasonable" happens
+		to be a symlink to "../../.." -- the symlink is valid, but to traverse
+		it would violate confinement.
+
+		Not all functions which do symlink checks will verify if the symlink target
+		is within the operational area; they may return ErrBreakout upon encountering
+		any symlink, even if following it would still be within bounds.
+		Check the function's documentation for more info on how it behaves.
+
+		Note that any function returning ErrBreakout is, by nature, doing so in a
+		best-effort sense: if there are concurrent modifcations to the operational
+		area of the filesystem by any other processes, it is *impossible* to
+		avoid a TOCTOU violation.
+	*/
+	ErrBreakout ErrorCategory = "fs-breakout"
+)
 
 /*
-	Grouping interface for errors returned from filesystem operations.
-
-	Implementors are assuring you that they will easily `json.Marshal`
-	(or other formats of your choice) AND roundtrip unmarshal
-	by virtue of exporting all their fields.
+   Categorize any errors into errcat-style errors with a category of `fs.ErrorCategory` type.
+   Well-recognized errors will be normalized to a specific type,
+   and all other errors will have a category of `ErrMisc`.
 */
-type ErrFS interface {
-	error
-	_errFS()
-}
-
-/*
-	Catchall error if an underlying layer returned an error we couldn't normalize.
-*/
-type ErrIOUnknown struct {
-	// The `err.Error()` stringification of the original error.
-	//
-	// We flatten this immediately so that if this struct is serialized,
-	// it's round-trippable.
-	Msg string
-}
-
-func (ErrIOUnknown) _errFS()         {}
-func (e ErrIOUnknown) Error() string { return e.Msg }
-
-/*
-	Convert any error into an ErrFS type.
-	Well-recognized errors will be normalized to a specific type,
-	and all other errors will be converted to an `*ErrIOUnknown`.
-*/
-func IOError(err error) ErrFS {
-	switch {
-	case err == nil:
+func NormalizeIOError(ioe error) error {
+	// Value switches.  Relatively fast -- and thus checked first.
+	switch ioe {
+	case nil:
 		return nil
-	//	case os.IsNotExist(err):
-	//		switch err := err.(type) {
-	//		case *os.PathError:
-	//			return ErrNotExists{err.Path}
-	//		case *os.LinkError:
-	//			return ErrNotExists{err.Old} // REVIEW: we have issues all the way to the kernel here: it's not clear if error regards old or new path.
-	//		case *os.SyscallError:
-	//			return ErrNotExists{} // has no path info :(
-	//		default: // 'os.ErrExist' is stringly typed :(
-	//			return ErrNotExists{} // has no path info :(
-	//		}
-	default:
-		return ErrIOUnknown{err.Error()}
+	case io.EOF, io.ErrUnexpectedEOF: // we don't believe in returning expected EOFs as errors.
+		return Recategorize(ioe, ErrUnexpectedEOF)
+	case io.ErrShortWrite:
+		return Recategorize(ioe, ErrShortWrite)
 	}
+	// Predicates.  God knows what they'll match;
+	//  literally turing complete exhaustive checking is the only option.
+	switch {
+	case os.IsNotExist(ioe):
+		switch e2 := ioe.(type) {
+		case *os.PathError: // Rejoice in the one kind of error that provides a clear path.
+			return ErrorDetailed(ErrNotExists, e2.Error(), map[string]string{"path": e2.Path})
+		case *os.LinkError:
+			return ErrorDetailed(ErrNotExists, e2.Error(), map[string]string{"pathOld": e2.Old, "pathNew": e2.New})
+		case *os.SyscallError:
+			return Recategorize(ioe, ErrNotExists) // has no path info :(
+		default: // 'os.ErrExist' is stringly typed :(
+			return Recategorize(ioe, ErrNotExists) // has no path info :(
+		}
+	case os.IsExist(ioe):
+		return Recategorize(ioe, ErrAlreadyExists)
+	}
+	// No matches.  Categorize to a placeholder.  At least it'll be serializable.
+	return Recategorize(ioe, ErrMisc)
 }
 
-/*
-	The normalization of anything matching `os.IsNotExist`.
-
-	The 'Path' field is usually set, but may be nil in some cases
-	(not all system errors return the path associated with them).
-*/
-type ErrNotExists struct {
-	Path *RelPath
-}
-
-func (ErrNotExists) _errFS() {}
-func (e ErrNotExists) Error() string {
-	return fmt.Sprintf("path %q does not exist", e.Path)
-}
-
-/*
-	Error returned when operating in a confined filesystem slice and an
-	operation performed would result in effects outside the area, e.g.
-	calling `PlaceFile` with "./reasonable/path" but "./reasonable" happens
-	to be a symlink to "../../.." -- the symlink is valid, but to traverse
-	it would violate confinement.
-
-	Not all functions which do symlink checks will verify if the symlink target
-	is within the operational area; they may return ErrBreakout upon encountering
-	any symlink, even if following it would still be within bounds.
-	Check the function's documentation for more info on how it behaves.
-
-	Note that any function returning ErrBreakout is, by nature, doing so in a
-	best-effort sense: if there are concurrent modifcations to the operational
-	area of the filesystem by any other processes, it is *impossible* to
-	avoid a TOCTOU violation.
-*/
-type ErrBreakout struct {
-	OpPath     RelPath
-	OpArea     AbsolutePath
-	LinkPath   RelPath
-	LinkTarget string
-}
-
-func (ErrBreakout) _errFS() {}
-func (e ErrBreakout) Error() string {
-	return fmt.Sprintf(
-		"breakout error: refusing to traverse symlink at %q->%q while placing %q in %q",
-		e.LinkPath, e.LinkTarget, e.OpPath, e.OpArea)
+func NewBreakoutError(OpArea AbsolutePath, OpPath RelPath, LinkPath RelPath, LinkTarget string) error {
+	return ErrorDetailed(
+		ErrBreakout,
+		fmt.Sprintf(
+			"breakout error: refusing to traverse symlink at %q->%q while placing %q in %q",
+			LinkPath, LinkTarget, OpPath, OpArea),
+		map[string]string{
+			"opArea":     OpArea.String(),
+			"opPath":     OpPath.String(),
+			"linkPath":   LinkPath.String(),
+			"linkTarget": LinkTarget,
+		},
+	)
 }

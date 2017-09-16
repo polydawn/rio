@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 
+	. "github.com/polydawn/go-errcat"
+
 	"go.polydawn.net/rio/fs"
 )
 
@@ -41,7 +43,7 @@ import (
 	it would create consistency issues.  But `rio unpack` is happy to do so,
 	because it is not the unpack command's job to maintain a CAS filesystem.)
 */
-func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.ErrFS {
+func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) error {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
 		if path == (fs.RelPath{}) {
@@ -49,15 +51,15 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 		}
 		target, isSymlink, err := afs.Readlink(path)
 		if isSymlink {
-			return fs.ErrBreakout{
-				OpPath:     fmeta.Name,
-				OpArea:     afs.BasePath(),
-				LinkPath:   path,
-				LinkTarget: target,
-			}
+			return fs.NewBreakoutError(
+				afs.BasePath(),
+				fmeta.Name,
+				path,
+				target,
+			)
 		} else if err == nil {
 			continue // regular paths are fine.
-		} else if _, ok := err.(*fs.ErrNotExists); ok {
+		} else if Category(err) == fs.ErrNotExists {
 			continue // not existing is fine.
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
@@ -75,7 +77,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 		}
 		if _, err := io.Copy(file, body); err != nil {
 			file.Close()
-			return fs.IOError(err)
+			return fs.NormalizeIOError(err)
 		}
 		file.Close()
 	case fs.Type_Dir:

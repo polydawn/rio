@@ -23,52 +23,52 @@ func (afs *osFS) BasePath() fs.AbsolutePath {
 	return afs.basePath
 }
 
-func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, fs.ErrFS) {
+func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, error) {
 	f, err := os.OpenFile(afs.basePath.Join(path).String(), flag, permsToOs(perms))
-	return f, fs.IOError(err)
+	return f, fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) Mkdir(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+func (afs *osFS) Mkdir(path fs.RelPath, perms fs.Perms) error {
 	err := os.Mkdir(afs.basePath.Join(path).String(), permsToOs(perms))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) Mklink(path fs.RelPath, target string) fs.ErrFS {
+func (afs *osFS) Mklink(path fs.RelPath, target string) error {
 	err := os.Symlink(target, afs.basePath.Join(path).String())
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) Mkfifo(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+func (afs *osFS) Mkfifo(path fs.RelPath, perms fs.Perms) error {
 	err := syscall.Mkfifo(afs.basePath.Join(path).String(), uint32(perms&07777))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) MkdevBlock(path fs.RelPath, major int64, minor int64, perms fs.Perms) fs.ErrFS {
+func (afs *osFS) MkdevBlock(path fs.RelPath, major int64, minor int64, perms fs.Perms) error {
 	mode := uint32(perms&07777) | syscall.S_IFBLK
 	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.Perms) fs.ErrFS {
+func (afs *osFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.Perms) error {
 	mode := uint32(perms&07777) | syscall.S_IFCHR
 	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) Lchown(path fs.RelPath, uid uint32, gid uint32) fs.ErrFS {
+func (afs *osFS) Lchown(path fs.RelPath, uid uint32, gid uint32) error {
 	err := os.Lchown(afs.basePath.Join(path).String(), int(uid), int(gid))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) Chmod(path fs.RelPath, perms fs.Perms) fs.ErrFS {
+func (afs *osFS) Chmod(path fs.RelPath, perms fs.Perms) error {
 	err := os.Chmod(afs.basePath.Join(path).String(), permsToOs(perms))
-	return fs.IOError(err)
+	return fs.NormalizeIOError(err)
 }
 
-func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
+func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, error) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {
-		return nil, fs.IOError(err)
+		return nil, fs.NormalizeIOError(err)
 	}
 
 	// Copy over the easy 1-to-1 parts.
@@ -138,33 +138,31 @@ func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, fs.ErrFS) {
 	return fmeta, nil
 }
 
-func (afs *osFS) ReadDirNames(path fs.RelPath) ([]string, fs.ErrFS) {
+func (afs *osFS) ReadDirNames(path fs.RelPath) ([]string, error) {
 	f, err := os.Open(afs.basePath.Join(path).String())
 	if err != nil {
-		return nil, fs.IOError(err)
+		return nil, fs.NormalizeIOError(err)
 	}
 	names, err := f.Readdirnames(-1)
 	f.Close()
 	if err != nil {
-		return names, fs.IOError(err)
+		return names, fs.NormalizeIOError(err)
 	}
 	return names, nil
 }
 
-func (afs *osFS) Readlink(path fs.RelPath) (string, bool, fs.ErrFS) {
+func (afs *osFS) Readlink(path fs.RelPath) (string, bool, error) {
 	target, err := os.Readlink(afs.basePath.Join(path).String())
 	switch {
 	case err == nil:
 		return target, true, nil
-	case os.IsNotExist(err):
-		return "", false, &fs.ErrNotExists{&path}
 	case err.(*os.PathError).Err == syscall.EINVAL:
 		// EINVAL means "not a symlink".
 		// We return this as false and a nil error because it's frequently useful to use
 		// the readlink syscall blindly with an lstat first in order to save a syscall.
 		return "", false, nil
 	default:
-		return "", false, fs.IOError(err)
+		return "", false, fs.NormalizeIOError(err)
 	}
 }
 
