@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 
+	. "github.com/polydawn/go-errcat"
+
 	"go.polydawn.net/rio/fs"
 )
 
@@ -49,15 +51,15 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 		}
 		target, isSymlink, err := afs.Readlink(path)
 		if isSymlink {
-			return fs.ErrBreakout{
-				OpPath:     fmeta.Name,
-				OpArea:     afs.BasePath(),
-				LinkPath:   path,
-				LinkTarget: target,
-			}
+			return fs.NewBreakoutError(
+				afs.BasePath(),
+				fmeta.Name,
+				path,
+				target,
+			)
 		} else if err == nil {
 			continue // regular paths are fine.
-		} else if os.IsNotExist(err) {
+		} else if Category(err) == fs.ErrNotExists {
 			continue // not existing is fine.
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
@@ -75,7 +77,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 		}
 		if _, err := io.Copy(file, body); err != nil {
 			file.Close()
-			return err
+			return fs.NormalizeIOError(err)
 		}
 		file.Close()
 	case fs.Type_Dir:

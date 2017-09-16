@@ -26,12 +26,12 @@ func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time
 	var _path *byte
 	_path, err := syscall.BytePtrFromString(afs.basePath.Join(path).String())
 	if err != nil { // EINVAL if the path string contains NUL bytes.
-		return err
+		return fs.NormalizeIOError(err)
 	}
 
 	// Note this does depend on kernel 2.6.22 or newer.  Fallbacks are available but we haven't implemented them and they lose nano precision.
 	if _, _, err := syscall.Syscall6(syscall.SYS_UTIMENSAT, uintptr(AT_FDCWD), uintptr(unsafe.Pointer(_path)), uintptr(unsafe.Pointer(&utimes[0])), uintptr(AT_SYMLINK_NOFOLLOW), 0, 0); err != 0 {
-		return err
+		return fs.NormalizeIOError(err)
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func (afs *osFS) SetTimesNano(path fs.RelPath, mtime time.Time, atime time.Time)
 	utimes[0] = syscall.NsecToTimespec(atime.UnixNano())
 	utimes[1] = syscall.NsecToTimespec(mtime.UnixNano())
 	if err := syscall.UtimesNano(afs.basePath.Join(path).String(), utimes[0:]); err != nil {
-		return err
+		return fs.NormalizeIOError(err)
 	}
 	return nil
 }
