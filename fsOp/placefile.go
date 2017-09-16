@@ -41,7 +41,7 @@ import (
 	it would create consistency issues.  But `rio unpack` is happy to do so,
 	because it is not the unpack command's job to maintain a CAS filesystem.)
 */
-func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.ErrFS {
+func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) error {
 	// First, no part of the path may be a symlink.
 	for path := fmeta.Name; ; path = path.Dir() {
 		if path == (fs.RelPath{}) {
@@ -57,7 +57,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 			}
 		} else if err == nil {
 			continue // regular paths are fine.
-		} else if _, ok := err.(*fs.ErrNotExists); ok {
+		} else if os.IsNotExist(err) {
 			continue // not existing is fine.
 		} else {
 			return err // any other unknown error means we lack perms or something: reject.
@@ -75,7 +75,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) fs.
 		}
 		if _, err := io.Copy(file, body); err != nil {
 			file.Close()
-			return fs.IOError(err)
+			return err
 		}
 		file.Close()
 	case fs.Type_Dir:

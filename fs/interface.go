@@ -21,31 +21,31 @@ type FS interface {
 	// May be '/' (the zero AbsolutePath) if not applicable.
 	BasePath() AbsolutePath
 
-	OpenFile(path RelPath, flag int, perms Perms) (File, ErrFS)
+	OpenFile(path RelPath, flag int, perms Perms) (File, error)
 
-	Mkdir(path RelPath, perms Perms) ErrFS
+	Mkdir(path RelPath, perms Perms) error
 
-	Mklink(path RelPath, target string) ErrFS
+	Mklink(path RelPath, target string) error
 
-	Mkfifo(path RelPath, perms Perms) ErrFS
+	Mkfifo(path RelPath, perms Perms) error
 
-	MkdevBlock(path RelPath, major int64, minor int64, perms Perms) ErrFS
+	MkdevBlock(path RelPath, major int64, minor int64, perms Perms) error
 
-	MkdevChar(path RelPath, major int64, minor int64, perms Perms) ErrFS
+	MkdevChar(path RelPath, major int64, minor int64, perms Perms) error
 
-	Lchown(path RelPath, uid uint32, gid uint32) ErrFS
+	Lchown(path RelPath, uid uint32, gid uint32) error
 
-	Chmod(path RelPath, perms Perms) ErrFS
+	Chmod(path RelPath, perms Perms) error
 
-	SetTimesLNano(path RelPath, mtime time.Time, atime time.Time) ErrFS
+	SetTimesLNano(path RelPath, mtime time.Time, atime time.Time) error
 
-	SetTimesNano(path RelPath, mtime time.Time, atime time.Time) ErrFS
+	SetTimesNano(path RelPath, mtime time.Time, atime time.Time) error
 
-	LStat(path RelPath) (*Metadata, ErrFS)
+	LStat(path RelPath) (*Metadata, error)
 
-	ReadDirNames(path RelPath) ([]string, ErrFS)
+	ReadDirNames(path RelPath) ([]string, error)
 
-	Readlink(path RelPath) (target string, isSymlink bool, err ErrFS)
+	Readlink(path RelPath) (target string, isSymlink bool, err error)
 }
 
 type File interface {
