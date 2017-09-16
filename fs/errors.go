@@ -60,7 +60,16 @@ func NormalizeIOError(ioe error) error {
 	//  literally turing complete exhaustive checking is the only option.
 	switch {
 	case os.IsNotExist(ioe):
-		return Recategorize(ioe, ErrNotExists)
+		switch e2 := ioe.(type) {
+		case *os.PathError: // Rejoice in the one kind of error that provides a clear path.
+			return ErrorDetailed(ErrNotExists, e2.Error(), map[string]string{"path": e2.Path})
+		case *os.LinkError:
+			return ErrorDetailed(ErrNotExists, e2.Error(), map[string]string{"pathOld": e2.Old, "pathNew": e2.New})
+		case *os.SyscallError:
+			return Recategorize(ioe, ErrNotExists) // has no path info :(
+		default: // 'os.ErrExist' is stringly typed :(
+			return Recategorize(ioe, ErrNotExists) // has no path info :(
+		}
 	case os.IsExist(ioe):
 		return Recategorize(ioe, ErrAlreadyExists)
 	}
