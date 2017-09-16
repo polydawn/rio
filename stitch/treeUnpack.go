@@ -1,4 +1,4 @@
-package banyan
+package stitch
 
 import (
 	"go.polydawn.net/go-timeless-api"
