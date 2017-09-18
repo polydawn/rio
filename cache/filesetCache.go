@@ -10,7 +10,7 @@ import (
 
 func ShelfFor(wareID api.WareID) fs.RelPath {
 	chunk1, chunk2, _ := whutil.ChunkifyHash(wareID)
-	return fs.MustRelPath(fmt.Sprintf("%s/committed/%s/%s/%s",
+	return fs.MustRelPath(fmt.Sprintf("%s/fileset/%s/%s/%s",
 		wareID.Type,
 		chunk1, chunk2, wareID.Hash,
 	))
