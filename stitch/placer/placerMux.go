@@ -2,7 +2,6 @@ package placer
 
 import (
 	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
 )
 
 type Placer func(srcPath, dstPath fs.AbsolutePath, writable bool) error
@@ -27,5 +26,3 @@ type Placer func(srcPath, dstPath fs.AbsolutePath, writable bool) error
 func MountPlacer() Placer {
 	return nil
 }
-
-var rootFs = osfs.New(fs.MustAbsolutePath("/")) // handy, since placers are always absolutized
