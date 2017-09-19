@@ -25,7 +25,7 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 		if stat.Type == fs.Type_Dir {
 			return nil
 		}
-		return Errorf(fs.ErrAlreadyExists, "%s already exists and is a %s not %s", path, stat.Type, fs.Type_Dir)
+		return Errorf(fs.ErrNotDir, "%s already exists and is a %s not %s", afs.BasePath().Join(path), stat.Type, fs.Type_Dir)
 	case fs.ErrNotExists:
 		if err := MkdirAll(afs, path.Dir(), perms); err != nil {
 			return err
@@ -34,6 +34,9 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 			return err
 		}
 		return nil
+	case fs.ErrNotDir:
+		// Reformat the error a tad to not say "lstat", which is distracting.
+		return Errorf(fs.ErrNotDir, "%s has parents which are not a directory", afs.BasePath().Join(path))
 	default:
 		return err
 	}

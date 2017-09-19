@@ -1,9 +1,11 @@
 package fsOp
 
 import (
+	"bytes"
 	"io"
 	"testing"
 
+	"github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/rio/fs"
@@ -33,11 +35,24 @@ func TestMkdirAll(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(stat.Type, ShouldEqual, fs.Type_Dir)
 			})
+			Convey("MkdirAll on an existing file should error...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("womp"), Type: fs.Type_File, Perms: 0755}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("womp"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
+			})
+			Convey("MkdirAll traversing existing file should error...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("womp"), Type: fs.Type_File, Perms: 0755}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("womp/2/3"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
+			})
 		})
 	})
 }
 
 func mustPlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) {
+	if fmeta.Type == fs.Type_File && body == nil {
+		body = &bytes.Buffer{}
+	}
 	if err := PlaceFile(afs, fmeta, body, true); err != nil {
 		panic(err)
 	}
