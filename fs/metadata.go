@@ -67,6 +67,31 @@ const (
 	Type_Hardlink   Type = 'h' // Rare, and may only appear contextually.
 )
 
+func (t Type) String() string {
+	switch t {
+	case Type_File:
+		return "file"
+	case Type_Dir:
+		return "dir"
+	case Type_Symlink:
+		return "symlink"
+	case Type_NamedPipe:
+		return "fifo"
+	case Type_Socket:
+		return "socket"
+	case Type_Device:
+		return "device"
+	case Type_CharDevice:
+		return "chardev"
+	case Type_Hardlink:
+		return "hardline"
+	case Type_Invalid:
+		fallthrough
+	default:
+		return "<invalid type>"
+	}
+}
+
 // Use this for the accessTime attribute when one is needed but no more
 // obvious value is at hand.
 var DefaultAtime = time.Time{}

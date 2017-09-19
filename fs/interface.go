@@ -41,6 +41,8 @@ type FS interface {
 
 	SetTimesNano(path RelPath, mtime time.Time, atime time.Time) error
 
+	Stat(path RelPath) (*Metadata, error)
+
 	LStat(path RelPath) (*Metadata, error)
 
 	ReadDirNames(path RelPath) ([]string, error)
