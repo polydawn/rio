@@ -50,3 +50,19 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 		return err
 	}
 }
+
+/*
+	Records the mtime property currently set on a path and returns a function which
+	will force it to that value again.
+
+	The typical use for this is `defer RepairMtime(fs, "./somedir")()` right
+	before invoking some funcs which will mutate the contents of that dir.
+	When the rest of the changes are done and the function returns, the mtime
+	of the dir will be forced back to its previous value, seemingly unchanged.
+*/
+func RepairMtime(afs fs.FS, path fs.RelPath) func() {
+	fmeta, _ := afs.LStat(path)
+	return func() {
+		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultAtime)
+	}
+}
