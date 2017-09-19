@@ -3,10 +3,13 @@ package cache
 import (
 	"context"
 
+	. "github.com/polydawn/go-errcat"
+
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	cacheapi "go.polydawn.net/rio/cache"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fsOp"
 )
 
 var ShelfFor = cacheapi.ShelfFor
@@ -39,7 +42,11 @@ func (c cache) Unpack(
 	monitor rio.Monitor,
 ) (api.WareID, error) {
 	// Initialize cache.
-	// TODO
+	//  Ensure the cache commit root dir exists.
+	if err := fsOp.MkdirAll(c.afs, fs.MustRelPath(wareID.Type+"/fileset"), 0700); err != nil {
+		return api.WareID{}, Errorf(rio.ExitLocalCacheProblem, "cannot initialize cache dirs: %s", err)
+	}
+	// FIXME you still shouldn't be trying to do this in direct mode boyo
 
 	// Check if we already have it in cache and can return earlier.
 	// TODO
