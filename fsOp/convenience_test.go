@@ -45,6 +45,32 @@ func TestMkdirAll(t *testing.T) {
 
 				So(MkdirAll(afs, fs.MustRelPath("womp/2/3"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
 			})
+			Convey("MkdirAll traversing symlinks should work...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Perms: 0755}, nil)
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("lnk"), Type: fs.Type_Symlink, Linkname: "./dir"}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("lnk/woo"), 0755), ShouldBeNil)
+				stat, err := afs.LStat(fs.MustRelPath("dir/woo"))
+				So(err, ShouldBeNil)
+				So(stat.Type, ShouldEqual, fs.Type_Dir)
+			})
+			Convey("MkdirAll with a dangling symlink should error...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("lnk"), Type: fs.Type_Symlink, Linkname: "./dir"}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("lnk/woo"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
+			})
+			Convey("MkdirAll traversing symlink to a file should error...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("file"), Type: fs.Type_File, Perms: 0644}, nil)
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("lnk"), Type: fs.Type_Symlink, Linkname: "./file"}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("lnk/woo"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
+			})
+			Convey("MkdirAll onto a symlink to a file should error...", func() {
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("file"), Type: fs.Type_File, Perms: 0644}, nil)
+				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("lnk"), Type: fs.Type_Symlink, Linkname: "./file"}, nil)
+
+				So(MkdirAll(afs, fs.MustRelPath("lnk"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
+			})
 		})
 	})
 }

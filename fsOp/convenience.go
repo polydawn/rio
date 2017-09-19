@@ -17,7 +17,7 @@ import (
 */
 func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 	// Check if the path already exists.
-	stat, err := afs.LStat(path)
+	stat, err := afs.Stat(path)
 	// Switch on status of the (derefenced) file.
 	//  Recurse and mkdir if necessary.
 	switch Category(err) {
@@ -31,7 +31,13 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 			return err
 		}
 		if err := afs.Mkdir(path, perms); err != nil {
-			return err
+			switch Category(err) {
+			case fs.ErrAlreadyExists:
+				// this seemingly-contradictory message means the path does exist... it's just that stat said it didn't, beacuse it's a dangling symlink.
+				return Errorf(fs.ErrNotDir, "%s already exists and is a %s not %s", afs.BasePath().Join(path), fs.Type_Symlink, fs.Type_Dir)
+			default:
+				return err
+			}
 		}
 		return nil
 	case fs.ErrNotDir:
