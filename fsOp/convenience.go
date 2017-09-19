@@ -27,6 +27,9 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 		}
 		return Errorf(fs.ErrNotDir, "%s already exists and is a %s not %s", afs.BasePath().Join(path), stat.Type, fs.Type_Dir)
 	case fs.ErrNotExists:
+		if path == (fs.RelPath{}) {
+			return Errorf(fs.ErrNotExists, "base path %s does not exist!", afs.BasePath())
+		}
 		if err := MkdirAll(afs, path.Dir(), perms); err != nil {
 			return err
 		}

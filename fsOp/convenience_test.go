@@ -71,6 +71,11 @@ func TestMkdirAll(t *testing.T) {
 
 				So(MkdirAll(afs, fs.MustRelPath("lnk"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotDir)
 			})
+			Convey("MkdirAll when the entire filesystem DNE should error...", func() {
+				afs := osfs.New(tmpDir.Join(fs.MustRelPath("nope")))
+
+				So(MkdirAll(afs, fs.MustRelPath("dir"), 0755), errcat.ShouldErrorWithCategory, fs.ErrNotExists)
+			})
 		})
 	})
 }
