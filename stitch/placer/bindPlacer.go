@@ -21,8 +21,20 @@ var _ Placer = BindPlacer
 	you need a placer like "aufs" or "overlay".
 */
 func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) error {
+	// Determine desired type.
+	srcStat, err := rootFs.LStat(srcPath.CoerceRelative())
+	if err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error placing with bind mount: %s", err)
+	}
+	switch srcStat.Type {
+	case fs.Type_File: // pass
+	case fs.Type_Dir: // pass
+	default:
+		return Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is %s)", srcPath)
+	}
+
 	// Make the destination path exist and be the right type to mount over.
-	mkDest(srcPath, dstPath)
+	mkDest(dstPath, srcStat.Type)
 
 	// Make mount syscall to bind, and optionally then push it to readonly.
 	//  Works the same for dirs or files.
@@ -39,31 +51,18 @@ func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) error {
 	return nil
 }
 
-func mkDest(srcPath, dstPath fs.AbsolutePath) error {
-	// Determine desired type.
-	srcStat, err := os.Stat(srcPath.String())
-	if err != nil {
-		return Errorf(rio.ExitLocalCacheProblem, "error placing with bind mount: %s", err)
-	}
-	mode := srcStat.Mode() & os.ModeType
-	switch mode {
-	case os.ModeDir, 0: // pass
-	default:
-		return Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is not)", srcPath)
-	}
-
+func mkDest(dstPath fs.AbsolutePath, wantType fs.Type) error {
 	// Handle all the cases for existing things at destination.
-	dstStat, err := os.Stat(dstPath.String())
-	if err == nil {
-		// If exists and wrong type, error.
-		if dstStat.Mode()&os.ModeType != mode {
-			return Errorf(rio.ErrAssemblyInvalid, "placer: destination already exists and is different type than source")
+	dstStat, err := rootFs.LStat(dstPath.CoerceRelative())
+	switch Category(err) {
+	case nil: // It exists.  But is it the right type?
+		if dstStat.Type == wantType {
+			return nil // Already matches.  Huzzah.
 		}
-		// If exists and right type, exit early.
-		return nil
-	}
-	// If it doesn't exist, that's fine; any other error, ErrAssembly.
-	if !os.IsNotExist(err) {
+		return Errorf(rio.ErrAssemblyInvalid, "placer: destination already exists and is different type than source")
+	case fs.ErrNotExists:
+		// Carry on.  We'll create it.
+	default: // Any other error: raise.
 		return Errorf(rio.ErrAssemblyInvalid, "placer: destination unusable: %s", err)
 	}
 
@@ -75,13 +74,13 @@ func mkDest(srcPath, dstPath fs.AbsolutePath) error {
 	// The perms don't matter; will be shadowed.
 	// We assume the parent dirs are all in place because you're almost
 	// certainly using this as part of an assembler.
-	switch mode {
-	case os.ModeDir:
-		err = os.Mkdir(dstPath.String(), 0644)
-	case 0:
+	switch wantType {
+	case fs.Type_File:
 		var f *os.File
 		f, err = os.OpenFile(dstPath.String(), os.O_CREATE, 0644)
 		f.Close()
+	case fs.Type_Dir:
+		err = os.Mkdir(dstPath.String(), 0644)
 	}
 	if err != nil {
 		return Errorf(rio.ErrAssemblyInvalid, "placer: destination unusable: %s", err)
