@@ -9,6 +9,7 @@ func UnpackArgs(
 	wareID api.WareID,
 	path string,
 	filters api.FilesetFilters,
+	placementMode rio.PlacementMode,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
 ) ([]string, error) {
@@ -30,6 +31,10 @@ func UnpackArgs(
 	}
 	if filters.Sticky {
 		args = append(args, "--sticky")
+	}
+	// Append placement mode if specified.
+	if placementMode != "" {
+		args = append(args, "--placer="+string(placementMode))
 	}
 	// Append warehouses.
 	//  Giving this argument repeatedly forms a list in the rio CLI.

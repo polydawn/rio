@@ -26,6 +26,7 @@ func UnpackFunc(
 	wareID api.WareID,
 	path string,
 	filters api.FilesetFilters,
+	placementMode rio.PlacementMode,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
 ) (gotWareID api.WareID, err error) {
@@ -34,7 +35,7 @@ func UnpackFunc(
 	}
 
 	// Marshal args.
-	args, err := UnpackArgs(wareID, path, filters, warehouses, monitor)
+	args, err := UnpackArgs(wareID, path, filters, placementMode, warehouses, monitor)
 	if err != nil {
 		return api.WareID{}, err
 	}

@@ -53,6 +53,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 						wareID,
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{"file://./fixtures/tar_withBase.tgz"},
 						rio.Monitor{},
 					)
@@ -90,6 +91,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 						wareID,
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{"file://./fixtures/tar_sansBase.tgz"},
 						rio.Monitor{},
 					)

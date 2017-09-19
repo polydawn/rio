@@ -35,6 +35,7 @@ func Unpack(
 	wareID api.WareID, // What wareID to fetch for unpacking.
 	path string, // Where to unpack the fileset (absolute path).
 	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	placementMode rio.PlacementMode, // Optionally: a placement mode (default is "copy").
 	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
@@ -44,6 +45,13 @@ func Unpack(
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
 	}
+	if placementMode == "" {
+		placementMode = rio.Placement_Copy
+	}
+
+	// Check for an already-cached fileset.
+	//  If it exists, jump to using a placer to get it into the target path.
+	// TODO
 
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".

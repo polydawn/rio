@@ -45,6 +45,7 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 						api.FilesetFilters{
 							Sticky: true,
 						},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{warehouseAddr},
 						rio.Monitor{},
 					)
