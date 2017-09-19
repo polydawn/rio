@@ -41,7 +41,15 @@ func (c cache) Unpack(
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
 ) (api.WareID, error) {
-	// Absolute first thing: Check if we already have the ware in cache and can jump to placement ASAP.
+	// Zeroth thing: caches are by hash, but remember that filters can give you a
+	//  result hash which is different than the requested ware hash.
+	//  Right now we deal with this simply/stupidly: if you used filters, no cache for you.
+	resultWareID := wareID
+	if isUnpackAltering(filt) {
+		resultWareID = api.WareID{"-", "-"} // The value forces cache miss.
+	}
+
+	// First thing: Check if we already have the ware in cache and can jump to placement ASAP.
 	//  (This must be first because we're willing to read cache even in "direct" mode, but
 	//  yet *not* willing to even initialize empty cache dirs in that mode.)
 	shelf := ShelfFor(wareID)
@@ -77,7 +85,7 @@ func (c cache) Unpack(
 	var tmpPath fs.RelPath
 	tmpPathStr := c.afs.BasePath().Join(tmpPath).String()
 	// Delegate!
-	resultWareID, err := c.unpackTool(ctx, wareID, tmpPathStr, filt, rio.Placement_Direct, warehouses, monitor)
+	resultWareID, err = c.unpackTool(ctx, wareID, tmpPathStr, filt, rio.Placement_Direct, warehouses, monitor)
 	if err != nil {
 		// Cleanup the tempdir
 		// TODO
