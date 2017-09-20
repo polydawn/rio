@@ -50,3 +50,17 @@ func (f Fulcrum) CanManageOwnership() bool {
 	}
 	return f.ourCaps.Get(capability.EFFECTIVE, capability.CAP_CHOWN|capability.CAP_FOWNER)
 }
+
+// Whether we have enough caps to confidently use bind mounts.
+// This requires "have CAP_SYS_ADMIN", because mounts are typically considered a very
+// powerful operation on linux,
+// or, on mac, is uid==0.
+// (Future work: user namespaces may also under some conditions allow *specifically*
+// *bind* mounts.  We don't yet support it because it's fiddly and seems to be something
+// of a moving target in terms of kernel support in the wild; lots of testing needed.)
+func (f Fulcrum) CanMountBind() bool {
+	if !f.onLinux {
+		return f.ourUID == 0
+	}
+	return f.ourCaps.Get(capability.EFFECTIVE, capability.CAP_SYS_ADMIN)
+}

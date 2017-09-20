@@ -18,6 +18,9 @@ func TestPlacers(t *testing.T) {
 	Convey("Copy placer spec tests:", t, func() {
 		specPlacerGood(CopyPlacer)
 	})
+	Convey("Bind placer spec tests:", t, testutil.Requires(testutil.RequiresCanMountBind, func() {
+		specPlacerGood(BindPlacer)
+	}))
 }
 
 func specPlacerGood(placeFunc Placer) {
