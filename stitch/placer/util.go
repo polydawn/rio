@@ -29,7 +29,7 @@ func mkDest(dstPath fs.AbsolutePath, wantType fs.Type) error {
 	}
 
 	// If we made it this far: dest doesn't exist yet.
-	// Capture the parent dir mtime, because we're about to disrupt it.
+	// Capture the parent dir mtime and defer its repair, because we're about to disrupt it.
 	defer fsOp.RepairMtime(rootFs, dstPath.Dir().CoerceRelative())()
 
 	// Make the dest node, matching type of the source.
