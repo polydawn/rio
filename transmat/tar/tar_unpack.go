@@ -16,10 +16,12 @@ import (
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/go-timeless-api/util"
+	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/lib/treewalk"
+	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/util"
@@ -40,18 +42,31 @@ func Unpack(
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
+	if placementMode == "" {
+		placementMode = rio.Placement_Copy
+	}
+	// Wrap the direct unpack func with cache behavior; call that.
+	return cache.Lrn2Cache(
+		osfs.New(config.GetCacheBasePath()),
+		unpack,
+	)(ctx, wareID, path, filt, placementMode, warehouses, monitor)
+}
+
+func unpack(
+	ctx context.Context,
+	wareID api.WareID,
+	path string,
+	filt api.FilesetFilters,
+	placementMode rio.PlacementMode,
+	warehouses []api.WarehouseAddr,
+	monitor rio.Monitor,
+) (api.WareID, error) {
+	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
 	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
 	}
-	if placementMode == "" {
-		placementMode = rio.Placement_Copy
-	}
-
-	// Check for an already-cached fileset.
-	//  If it exists, jump to using a placer to get it into the target path.
-	// TODO
 
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".
