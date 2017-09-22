@@ -28,7 +28,7 @@ func specPlacerGood(placeFunc Placer) {
 		afs := osfs.New(tmpDir)
 		Convey("Placement of a dir should work, and maintain parent props", func() {
 			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("srcParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2004, 01, 15, 0, 0, 0, 0, time.UTC)}, nil)
-			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("srcParent/content"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)}, nil)
+			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("srcParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)}, nil)
 			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("srcParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC)}, bytes.NewBuffer([]byte("asdf")))
 			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil)
 
@@ -41,7 +41,7 @@ func mustPlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) {
 	if fmeta.Type == fs.Type_File && body == nil {
 		body = &bytes.Buffer{}
 	}
-	if err := fsOp.PlaceFile(afs, fmeta, body, true); err != nil {
+	if err := fsOp.PlaceFile(afs, fmeta, body, false); err != nil {
 		panic(err)
 	}
 }
