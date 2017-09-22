@@ -53,6 +53,23 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 
 		So(cleanupFunc(), ShouldBeNil)
 	})
+	Convey("Placement of a file should work, and maintain parent props", func() {
+		PlaceFixture(afs, []FixtureFile{
+			{fs.Metadata{Name: fs.MustRelPath("srcParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2004, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("srcParent/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC)}, []byte("asdf")}, {fs.Metadata{Name: fs.MustRelPath("srcParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+		})
+
+		cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/file")), tmpDir.Join(fs.MustRelPath("dstParent/file")), true)
+		So(err, ShouldBeNil)
+
+		// First check the content files and dirs.
+		So(shouldStat(afs, fs.MustRelPath("dstParent/file")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC), Size: 4})
+		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
+		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
+
+		So(cleanupFunc(), ShouldBeNil)
+	})
 }
 
 func shouldStat(afs fs.FS, path fs.RelPath) fs.Metadata {
