@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/rio/fs"
@@ -65,6 +66,29 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 
 		// First check the content files and dirs.
 		So(shouldStat(afs, fs.MustRelPath("dstParent/file")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC), Size: 4})
+		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
+		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
+
+		So(cleanupFunc(), ShouldBeNil)
+	})
+	Convey("Placements overlapping existing content should work, and obscure it", func() {
+		PlaceFixture(afs, []FixtureFile{
+			{fs.Metadata{Name: fs.MustRelPath("srcParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2004, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("srcParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("srcParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC)}, []byte("asdf")},
+			{fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("dstParent/content"), Type: fs.Type_Dir, Perms: 0600, Mtime: time.Date(2029, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
+			{fs.Metadata{Name: fs.MustRelPath("dstParent/content/chump"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2106, 01, 15, 0, 0, 0, 0, time.UTC)}, []byte("qwer")},
+		})
+
+		cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
+		So(err, ShouldBeNil)
+
+		// First check the content files and dirs.
+		So(shouldStat(afs, fs.MustRelPath("dstParent/content")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)})
+		So(shouldStat(afs, fs.MustRelPath("dstParent/content/file")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC), Size: 4})
+		_, err = afs.LStat(fs.MustRelPath("dstParent/content/chump"))
+		So(err, errcat.ShouldErrorWithCategory, fs.ErrNotExists)
 		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
 

@@ -36,6 +36,12 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (CleanupFunc, error) {
 	// Capture the parent dir mtime and defer its repair, because we're about to disrupt it.
 	defer fsOp.RepairMtime(rootFs, dstPath.Dir().CoerceRelative())()
 
+	// Remove any files already here -- this is to emulate the same behavior
+	//  as would be seen with a mount (things masked just vanish).
+	if err := os.RemoveAll(dstPath.String()); err != nil {
+		return nil, Errorf(rio.ErrAssemblyInvalid, "error clearing copy placement area: %s", err)
+	}
+
 	// If plain file: handle that first and return early.
 	//  The non-recursive case is much easier.
 	if srcStat.Type == fs.Type_File {
