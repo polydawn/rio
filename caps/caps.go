@@ -64,3 +64,16 @@ func (f Fulcrum) CanMountBind() bool {
 	}
 	return f.ourCaps.Get(capability.EFFECTIVE, capability.CAP_SYS_ADMIN)
 }
+
+// Whether we have enough caps to confidently use *any* kind of mounts.
+// This requires "have CAP_SYS_ADMIN", because mounts are typically considered a very
+// powerful operation on linux,
+// or, on mac, is uid==0.
+// (This is distinct from "CanMountBind" because some recursive container situations
+// may have a whitelist allowing bind mounts, but not others like e.g. "aufs".)
+func (f Fulcrum) CanMountAny() bool {
+	if !f.onLinux {
+		return f.ourUID == 0
+	}
+	return f.ourCaps.Get(capability.EFFECTIVE, capability.CAP_SYS_ADMIN)
+}
