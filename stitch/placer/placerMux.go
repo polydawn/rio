@@ -4,7 +4,9 @@ import (
 	"go.polydawn.net/rio/fs"
 )
 
-type Placer func(srcPath, dstPath fs.AbsolutePath, writable bool) error
+type Placer func(srcPath, dstPath fs.AbsolutePath, writable bool) (CleanupFunc, error)
+
+type CleanupFunc func() error
 
 /*
 	The copy placer is always defined and always supported and is never swappable.

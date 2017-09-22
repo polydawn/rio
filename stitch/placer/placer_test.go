@@ -32,13 +32,16 @@ func specPlacerGood(placeFunc Placer) {
 				{fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
 			})
 
-			So(placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true), ShouldBeNil)
+			cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
+			So(err, ShouldBeNil)
 
 			// First check the content files and dirs.
 			So(shouldStat(afs, fs.MustRelPath("dstParent/content")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)})
 			So(shouldStat(afs, fs.MustRelPath("dstParent/content/file")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC), Size: 4})
 			// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 			So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
+
+			So(cleanupFunc(), ShouldBeNil)
 		})
 	})
 }
