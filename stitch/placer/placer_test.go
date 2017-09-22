@@ -15,9 +15,9 @@ import (
 )
 
 func TestPlacers(t *testing.T) {
-	Convey("Copy placer spec tests:", t, func() {
+	Convey("Copy placer spec tests:", t, testutil.Requires(testutil.RequiresCanManageOwnership, func() {
 		specPlacerGood(CopyPlacer)
-	})
+	}))
 	Convey("Bind placer spec tests:", t, testutil.Requires(testutil.RequiresCanMountBind, func() {
 		specPlacerGood(BindPlacer)
 	}))
@@ -32,7 +32,7 @@ func specPlacerGood(placeFunc Placer) {
 			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("srcParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC)}, bytes.NewBuffer([]byte("asdf")))
 			mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil)
 
-			So(placeFunc(tmpDir.Join(fs.MustRelPath("srcParent")), tmpDir.Join(fs.MustRelPath("dstParent")), true), ShouldBeNil)
+			So(placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true), ShouldBeNil)
 		})
 	})
 }
