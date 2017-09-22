@@ -1,14 +1,20 @@
 package stitch
 
 import (
+	"context"
 	"sort"
+	"sync"
 
 	. "github.com/polydawn/go-errcat"
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/rio/cache"
+	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
+	"go.polydawn.net/rio/stitch/placer"
 )
 
 /*
@@ -34,28 +40,84 @@ func (a UnpackSpecByPath) Len() int           { return len(a) }
 func (a UnpackSpecByPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a UnpackSpecByPath) Less(i, j int) bool { return a[i].Path.String() < a[j].Path.String() }
 
-type assembler struct {
+type unpackResult struct {
+	Path  fs.AbsolutePath // cache path or mount source path
+	Error error
+}
+
+type Assembler struct {
 	cache          fs.FS
 	unpackTool     rio.UnpackFunc
-	placerTool     func( /*todo*/ )
+	placerTool     placer.Placer
 	fillerDirProps fs.Metadata
 }
 
-func (a assembler) Run(targetFs fs.FS, parts []UnpackSpec) error {
+func NewAssembler(unpackTool rio.UnpackFunc) (*Assembler, error) {
+	placerTool, err := placer.GetMountPlacer()
+	if err != nil {
+		return nil, err
+	}
+	return &Assembler{
+		cache:      osfs.New(config.GetCacheBasePath()),
+		unpackTool: unpackTool,
+		placerTool: placerTool,
+		fillerDirProps: fs.Metadata{
+			Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
+		},
+	}, nil
+}
+
+func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec) (placer.CleanupFunc, error) {
 	sort.Sort(UnpackSpecByPath(parts))
 
 	// Fan out materialization into cache paths.
-	// TODO
+	unpackResults := make([]unpackResult, len(parts))
+	var wg sync.WaitGroup
+	wg.Add(len(parts))
+	for i, part := range parts {
+		go func(i int, part UnpackSpec) {
+			defer wg.Done()
+			res := &unpackResults[i]
+			// If it's a mount, shortcut.
+			if part.WareID.Type == "mount" {
+				res.Path, res.Error = fs.ParseAbsolutePath(part.WareID.Hash)
+				return
+			}
+			// Unpack with placement=none to populate cache.
+			resultWareID, err := a.unpackTool(
+				ctx, // TODO fork em out
+				part.WareID,
+				"-",
+				part.Filters,
+				rio.Placement_None,
+				part.Warehouses,
+				rio.Monitor{},
+			)
+			// Yield the cache path.
+			res.Path = config.GetCacheBasePath().Join(cache.ShelfFor(resultWareID))
+			res.Error = err
+			// TODO if any error, fan out cancellations
+		}(i, part)
+	}
+	wg.Wait()
+	// Yield up any errors from individual unpacks.
+	for _, result := range unpackResults {
+		if result.Error != nil {
+			return nil, result.Error
+		}
+	}
 
 	// Zip up all placements, in order.
 	//  Parent dirs are made as necessary along the way.
-	for _, part := range parts {
+	hk := &housekeeping{}
+	for i, part := range parts {
 		path := part.Path.CoerceRelative()
+
 		// Ensure parent dirs.
 		for _, parentPath := range path.Dir().Split() {
 			target, isSymlink, err := targetFs.Readlink(parentPath)
 			if isSymlink {
-				return fs.NewBreakoutError(
+				return nil, fs.NewBreakoutError(
 					targetFs.BasePath(),
 					path,
 					parentPath,
@@ -68,15 +130,46 @@ func (a assembler) Run(targetFs fs.FS, parts []UnpackSpec) error {
 				a.fillerDirProps.Name = parentPath
 				// Could be cleaner: this PlaceFile call rechecks the symlink thing, but it's the shortest call for "make all props right plz".
 				if err := fsOp.PlaceFile(targetFs, a.fillerDirProps, nil, false); err != nil {
-					return err
+					return nil, err
 				}
 			} else {
 				// Halt assembly attempt for any unhandlable errors that come up during parent path establishment.
-				return err
+				return nil, err
 			}
 		}
+
 		// Invoke placer.
-		// TODO
+		//  Accumulate the individual cleanup funcs into a mega func we'll return.
+		//  If errors occur during any placement, fire the cleanups so far before returning.
+		var cleanup placer.CleanupFunc
+		var err error
+		switch part.WareID.Type {
+		case "mount":
+			cleanup, err = placer.BindPlacer(unpackResults[i].Path, part.Path, false)
+		default:
+			cleanup, err = a.placerTool(unpackResults[i].Path, part.Path, false)
+		}
+		if err != nil {
+			hk.Teardown()
+			return nil, err
+		}
+		hk.append(cleanup)
+	}
+	return hk.Teardown, nil
+}
+
+type housekeeping struct {
+	CleanupStack []placer.CleanupFunc
+}
+
+func (hk *housekeeping) append(fn placer.CleanupFunc) {
+	hk.CleanupStack = append(hk.CleanupStack, fn)
+}
+
+func (hk housekeeping) Teardown() error {
+	for i := len(hk.CleanupStack) - 1; i >= 0; i-- {
+		// TODO better error handling here.  difficult to say whether we should continue with the rest of cleanups or not.
+		hk.CleanupStack[i]()
 	}
 	return nil
 }
