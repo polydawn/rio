@@ -10,6 +10,7 @@ import (
 	"go.polydawn.net/go-timeless-api/rio"
 	cacheapi "go.polydawn.net/rio/cache"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/lib/guid"
 	"go.polydawn.net/rio/stitch/placer"
@@ -115,6 +116,10 @@ func (c cache) populate(
 ) (api.WareID, fs.RelPath, error) {
 	// Initialize cache.
 	//  Ensure the cache commit root dir exists.
+	//  Also ensure the cache parent dir exists... no bound on recursion.
+	if err := fsOp.MkdirAll(osfs.New(fs.AbsolutePath{}), c.fs.BasePath().CoerceRelative(), 0700); err != nil {
+		return api.WareID{}, fs.RelPath{}, Errorf(rio.ErrLocalCacheProblem, "cannot initialize cache dirs: %s", err)
+	}
 	if err := fsOp.MkdirAll(c.fs, fs.MustRelPath(wareID.Type+"/fileset"), 0700); err != nil {
 		return api.WareID{}, fs.RelPath{}, Errorf(rio.ErrLocalCacheProblem, "cannot initialize cache dirs: %s", err)
 	}
