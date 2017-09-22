@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/rio/cache"
+	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
@@ -45,6 +48,7 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 						api.FilesetFilters{
 							Sticky: true,
 						},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{warehouseAddr},
 						rio.Monitor{},
 					)
@@ -68,5 +72,60 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 				})
 			})
 		}
+	})
+}
+
+func CheckCachePopulation(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
+	Convey("SPEC: Caching: unpack with 'none' placement should result in cache...", func() {
+		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+			// Bonk our own config env vars to isolate cache.
+			tmpBase := tmpDir.Join(fs.MustRelPath("rio-base"))
+			os.Setenv("RIO_BASE", tmpBase.String())
+
+			// Set up fixture.
+			fixture := FixtureGamma
+			fixturePath := tmpDir.Join(fs.MustRelPath("fixture"))
+			PlaceFixture(osfs.New(fixturePath), fixture)
+
+			// Pack up into our warehouseaddr.  (Not interesting, but we lack other fixtures.)
+			wareID, err := pack(
+				context.Background(),
+				fixturePath.String(),
+				api.FilesetFilters{Uid: "keep", Gid: "keep", Mtime: "keep"},
+				warehouseAddr,
+				rio.Monitor{},
+			)
+			So(err, ShouldBeNil)
+
+			// Unpack to a new path, with Placement_None mode.
+			unpackPath := tmpDir.Join(fs.MustRelPath("unpack"))
+			wareID2, err := unpack(
+				context.Background(),
+				wareID,
+				unpackPath.String(),
+				api.FilesetFilters{Sticky: true},
+				rio.Placement_None,
+				[]api.WarehouseAddr{warehouseAddr},
+				rio.Monitor{},
+			)
+			So(err, ShouldBeNil)
+			So(wareID, ShouldResemble, wareID2)
+
+			Convey("cache should exist, and agree on hash and content", FailureContinues, func() {
+				// Each file in the fixture should exist and match rescanning.
+				shelfPath := config.GetCacheBasePath().Join(cache.ShelfFor(wareID))
+				afs := osfs.New(shelfPath)
+				for _, file := range fixture {
+					fmeta, reader, err := fsOp.ScanFile(afs, file.Metadata.Name)
+					So(err, ShouldBeNil)
+					fmeta.Mtime = fmeta.Mtime.UTC()
+					So(*fmeta, ShouldResemble, file.Metadata)
+					if file.Metadata.Type == fs.Type_File {
+						body, _ := ioutil.ReadAll(reader)
+						So(string(body), ShouldResemble, string(file.Body))
+					}
+				}
+			})
+		})
 	})
 }

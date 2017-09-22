@@ -27,6 +27,16 @@ var RequiresLongRun = ConveyRequirement{"run long tests", func() bool { return !
 var RequiresCanManageOwnership = ConveyRequirement{"have caps for managing file ownership", caps.Scan().CanManageOwnership}
 
 /*
+	Require that the test process is running with enough capabilities to be able to make bind mounts.
+*/
+var RequiresCanMountBind = ConveyRequirement{"have caps for mounting binds", caps.Scan().CanMountBind}
+
+/*
+	Require that the test process is running with enough capabilities to be able to make any/all mounts.
+*/
+var RequiresCanMountAny = ConveyRequirement{"have caps for any mounting", caps.Scan().CanMountAny}
+
+/*
 	Decorates a GoConvey test to check a set of `ConveyRequirement`s,
 	returning a dummy test func that skips (with an explanation!) if any
 	of the requirements are unsatisfied; if all is well, it yields

@@ -38,6 +38,7 @@ func Test(t *testing.T) {
 						api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 						rio.Monitor{},
 					)
@@ -53,6 +54,7 @@ func Test(t *testing.T) {
 						api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						nil,
 						rio.Monitor{},
 					)

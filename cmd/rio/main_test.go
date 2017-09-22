@@ -83,6 +83,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 							"unpack",
 							tmpDir.String(),
 							wareID,
+							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 							fmt.Sprintf("--source=%s", source),
 						}, rio.ExitSuccess, wareID + "\n", ""},
 						{"UnpackJsonFormat", []string{
@@ -90,6 +91,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 							"unpack",
 							tmpDir.String(),
 							wareID,
+							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 							fmt.Sprintf("--source=%s", source),
 							fmt.Sprintf("--format=%s", FmtJson),
 						}, rio.ExitSuccess, fmt.Sprintf(`{"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},

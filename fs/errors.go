@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 
 	. "github.com/polydawn/go-errcat"
 )
@@ -19,6 +20,7 @@ const (
 	ErrUnexpectedEOF ErrorCategory = "fs-unexpected-eof"
 	ErrNotExists     ErrorCategory = "fs-not-exists"
 	ErrAlreadyExists ErrorCategory = "fs-already-exists"
+	ErrNotDir        ErrorCategory = "fs-not-dir" // contextually, may be a form of either ErrNotExists or ErrAlready exists: shows up when e.g. lstat doesnotexist/deeper/path or mkdir aregularfile/deeper/path.
 	ErrShortWrite    ErrorCategory = "fs-shortwrite"
 
 	/*
@@ -55,6 +57,14 @@ func NormalizeIOError(ioe error) error {
 		return Recategorize(ioe, ErrUnexpectedEOF)
 	case io.ErrShortWrite:
 		return Recategorize(ioe, ErrShortWrite)
+	}
+	// Complicated things there are no stdlib predicates for.
+	switch e2 := ioe.(type) {
+	case *os.PathError:
+		switch e2.Err {
+		case syscall.ENOTDIR:
+			return ErrorDetailed(ErrNotDir, e2.Error(), map[string]string{"path": e2.Path})
+		}
 	}
 	// Predicates.  God knows what they'll match;
 	//  literally turing complete exhaustive checking is the only option.

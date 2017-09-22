@@ -65,12 +65,23 @@ func (afs *osFS) Chmod(path fs.RelPath, perms fs.Perms) error {
 	return fs.NormalizeIOError(err)
 }
 
+func (afs *osFS) Stat(path fs.RelPath) (*fs.Metadata, error) {
+	fi, err := os.Stat(afs.basePath.Join(path).String())
+	if err != nil {
+		return nil, fs.NormalizeIOError(err)
+	}
+	return afs.convertFileinfo(path, fi)
+}
+
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, error) {
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {
 		return nil, fs.NormalizeIOError(err)
 	}
+	return afs.convertFileinfo(path, fi)
+}
 
+func (afs *osFS) convertFileinfo(path fs.RelPath, fi os.FileInfo) (*fs.Metadata, error) {
 	// Copy over the easy 1-to-1 parts.
 	fmeta := &fs.Metadata{
 		Name:  path,

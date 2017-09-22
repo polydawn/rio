@@ -26,6 +26,8 @@ func TestTarUnpack(t *testing.T) {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 					osfs.New(tmpDir).Mkdir(fs.MustRelPath("bounce"), 0755)
 					tests.CheckRoundTrip(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
+					// Following tests could be done in all modes, but isn't about warehouses, so would be redundant to do so.
+					tests.CheckCachePopulation(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
 				})
 			})
 			Convey("Using kvfs warehouse, in *non*-content-addressable mode:", func() {
@@ -53,6 +55,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 						wareID,
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{"file://./fixtures/tar_withBase.tgz"},
 						rio.Monitor{},
 					)
@@ -90,6 +93,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 						wareID,
 						tmpDir.String(),
 						api.FilesetFilters{},
+						rio.Placement_Direct,
 						[]api.WarehouseAddr{"file://./fixtures/tar_sansBase.tgz"},
 						rio.Monitor{},
 					)

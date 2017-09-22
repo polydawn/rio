@@ -38,10 +38,11 @@ type baseCLI struct {
 		TargetWarehouseAddr string             // Warehouse address to push to
 	}
 	UnpackCLI struct {
+		WareID               string // Ware id string "<kind>:<hash>"
+		Path                 string // Unpack target path
 		Filters              api.FilesetFilters
-		Path                 string   // Unpack target path
+		PlacementMode        string   // Placement mode enum
 		SourcesWarehouseAddr []string // Warehouse address to push to
-		WareID               string   // Ware id string "<kind>:<hash>"
 	}
 	MirrorCLI struct {
 		SourcesWarehouseAddr []string // Warehouse addresses to fetch from
@@ -76,6 +77,9 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 	appUnpack.Arg("ware", "Ware ID").
 		Required().
 		StringVar(&cli.UnpackCLI.WareID)
+	appUnpack.Flag("placer", "Placement mode to use [copy, direct, mount, none]").
+		EnumVar(&cli.UnpackCLI.PlacementMode,
+			string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
 	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
 		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
 
@@ -227,7 +231,7 @@ func executeUnpack(ctx context.Context, cli baseCLI, unpackFn rio.UnpackFunc) (a
 	}
 	path := cli.UnpackCLI.Path
 	warehouses := convertWarehouseSlice(cli.UnpackCLI.SourcesWarehouseAddr)
-	return unpackFn(ctx, wareID, path, cli.UnpackCLI.Filters, warehouses, monitor)
+	return unpackFn(ctx, wareID, path, cli.UnpackCLI.Filters, rio.PlacementMode(cli.UnpackCLI.PlacementMode), warehouses, monitor)
 }
 
 func executePack(ctx context.Context, cli baseCLI, packFn rio.PackFunc) (api.WareID, error) {

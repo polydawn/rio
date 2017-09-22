@@ -159,6 +159,31 @@ func TestRelPathJoins(t *testing.T) {
 	})
 }
 
+func TestRelPathSplits(t *testing.T) {
+	Convey("RelPath.Split suite:", t, func() {
+		for _, tr := range []struct {
+			title string
+			p1    RelPath
+			ps    []RelPath
+		}{
+			{"zero values",
+				RelPath{},
+				[]RelPath{RelPath{}}},
+			{"len=1 values",
+				MustRelPath("./a"),
+				[]RelPath{RelPath{}, MustRelPath("a")}},
+			{"len=3 values",
+				MustRelPath("./a/bb/c"),
+				[]RelPath{RelPath{}, MustRelPath("a"), MustRelPath("a/bb"), MustRelPath("a/bb/c")}},
+		} {
+			Convey(tr.title, func() {
+				v := tr.p1.Split()
+				So(v, ShouldResemble, tr.ps)
+			})
+		}
+	})
+}
+
 //--------------
 // AbsolutePath
 //--------------

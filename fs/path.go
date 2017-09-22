@@ -92,6 +92,30 @@ func (p RelPath) Join(p2 RelPath) RelPath {
 }
 
 /*
+	Returns a slice of relative paths for each segment in the path.
+
+	E.g. for "./a/b/c" it will return [".", "./a", "./a/b", "./a/b/c"].
+
+	For some path where you wish to create all parent paths, it may be useful
+	to `range path.Dir().Split()`.
+*/
+func (p RelPath) Split() []RelPath {
+	if p.path == "" {
+		return []RelPath{RelPath{}}
+	}
+	if p.lastSplit == -1 {
+		return []RelPath{RelPath{}, p}
+	}
+	n := strings.Count(p.path, "/") + 1
+	slice := make([]RelPath, n+1)
+	slice[n] = p
+	for i := n - 1; i >= 0; i-- {
+		slice[i] = slice[i+1].Dir()
+	}
+	return slice
+}
+
+/*
 	Relative paths and absolute paths are not interchangeable.
 	Using these path structures aids in keeping these ideas separate and
 	hopefully prevent certain kinds of errors caused by accidentally using the incorrect path type.
@@ -170,4 +194,8 @@ func (p AbsolutePath) Join(p2 RelPath) AbsolutePath {
 	default:
 		return AbsolutePath{p.path + "/" + p2.path, len(p.path) + p2.lastSplit + 1}
 	}
+}
+
+func (p AbsolutePath) CoerceRelative() RelPath {
+	return MustRelPath("." + p.path)
 }
