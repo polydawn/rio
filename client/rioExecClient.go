@@ -3,6 +3,7 @@ package rioexecclient
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"time"
@@ -70,6 +71,12 @@ func UnpackFunc(
 	for {
 		// Peel off a message.
 		if err := unmarshaller.Unmarshal(&msgSlot); err != nil {
+			if err == io.EOF {
+				// In case of unexpected EOF, there must have been a panic on the other side;
+				//  it'll be more informative to break here and return the error from Wait,
+				//  which will include the stderr capture.
+				break
+			}
 			return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: API parse error: %s", err)
 		}
 
