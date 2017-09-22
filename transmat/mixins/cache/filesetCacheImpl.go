@@ -67,6 +67,9 @@ func (c cache) Unpack(
 		}
 		// Unpack into the cache.
 		resultWareID, shelf, err = c.populate(ctx, wareID, filt, warehouses, monitor)
+		if err != nil {
+			return resultWareID, err
+		}
 		// Now that the cache has it, we can fallthrough into the "cache already had it" path.
 		fallthrough
 	case nil: // Cache has it!  Reaction varies.
