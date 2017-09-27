@@ -75,22 +75,21 @@ func (c cache) Unpack(
 		fallthrough
 	case nil: // Cache has it!  Reaction varies.
 		absShelf := c.fs.BasePath().Join(shelf)
-		absDest := fs.MustAbsolutePath(path)
 		switch placementMode {
 		case rio.Placement_None: // If no placement, cache having it is victory!
 			return wareID, nil
 		case rio.Placement_Direct: // In direct mode, copy.
-			_, err := placer.CopyPlacer(absShelf, absDest, true)
+			_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(path), true)
 			return wareID, err
 		case rio.Placement_Copy: // In copy mode, ... well obviously copy.
-			_, err := placer.CopyPlacer(absShelf, absDest, true)
+			_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(path), true)
 			return wareID, err
 		case rio.Placement_Mount: // In mount mode, mount.
 			placerFn, err := placer.GetMountPlacer()
 			if err != nil {
 				return api.WareID{}, err
 			}
-			_, err = placerFn(absShelf, absDest, true)
+			_, err = placerFn(absShelf, fs.MustAbsolutePath(path), true)
 			return wareID, err
 		default:
 			panic("unreachable")
