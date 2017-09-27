@@ -10,6 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	. "go.polydawn.net/rio/testutil"
@@ -198,7 +199,37 @@ func TestTreeUnpack(t *testing.T) {
 					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Invalid mounts should fail:", func() {
-					// TODO
+					// Set up another swatch of filesystem to be mounted.
+					mfs := osfs.New(tmpDir.Join(fs.MustRelPath("mount")))
+					tests.PlaceFixture(mfs, tests.FixtureAlpha)
+
+					// Assemble a tree with some regular inputs, and one mount... and
+					//  an input under the mount.  This should be rejected.
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+							{
+								Path:   fs.MustAbsolutePath("/bc"),
+								WareID: api.WareID{"mount", "rw:" + tmpDir.Join(fs.MustRelPath("mount")).String()},
+							},
+							{
+								Path:       fs.MustAbsolutePath("/bc/nopenope"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+						},
+					)
+					So(err, ShouldErrorWithCategory, rio.ErrAssemblyInvalid)
+					So(cleanupFunc, ShouldBeNil)
 				})
 				Convey("Unpack with no explicit root should work:", func() {
 					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
