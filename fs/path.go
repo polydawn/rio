@@ -1,7 +1,7 @@
 package fs
 
 import (
-	"errors"
+	"fmt"
 	"path"
 	"strings"
 )
@@ -146,7 +146,7 @@ func MustAbsolutePath(p string) AbsolutePath {
 func ParseAbsolutePath(p string) (AbsolutePath, error) {
 	p = path.Clean(p)
 	if p[0] != '/' {
-		return AbsolutePath{}, errors.New("fs: not an absolute path")
+		return AbsolutePath{}, fmt.Errorf("fs: not an absolute path (%q)", p)
 	}
 	if p == "/" { // We can't stop people from using the zero value, so, use it.
 		return AbsolutePath{}, nil
