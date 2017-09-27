@@ -201,7 +201,35 @@ func TestTreeUnpack(t *testing.T) {
 					// TODO
 				})
 				Convey("Unpack with no explicit root should work:", func() {
-					// TODO
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/only/deep"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+						},
+					)
+					So(err, ShouldBeNil)
+
+					// The root and other parent dirs should all have the default bits.
+					So(ShouldStat(afs, fs.MustRelPath(".")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("only")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("only"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)})
+					// The rest of the ware is unchanged, just offset.
+					So(ShouldStat(afs, fs.MustRelPath("only/deep")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("only/deep"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("only/deep/ab")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("only/deep/ab"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("only/deep/bc")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("only/deep/bc"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+
+					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Unpack with shadowing should work and shadow:", func() {
 					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
