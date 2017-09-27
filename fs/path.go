@@ -24,7 +24,7 @@ type RelPath struct {
 func MustRelPath(p string) RelPath {
 	p = path.Clean(p)
 	if p[0] == '/' {
-		panic("fs: not a relative path")
+		panic(fmt.Errorf("fs: not a relative path (%q)", p))
 	}
 	if p == "." { // We can't stop people from using the zero value, so, use it.
 		return RelPath{}
