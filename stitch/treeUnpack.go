@@ -72,6 +72,25 @@ func NewAssembler(unpackTool rio.UnpackFunc) (*Assembler, error) {
 func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec) (func() error, error) {
 	sort.Sort(UnpackSpecByPath(parts))
 
+	// Unpacking either wares or more mounts into paths under mounts is seriously illegal.
+	//  It's a massive footgun, entirely strange, and just No.
+	//  Doing it into paths under other wares is fine because it's not *leaving* our zone.
+	var mounts map[fs.AbsolutePath]struct{}
+	for _, part := range parts {
+		for mount := range mounts {
+			if strings.HasPrefix(part.Path.String(), mount.String()) {
+				return nil, Errorf(rio.ErrAssemblyInvalid, "invalid inputs config: "+
+					"cannot stitch additional inputs under a mount (%q is under mount at %q)",
+					part.Path, mount)
+			}
+		}
+		// If this one is a mount, mark it for the rest.
+		//  (Paths under it must come after it, due to the sort.)
+		if part.WareID.Type == "mount" {
+			mounts[part.Path] = struct{}{}
+		}
+	}
+
 	// Fan out materialization into cache paths.
 	unpackResults := make([]unpackResult, len(parts))
 	var wg sync.WaitGroup
@@ -119,6 +138,8 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		for _, parentPath := range path.Dir().Split() {
 			target, isSymlink, err := targetFs.Readlink(parentPath)
 			if isSymlink {
+				// Future hackers: if you ever try to make this check cleverer,
+				//  also make sure you include a check for host mount crossings.
 				return nil, fs.NewBreakoutError(
 					targetFs.BasePath(),
 					path,
