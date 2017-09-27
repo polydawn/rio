@@ -111,7 +111,46 @@ func TestTreeUnpack(t *testing.T) {
 					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Unpack plus implicit parent dir creation should work:", func() {
-					// TODO
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+							{
+								Path:       fs.MustAbsolutePath("/mk/dir/"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+						},
+					)
+					So(err, ShouldBeNil)
+
+					// From the first input:
+					So(ShouldStat(afs, fs.MustRelPath(".")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("ab")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("ab"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					// From implicit dir creation:
+					So(ShouldStat(afs, fs.MustRelPath("mk")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("mk"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)})
+					// From the second input:
+					So(ShouldStat(afs, fs.MustRelPath("mk/dir")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("mk/dir"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("mk/dir/ab")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("mk/dir/ab"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("mk/dir/bc")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("mk/dir/bc"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+
+					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Unpack plus mounts should work:", func() {
 					// TODO

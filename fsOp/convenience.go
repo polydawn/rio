@@ -66,7 +66,10 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 	of the dir will be forced back to its previous value, seemingly unchanged.
 */
 func RepairMtime(afs fs.FS, path fs.RelPath) func() {
-	fmeta, _ := afs.LStat(path)
+	fmeta, err := afs.LStat(path)
+	if err != nil {
+		return func() {}
+	}
 	return func() {
 		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultAtime)
 	}

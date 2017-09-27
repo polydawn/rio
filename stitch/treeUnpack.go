@@ -154,30 +154,38 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		path := part.Path.CoerceRelative()
 
 		// Ensure parent dirs.
-		for _, parentPath := range path.Dir().Split() {
-			target, isSymlink, err := targetFs.Readlink(parentPath)
-			if isSymlink {
-				// Future hackers: if you ever try to make this check cleverer,
-				//  also make sure you include a check for host mount crossings.
-				return nil, fs.NewBreakoutError(
-					targetFs.BasePath(),
-					path,
-					parentPath,
-					target,
-				)
-			} else if err == nil {
-				continue
-			} else if Category(err) == fs.ErrNotExists {
-				// Make the parent dir if it does not exist.
-				a.fillerDirProps.Name = parentPath
-				// Could be cleaner: this PlaceFile call rechecks the symlink thing, but it's the shortest call for "make all props right plz".
-				if err := fsOp.PlaceFile(targetFs, a.fillerDirProps, nil, false); err != nil {
-					return nil, err
+		//  We do it in a closure to give convenint scope for defers.
+		if err := func() error {
+			for _, parentPath := range path.Dir().Split() {
+				target, isSymlink, err := targetFs.Readlink(parentPath)
+				if isSymlink {
+					// Future hackers: if you ever try to make this check cleverer,
+					//  also make sure you include a check for host mount crossings.
+					return fs.NewBreakoutError(
+						targetFs.BasePath(),
+						path,
+						parentPath,
+						target,
+					)
+				} else if err == nil {
+					continue
+				} else if Category(err) == fs.ErrNotExists {
+					// Capture the parent mtime for restoration before issuing a syscall that bonks it.
+					defer fsOp.RepairMtime(targetFs, parentPath.Dir())()
+					// Make the parent dir if it does not exist.
+					a.fillerDirProps.Name = parentPath
+					// Could be cleaner: this PlaceFile call rechecks the symlink thing, but it's the shortest call for "make all props right plz".
+					if err := fsOp.PlaceFile(targetFs, a.fillerDirProps, nil, false); err != nil {
+						return err
+					}
+				} else {
+					// Halt assembly attempt for any unhandlable errors that come up during parent path establishment.
+					return err
 				}
-			} else {
-				// Halt assembly attempt for any unhandlable errors that come up during parent path establishment.
-				return nil, err
 			}
+			return nil
+		}(); err != nil {
+			return nil, err
 		}
 
 		// Invoke placer.
