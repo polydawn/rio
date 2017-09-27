@@ -3,6 +3,7 @@ package testutil
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -35,6 +36,18 @@ var RequiresCanMountBind = ConveyRequirement{"have caps for mounting binds", cap
 	Require that the test process is running with enough capabilities to be able to make any/all mounts.
 */
 var RequiresCanMountAny = ConveyRequirement{"have caps for any mounting", caps.Scan().CanMountAny}
+
+/*
+	Require than an env var *not* be set.
+
+	We use this for things like `RequiresEnvBlank(RIO_TEST_SKIP_AUFS)`.
+*/
+func RequiresEnvBlank(key string) ConveyRequirement {
+	return ConveyRequirement{
+		fmt.Sprintf("env %q must not be set", key),
+		func() bool { return os.Getenv(key) == "" },
+	}
+}
 
 /*
 	Decorates a GoConvey test to check a set of `ConveyRequirement`s,

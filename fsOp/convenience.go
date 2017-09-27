@@ -34,6 +34,11 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 			return err
 		}
 		if err := afs.Mkdir(path, perms); err != nil {
+			// Re-check if it exists and is a dir; we may have been raced, and we're okay with that.
+			stat, err1 := afs.LStat(path)
+			if err1 == nil && stat.Type == fs.Type_Dir {
+				return nil
+			}
 			switch Category(err) {
 			case fs.ErrAlreadyExists:
 				// this seemingly-contradictory message means the path does exist... it's just that stat said it didn't, beacuse it's a dangling symlink.
@@ -61,7 +66,10 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 	of the dir will be forced back to its previous value, seemingly unchanged.
 */
 func RepairMtime(afs fs.FS, path fs.RelPath) func() {
-	fmeta, _ := afs.LStat(path)
+	fmeta, err := afs.LStat(path)
+	if err != nil {
+		return func() {}
+	}
 	return func() {
 		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultAtime)
 	}

@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"fmt"
 	"path"
 	"strings"
 )
@@ -23,7 +24,7 @@ type RelPath struct {
 func MustRelPath(p string) RelPath {
 	p = path.Clean(p)
 	if p[0] == '/' {
-		panic("fs: not a relative path")
+		panic(fmt.Errorf("fs: not a relative path (%q)", p))
 	}
 	if p == "." { // We can't stop people from using the zero value, so, use it.
 		return RelPath{}
@@ -131,14 +132,27 @@ type AbsolutePath struct {
 	Will panic if the given path is not absolute.
 */
 func MustAbsolutePath(p string) AbsolutePath {
+	path, err := ParseAbsolutePath(p)
+	if err != nil {
+		panic(err)
+	}
+	return path
+}
+
+/*
+	Converts a string to an absolute path struct,
+	returning an error if the given path string is not absolute.
+*/
+func ParseAbsolutePath(p string) (AbsolutePath, error) {
 	p = path.Clean(p)
 	if p[0] != '/' {
-		panic("fs: not an absolute path")
+		return AbsolutePath{}, fmt.Errorf("fs: not an absolute path (%q)", p)
 	}
 	if p == "/" { // We can't stop people from using the zero value, so, use it.
-		return AbsolutePath{}
+		return AbsolutePath{}, nil
 	}
-	return AbsolutePath{p, strings.LastIndexByte(p, '/')}
+	return AbsolutePath{p, strings.LastIndexByte(p, '/')}, nil
+
 }
 
 /*

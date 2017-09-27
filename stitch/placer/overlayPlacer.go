@@ -24,7 +24,7 @@ func NewOverlayPlacer(workDir fs.AbsolutePath) (Placer, error) {
 	if err := fsOp.MkdirAll(rootFs, workDir.CoerceRelative(), 0700); err != nil {
 		return nil, Errorf(rio.ErrLocalCacheProblem, "error creating overlay work area: %s", err)
 	}
-	return func(srcPath, dstPath fs.AbsolutePath, writable bool) (CleanupFunc, error) {
+	return func(srcPath, dstPath fs.AbsolutePath, writable bool) (Janitor, error) {
 		// Short-circuit into bind placer if not writable.
 		if writable == false {
 			return BindPlacer(srcPath, dstPath, writable)
@@ -81,17 +81,33 @@ func NewOverlayPlacer(workDir fs.AbsolutePath) (Placer, error) {
 		}
 
 		// Return a cleanup func that will gracefully unmount... and also remove layer content.
-		return func() error {
-			if err := syscall.Unmount(dstPath.String(), 0); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay mount: %s", err)
-			}
-			if err := os.RemoveAll(upperPath.String()); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay placement: %s", err)
-			}
-			if err := os.RemoveAll(workPath.String()); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay placement: %s", err)
-			}
-			return nil
+		return overlayJanitor{
+			dstPath,
+			upperPath,
+			workPath,
 		}, nil
 	}, nil
 }
+
+type overlayJanitor struct {
+	mountPath fs.AbsolutePath
+	upperPath fs.AbsolutePath
+	workPath  fs.AbsolutePath
+}
+
+func (j overlayJanitor) Description() string {
+	return fmt.Sprintf("umount %q; rm -rf %q; rm -rf %q;", j.mountPath, j.upperPath, j.workPath)
+}
+func (j overlayJanitor) Teardown() error {
+	if err := syscall.Unmount(j.mountPath.String(), 0); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay mount: %s", err)
+	}
+	if err := os.RemoveAll(j.upperPath.String()); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay placement: %s", err)
+	}
+	if err := os.RemoveAll(j.workPath.String()); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down overlay placement: %s", err)
+	}
+	return nil
+}
+func (j overlayJanitor) AlwaysTry() bool { return true }

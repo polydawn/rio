@@ -23,3 +23,23 @@ tar fixtures notes
   - they diverge in timestamps, and filenames, and...
   - and the `./` entry: rio normalization will add a base dir placeholder, but it won't have those ownership bits!
   - the `./` prefix should not matter; rio normalization vanishes it completely.
+
+### `tar_kitchenSink.tgz`
+
+- gzipped.
+- produced by rio.
+- many entires:
+  - `./`
+  - `./dir/`
+  - `./dir/f1`
+  - `./deep/`
+  - `./deep/tree/`
+  - `./deep/tree/f3`
+  - `./lnkdangle`
+  - `./empty/`
+  - `./f2`
+  - `./lnkfile`
+  - `./lnkdir`
+- ownership is mostly 7000:7000, but one file (f2) is 4000:5000.  no usernames.
+- dates are various in 2017-09-27.
+- a variety of symlinks are included.

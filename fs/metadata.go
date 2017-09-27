@@ -94,4 +94,4 @@ func (t Type) String() string {
 
 // Use this for the accessTime attribute when one is needed but no more
 // obvious value is at hand.
-var DefaultAtime = time.Time{}
+var DefaultAtime = time.Date(2010, 01, 01, 0, 0, 0, 0, time.UTC)

@@ -1,6 +1,7 @@
 package placer
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/polydawn/go-errcat"
@@ -20,7 +21,7 @@ var _ Placer = CopyPlacer
 	The result filesystem will always be writable; it is not possible to make
 	a read-only filesystem with this placer.
 */
-func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (CleanupFunc, error) {
+func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (Janitor, error) {
 	// Determine desired type.
 	srcStat, err := rootFs.LStat(srcPath.CoerceRelative())
 	if err != nil {
@@ -51,11 +52,8 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (CleanupFunc, error) {
 		}
 		defer body.Close()
 		fmeta.Name = dstPath.CoerceRelative()
-		return func() error {
-			if err := os.Remove(dstPath.String()); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down copy placement: %s", err)
-			}
-			return nil
+		return copyJanitor{
+			dstPath,
 		}, fsOp.PlaceFile(rootFs, *fmeta, body, false)
 	}
 
@@ -88,10 +86,22 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (CleanupFunc, error) {
 	}
 
 	// Return a cleanup func that does a recursive delete.
-	return func() error {
-		if err := os.RemoveAll(dstPath.String()); err != nil {
-			return Errorf(rio.ErrLocalCacheProblem, "error tearing down copy placement: %s", err)
-		}
-		return nil
+	return copyJanitor{
+		dstPath,
 	}, nil
 }
+
+type copyJanitor struct {
+	dstPath fs.AbsolutePath
+}
+
+func (j copyJanitor) Description() string {
+	return fmt.Sprintf("rm -rf %q;", j.dstPath)
+}
+func (j copyJanitor) Teardown() error {
+	if err := os.RemoveAll(j.dstPath.String()); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down copy placement: %s", err)
+	}
+	return nil
+}
+func (j copyJanitor) AlwaysTry() bool { return false }
