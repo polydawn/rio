@@ -180,13 +180,14 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		// Invoke placer.
 		//  Accumulate the individual cleanup funcs into a mega func we'll return.
 		//  If errors occur during any placement, fire the cleanups so far before returning.
+		targetPath := targetFs.BasePath().Join(part.Path.CoerceRelative())
 		var janitor placer.Janitor
 		var err error
 		switch part.WareID.Type {
 		case "mount":
-			janitor, err = placer.BindPlacer(unpackResults[i].Path, part.Path, unpackResults[i].Writable)
+			janitor, err = placer.BindPlacer(unpackResults[i].Path, targetPath, unpackResults[i].Writable)
 		default:
-			janitor, err = a.placerTool(unpackResults[i].Path, part.Path, unpackResults[i].Writable)
+			janitor, err = a.placerTool(unpackResults[i].Path, targetPath, unpackResults[i].Writable)
 		}
 		if err != nil {
 			hk.Teardown()
