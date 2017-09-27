@@ -57,7 +57,58 @@ func TestTreeUnpack(t *testing.T) {
 					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Multi-entry unpack should work:", func() {
-					// TODO
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+							{
+								Path:       fs.MustAbsolutePath("/bc"),
+								WareID:     api.WareID{"tar", "2jkqXaVWCdH7axj1XW56rxZ6WVQ8f46nqMf2BBX7kjLsU9DsvQCquEoy6GcBcQ1Fqc"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
+							},
+						},
+					)
+					So(err, ShouldBeNil)
+
+					// Root and first file come from the first input:
+					So(ShouldStat(afs, fs.MustRelPath(".")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("ab")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("ab"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					// This dir exists in the first input, but is shadowed to the second input's root props:
+					So(ShouldStat(afs, fs.MustRelPath("bc")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 27, 6, 0, time.UTC)})
+					// These are from the second input:
+					So(ShouldStat(afs, fs.MustRelPath("bc/dir/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/dir/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 26, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/dir/f1")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/dir/f1"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0750, Mtime: time.Date(2017, 9, 27, 18, 25, 55, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/empty/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/empty/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 26, 2, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/f2")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/f2"), Type: fs.Type_File, Uid: 4000, Gid: 5000, Perms: 0644, Size: 3, Mtime: time.Date(2017, 9, 27, 18, 26, 39, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/deep/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/deep/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 27, 10, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/deep/tree/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/deep/tree/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 27, 19, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/deep/tree/f3")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/deep/tree/f3"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Size: 7, Mtime: time.Date(2017, 9, 27, 18, 27, 19, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/lnkdangle")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/lnkdangle"), Type: fs.Type_Symlink, Uid: 7000, Gid: 7000, Perms: 0777, Linkname: "nonexistent", Mtime: time.Date(2017, 9, 27, 18, 26, 14, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/lnkfile")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/lnkfile"), Type: fs.Type_Symlink, Uid: 7000, Gid: 7000, Perms: 0777, Linkname: "f2", Mtime: time.Date(2017, 9, 27, 18, 26, 49, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/lnkdir")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/lnkdir"), Type: fs.Type_Symlink, Uid: 7000, Gid: 7000, Perms: 0777, Linkname: "dir/", Mtime: time.Date(2017, 9, 27, 18, 26, 22, 0, time.UTC)})
+
+					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Unpack plus implicit parent dir creation should work:", func() {
 					// TODO
