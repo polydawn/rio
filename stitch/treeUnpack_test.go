@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/go-timeless-api"
@@ -201,6 +202,45 @@ func TestTreeUnpack(t *testing.T) {
 				})
 				Convey("Unpack with no explicit root should work:", func() {
 					// TODO
+				})
+				Convey("Unpack with shadowing should work and shadow:", func() {
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/"),
+								WareID:     api.WareID{"tar", "2jkqXaVWCdH7axj1XW56rxZ6WVQ8f46nqMf2BBX7kjLsU9DsvQCquEoy6GcBcQ1Fqc"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
+							},
+							{
+								Path:       fs.MustAbsolutePath("/deep/tree"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+						},
+					)
+					So(err, ShouldBeNil)
+
+					// Root is from the first input:
+					So(ShouldStat(afs, fs.MustRelPath(".")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 27, 6, 0, time.UTC)})
+					// Let's go ahead and skip a bunch and assume most of that 'kitchen sink' asset unpacked fine...
+					// But specifically, let's make sure the parent of our shadowed path made it there just fine:
+					So(ShouldStat(afs, fs.MustRelPath("deep/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("deep/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2017, 9, 27, 18, 27, 10, 0, time.UTC)})
+					// The shadowed path should have props from the second input (still no shocker, other test have covered this):
+					So(ShouldStat(afs, fs.MustRelPath("deep/tree/")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("deep/tree/"), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+
+					// Okay here's the crux: files that existed in the first layer *must not be visible* when shadowed:
+					_, err = afs.LStat(fs.MustRelPath("deep/tree/f3"))
+					So(err, ShouldErrorWithCategory, fs.ErrNotExists)
+
+					So(cleanupFunc(), ShouldBeNil)
 				})
 			})
 		}),
