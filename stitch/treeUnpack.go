@@ -129,10 +129,13 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 				part.Warehouses,
 				rio.Monitor{},
 			)
+			if err != nil {
+				res.Error = err
+				return
+			}
 			// Yield the cache path.
 			res.Path = config.GetCacheBasePath().Join(cache.ShelfFor(resultWareID))
 			res.Writable = true
-			res.Error = err
 			// TODO if any error, fan out cancellations
 		}(i, part)
 	}
