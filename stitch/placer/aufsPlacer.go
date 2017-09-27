@@ -24,7 +24,7 @@ func NewAufsPlacer(workDir fs.AbsolutePath) (Placer, error) {
 	if err := fsOp.MkdirAll(rootFs, workDir.CoerceRelative(), 0700); err != nil {
 		return nil, Errorf(rio.ErrLocalCacheProblem, "error creating aufs work area: %s", err)
 	}
-	return func(srcPath, dstPath fs.AbsolutePath, writable bool) (CleanupFunc, error) {
+	return func(srcPath, dstPath fs.AbsolutePath, writable bool) (Janitor, error) {
 		// Short-circuit into bind placer if not writable.
 		if writable == false {
 			return BindPlacer(srcPath, dstPath, writable)
@@ -87,14 +87,28 @@ func NewAufsPlacer(workDir fs.AbsolutePath) (Placer, error) {
 		}
 
 		// Return a cleanup func that will gracefully unmount... and also remove layer content.
-		return func() error {
-			if err := syscall.Unmount(dstPath.String(), 0); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down aufs mount: %s", err)
-			}
-			if err := os.RemoveAll(layerPath.String()); err != nil {
-				return Errorf(rio.ErrLocalCacheProblem, "error tearing down aufs placement: %s", err)
-			}
-			return nil
+		return aufsJanitor{
+			dstPath,
+			layerPath,
 		}, nil
 	}, nil
 }
+
+type aufsJanitor struct {
+	mountPath fs.AbsolutePath
+	layerPath fs.AbsolutePath
+}
+
+func (j aufsJanitor) Description() string {
+	return fmt.Sprintf("umount %q; rm -rf %q;", j.mountPath, j.layerPath)
+}
+func (j aufsJanitor) Teardown() error {
+	if err := syscall.Unmount(j.mountPath.String(), 0); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down aufs mount: %s", err)
+	}
+	if err := os.RemoveAll(j.layerPath.String()); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down aufs placement: %s", err)
+	}
+	return nil
+}
+func (j aufsJanitor) AlwaysTry() bool { return true }

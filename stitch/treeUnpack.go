@@ -67,7 +67,7 @@ func NewAssembler(unpackTool rio.UnpackFunc) (*Assembler, error) {
 	}, nil
 }
 
-func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec) (placer.CleanupFunc, error) {
+func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec) (func() error, error) {
 	sort.Sort(UnpackSpecByPath(parts))
 
 	// Fan out materialization into cache paths.
@@ -141,35 +141,35 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		// Invoke placer.
 		//  Accumulate the individual cleanup funcs into a mega func we'll return.
 		//  If errors occur during any placement, fire the cleanups so far before returning.
-		var cleanup placer.CleanupFunc
+		var janitor placer.Janitor
 		var err error
 		switch part.WareID.Type {
 		case "mount":
-			cleanup, err = placer.BindPlacer(unpackResults[i].Path, part.Path, false)
+			janitor, err = placer.BindPlacer(unpackResults[i].Path, part.Path, false)
 		default:
-			cleanup, err = a.placerTool(unpackResults[i].Path, part.Path, false)
+			janitor, err = a.placerTool(unpackResults[i].Path, part.Path, false)
 		}
 		if err != nil {
 			hk.Teardown()
 			return nil, err
 		}
-		hk.append(cleanup)
+		hk.append(janitor)
 	}
 	return hk.Teardown, nil
 }
 
 type housekeeping struct {
-	CleanupStack []placer.CleanupFunc
+	CleanupStack []placer.Janitor
 }
 
-func (hk *housekeeping) append(fn placer.CleanupFunc) {
-	hk.CleanupStack = append(hk.CleanupStack, fn)
+func (hk *housekeeping) append(janitor placer.Janitor) {
+	hk.CleanupStack = append(hk.CleanupStack, janitor)
 }
 
 func (hk housekeeping) Teardown() error {
 	for i := len(hk.CleanupStack) - 1; i >= 0; i-- {
 		// TODO better error handling here.  difficult to say whether we should continue with the rest of cleanups or not.
-		hk.CleanupStack[i]()
+		hk.CleanupStack[i].Teardown()
 	}
 	return nil
 }

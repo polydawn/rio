@@ -1,6 +1,7 @@
 package placer
 
 import (
+	"fmt"
 	"syscall"
 
 	. "github.com/polydawn/go-errcat"
@@ -18,7 +19,7 @@ var _ Placer = BindPlacer
 	to be writable, but do not want the source to be mutable, then
 	you need a placer like "aufs" or "overlay".
 */
-func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) (CleanupFunc, error) {
+func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) (Janitor, error) {
 	// Determine desired type.
 	srcStat, err := rootFs.LStat(srcPath.CoerceRelative())
 	if err != nil {
@@ -50,10 +51,22 @@ func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) (CleanupFunc, e
 	}
 
 	// Return a cleanup func that will gracefully unmount.
-	return func() error {
-		if err := syscall.Unmount(dstPath.String(), 0); err != nil {
-			return Errorf(rio.ErrLocalCacheProblem, "error tearing down bind mount: %s", err)
-		}
-		return nil
+	return bindJanitor{
+		dstPath,
 	}, nil
 }
+
+type bindJanitor struct {
+	mountPath fs.AbsolutePath
+}
+
+func (j bindJanitor) Description() string {
+	return fmt.Sprintf("umount %q;", j.mountPath)
+}
+func (j bindJanitor) Teardown() error {
+	if err := syscall.Unmount(j.mountPath.String(), 0); err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "error tearing down bind mount: %s", err)
+	}
+	return nil
+}
+func (j bindJanitor) AlwaysTry() bool { return true }

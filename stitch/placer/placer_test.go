@@ -50,7 +50,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 			{fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
 		})
 
-		cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
+		janitor, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
 		So(err, ShouldBeNil)
 
 		// First check the content files and dirs.
@@ -59,7 +59,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
 
-		So(cleanupFunc(), ShouldBeNil)
+		So(janitor.Teardown(), ShouldBeNil)
 	})
 	Convey("Placement of a file should work, and maintain parent props", func() {
 		PlaceFixture(afs, []FixtureFile{
@@ -68,7 +68,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 			{fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)}, nil},
 		})
 
-		cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/file")), tmpDir.Join(fs.MustRelPath("dstParent/file")), true)
+		janitor, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/file")), tmpDir.Join(fs.MustRelPath("dstParent/file")), true)
 		So(err, ShouldBeNil)
 
 		// First check the content files and dirs.
@@ -76,7 +76,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
 
-		So(cleanupFunc(), ShouldBeNil)
+		So(janitor.Teardown(), ShouldBeNil)
 	})
 	Convey("Placements overlapping existing content should work, and obscure it", func() {
 		PlaceFixture(afs, []FixtureFile{
@@ -88,7 +88,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 			{fs.Metadata{Name: fs.MustRelPath("dstParent/content/chump"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2106, 01, 15, 0, 0, 0, 0, time.UTC)}, []byte("qwer")},
 		})
 
-		cleanupFunc, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
+		janitor, err := placeFunc(tmpDir.Join(fs.MustRelPath("srcParent/content")), tmpDir.Join(fs.MustRelPath("dstParent/content")), true)
 		So(err, ShouldBeNil)
 
 		// First check the content files and dirs.
@@ -99,7 +99,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 		So(shouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
 
-		So(cleanupFunc(), ShouldBeNil)
+		So(janitor.Teardown(), ShouldBeNil)
 	})
 }
 
