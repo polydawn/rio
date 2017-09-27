@@ -12,6 +12,7 @@ import (
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	. "go.polydawn.net/rio/testutil"
+	"go.polydawn.net/rio/transmat/mixins/tests"
 	"go.polydawn.net/rio/transmat/tar"
 )
 
@@ -153,7 +154,47 @@ func TestTreeUnpack(t *testing.T) {
 					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Unpack plus mounts should work:", func() {
-					// TODO
+					// Set up another swatch of filesystem to be mounted.
+					mfs := osfs.New(tmpDir.Join(fs.MustRelPath("mount")))
+					tests.PlaceFixture(mfs, tests.FixtureAlpha)
+
+					// Assemble a tree with some regular inputs, and one mount.
+					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
+					cleanupFunc, err := assembler.Run(
+						context.Background(),
+						afs,
+						[]UnpackSpec{
+							{
+								Path:       fs.MustAbsolutePath("/"),
+								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
+								Filters:    api.Filter_NoMutation,
+								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+							},
+							{
+								Path:   fs.MustAbsolutePath("/bc"),
+								WareID: api.WareID{"mount", "rw:" + tmpDir.Join(fs.MustRelPath("mount")).String()},
+							},
+						},
+					)
+					So(err, ShouldBeNil)
+
+					// Test that the regular content is still in the right spots.
+					So(ShouldStat(afs, fs.MustRelPath(".")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("."), Type: fs.Type_Dir, Uid: 7000, Gid: 7000, Perms: 0755, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("ab")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("ab"), Type: fs.Type_File, Uid: 7000, Gid: 7000, Perms: 0644, Mtime: time.Date(2015, 05, 30, 19, 53, 35, 0, time.UTC)})
+					// Test that the mount content is in the right spot.
+					So(ShouldStat(afs, fs.MustRelPath("bc")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: time.Date(1990, 1, 14, 12, 30, 0, 0, time.UTC)})
+					So(ShouldStat(afs, fs.MustRelPath("bc/a")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("bc/a"), Type: fs.Type_File, Uid: 0, Gid: 0, Perms: 0644, Size: 3, Mtime: time.Date(1990, 1, 14, 12, 30, 0, 0, time.UTC)})
+
+					// Test that we can write to the mount... and since it is rw, it is propagated back!
+					tests.PlaceFixture(osfs.New(tmpDir.Join(fs.MustRelPath("tree/bc/lol"))), tests.FixtureAlpha)
+					So(ShouldStat(mfs, fs.MustRelPath("lol/a")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("lol/a"), Type: fs.Type_File, Uid: 0, Gid: 0, Perms: 0644, Size: 3, Mtime: time.Date(1990, 1, 14, 12, 30, 0, 0, time.UTC)})
+
+					So(cleanupFunc(), ShouldBeNil)
 				})
 				Convey("Invalid mounts should fail:", func() {
 					// TODO

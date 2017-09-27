@@ -76,7 +76,7 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 	// Unpacking either wares or more mounts into paths under mounts is seriously illegal.
 	//  It's a massive footgun, entirely strange, and just No.
 	//  Doing it into paths under other wares is fine because it's not *leaving* our zone.
-	var mounts map[fs.AbsolutePath]struct{}
+	mounts := map[fs.AbsolutePath]struct{}{}
 	for _, part := range parts {
 		for mount := range mounts {
 			if strings.HasPrefix(part.Path.String(), mount.String()) {
