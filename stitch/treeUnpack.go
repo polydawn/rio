@@ -43,8 +43,9 @@ func (a UnpackSpecByPath) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a UnpackSpecByPath) Less(i, j int) bool { return a[i].Path.String() < a[j].Path.String() }
 
 type unpackResult struct {
-	Path  fs.AbsolutePath // cache path or mount source path
-	Error error
+	Path     fs.AbsolutePath // cache path or mount source path
+	Writable bool
+	Error    error
 }
 
 type Assembler struct {
@@ -99,9 +100,23 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		go func(i int, part UnpackSpec) {
 			defer wg.Done()
 			res := &unpackResults[i]
-			// If it's a mount, shortcut.
+			// If it's a mount, do some parsing, and that's it for prep work.
 			if part.WareID.Type == "mount" {
-				res.Path, res.Error = fs.ParseAbsolutePath(part.WareID.Hash)
+				ss := strings.SplitN(part.WareID.Hash, ":", 2)
+				if len(ss) != 2 {
+					res.Error = Errorf(rio.ErrAssemblyInvalid, "invalid inputs config: mounts must specify mode (e.g. \"ro:/path\" or \"rw:/path\"")
+					return
+				}
+				switch ss[0] {
+				case "rw":
+					res.Writable = true
+				case "ro":
+					res.Writable = false
+				default:
+					res.Error = Errorf(rio.ErrAssemblyInvalid, "invalid inputs config: mounts must specify mode (e.g. \"ro:/path\" or \"rw:/path\"")
+					return
+				}
+				res.Path, res.Error = fs.ParseAbsolutePath(ss[1])
 				return
 			}
 			// Unpack with placement=none to populate cache.
@@ -116,6 +131,7 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 			)
 			// Yield the cache path.
 			res.Path = config.GetCacheBasePath().Join(cache.ShelfFor(resultWareID))
+			res.Writable = true
 			res.Error = err
 			// TODO if any error, fan out cancellations
 		}(i, part)
@@ -168,9 +184,9 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 		var err error
 		switch part.WareID.Type {
 		case "mount":
-			janitor, err = placer.BindPlacer(unpackResults[i].Path, part.Path, false)
+			janitor, err = placer.BindPlacer(unpackResults[i].Path, part.Path, unpackResults[i].Writable)
 		default:
-			janitor, err = a.placerTool(unpackResults[i].Path, part.Path, false)
+			janitor, err = a.placerTool(unpackResults[i].Path, part.Path, unpackResults[i].Writable)
 		}
 		if err != nil {
 			hk.Teardown()
