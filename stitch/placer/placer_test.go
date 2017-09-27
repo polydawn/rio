@@ -24,7 +24,7 @@ func TestPlacers(t *testing.T) {
 			specPlacerGood(BindPlacer, tmpDir)
 		})
 	}))
-	Convey("AUFS placer spec tests:", t, Requires(RequiresCanMountAny, func() {
+	Convey("AUFS placer spec tests:", t, Requires(RequiresCanMountAny, RequiresEnvBlank("RIO_TEST_SKIP_AUFS"), func() {
 		WithTmpdir(func(tmpDir fs.AbsolutePath) {
 			aufsPlacer, err := NewAufsPlacer(tmpDir.Join(fs.MustRelPath("aufs")))
 			So(err, ShouldBeNil)

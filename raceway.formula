@@ -17,4 +17,8 @@ action:
 			export GOROOT=/app/go/go
 			export PATH=$PATH:/app/go/go/bin
 
+			## We have to explicitly skip some tests, because nested
+			##  AUFS is Not A Thing, and we're in that situation.
+			export RIO_TEST_SKIP_AUFS=true
+
 			./goad
