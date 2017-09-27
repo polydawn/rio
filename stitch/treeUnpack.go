@@ -2,7 +2,9 @@ package stitch
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	. "github.com/polydawn/go-errcat"
@@ -167,9 +169,33 @@ func (hk *housekeeping) append(janitor placer.Janitor) {
 }
 
 func (hk housekeeping) Teardown() error {
+	progress := make([]string, len(hk.CleanupStack))
+	var firstError error
 	for i := len(hk.CleanupStack) - 1; i >= 0; i-- {
-		// TODO better error handling here.  difficult to say whether we should continue with the rest of cleanups or not.
-		hk.CleanupStack[i].Teardown()
+		janitor := hk.CleanupStack[i]
+		if firstError != nil && !janitor.AlwaysTry() {
+			progress[i] = "\tskipped: " + janitor.Description()
+			continue
+		}
+		err := hk.CleanupStack[i].Teardown()
+		if err != nil {
+			if firstError == nil {
+				firstError = err
+			}
+			progress[i] = "\tfailed:  " + janitor.Description()
+			continue
+		}
+		progress[i] = "\tsuccess: " + janitor.Description()
 	}
-	return nil
+	if firstError != nil {
+		// Keep the category of the first one, but also fold in
+		//  the string of everything that did or did not get cleaned up.
+		cleanupReport := strings.Join(progress, "\n")
+		firstError = ErrorDetailed(
+			Category(firstError),
+			fmt.Sprintf("%s.  The following cleanups were attempted:\n%s", firstError, cleanupReport),
+			map[string]string{"cleanupReport": cleanupReport},
+		)
+	}
+	return firstError
 }
