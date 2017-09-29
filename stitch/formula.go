@@ -6,7 +6,7 @@ import (
 )
 
 /*
-	Reduce a formula to a slice of unpackSpecs, ready to be used
+	Reduce a formula to a slice of []UnpackSpec, ready to be used
 	invoking Assembler.Run().
 
 	Typically the filters arg will be either `api.Filter_NoMutation` or
@@ -16,7 +16,7 @@ import (
 	Whether the action, outputs, or saveUrls are set is irrelevant;
 	they will be ignored completely.
 */
-func FormulaToUnpackTree(frm api.Formula, filters api.FilesetFilters) (parts []UnpackSpec) {
+func FormulaToUnpackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []UnpackSpec) {
 	for path, wareID := range frm.Inputs {
 		warehouses, _ := frm.FetchUrls[path]
 		parts = append(parts, UnpackSpec{
@@ -24,6 +24,27 @@ func FormulaToUnpackTree(frm api.Formula, filters api.FilesetFilters) (parts []U
 			WareID:     wareID,
 			Filters:    filters,
 			Warehouses: warehouses,
+		})
+	}
+	return
+}
+
+/*
+	Reduce a formula to a slice of []PackSpec, ready to be used
+	invoking PackMulti().
+
+	Whether the action, inputs, or fetchUrls are set is irrelevant;
+	they will be ignored completely.
+*/
+func FormulaToPackSpecs(frm api.Formula) (parts []PackSpec) {
+	for path, output := range frm.Outputs {
+		warehouse, _ := frm.SaveUrls[path]
+		parts = append(parts, PackSpec{
+			Path: fs.MustAbsolutePath(string(path)),
+			// FIXME um we need to pass in the pack format here
+			//PackFmt:   output.PackFmt,
+			Filters:   output.Filters,
+			Warehouse: warehouse,
 		})
 	}
 	return
