@@ -23,9 +23,9 @@ import (
 	Struct to gather the args for a single rio.Unpack func call.
 	(The context object and monitors are handled in a different band.)
 
-	Note the similar name to a structure in the go-timeless-api packages;
-	this one is not serializable, is internal, and
-	contains the literal set of warehouses already resolved,
+	It may be interesting to note the similarity to Formula.Inputs from
+	the go-timeless-api packages, but they are distinct:
+	this one is internal, not serializable, contains the list of warehouses,
 	as well as the path inline rather than in a map key, so we can sort slices.
 */
 type UnpackSpec struct {
