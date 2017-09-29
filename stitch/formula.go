@@ -40,9 +40,8 @@ func FormulaToPackSpecs(frm api.Formula) (parts []PackSpec) {
 	for path, output := range frm.Outputs {
 		warehouse, _ := frm.SaveUrls[path]
 		parts = append(parts, PackSpec{
-			Path: fs.MustAbsolutePath(string(path)),
-			// FIXME um we need to pass in the pack format here
-			//PackFmt:   output.PackFmt,
+			Path:      fs.MustAbsolutePath(string(path)),
+			PackType:  output.PackType,
 			Filters:   output.Filters,
 			Warehouse: warehouse,
 		})

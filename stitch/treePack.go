@@ -21,6 +21,7 @@ import (
 */
 type PackSpec struct {
 	Path      fs.AbsolutePath
+	PackType  api.PackType
 	Filters   api.FilesetFilters
 	Warehouse api.WarehouseAddr
 }
@@ -53,6 +54,7 @@ func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts
 			// Unpack with placement=none to populate cache.
 			res.WareID, res.Error = packTool(
 				ctx, // TODO fork em out
+				part.PackType,
 				part.Path.String(),
 				part.Filters,
 				part.Warehouse,

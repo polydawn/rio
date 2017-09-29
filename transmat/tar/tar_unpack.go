@@ -42,6 +42,9 @@ func Unpack(
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
+	if wareID.Type != PackType {
+		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, wareID.Type)
+	}
 	if placementMode == "" {
 		placementMode = rio.Placement_Copy
 	}

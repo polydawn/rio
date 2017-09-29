@@ -13,7 +13,7 @@ import (
 	"go.polydawn.net/rio/testutil"
 )
 
-func CheckPackProducesConsistentHash(pack rio.PackFunc) {
+func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {
 	Convey("SPEC: Applying the PackFunc to a filesystem twice should produce the same hash", func() {
 		for _, fixture := range AllFixtures {
 			Convey(fmt.Sprintf("- Fixture %q", fixture.Name), func() {
@@ -24,6 +24,7 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 					// Pack (to /dev/null) once.
 					wareID1, err := pack(
 						context.Background(),
+						packType,
 						tmpDir.String(),
 						api.FilesetFilters{
 							Uid:   "keep",
@@ -37,6 +38,7 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 					// Pack (to /dev/null) from the same path a second time.
 					wareID2, err := pack(
 						context.Background(),
+						packType,
 						tmpDir.String(),
 						api.FilesetFilters{
 							Uid:   "keep",
@@ -57,7 +59,7 @@ func CheckPackProducesConsistentHash(pack rio.PackFunc) {
 	})
 }
 
-func CheckPackHashVariesOnVariations(pack rio.PackFunc) {
+func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 	// Compute the alpha fixture hash once up front; we compare to it
 	//  for each other variation fixture.
 	var wareIDAlpha api.WareID
@@ -66,6 +68,7 @@ func CheckPackHashVariesOnVariations(pack rio.PackFunc) {
 		PlaceFixture(afs, FixtureAlpha)
 		wareIDAlpha, _ = pack(
 			context.Background(),
+			packType,
 			tmpDir.String(),
 			api.FilesetFilters{
 				Uid:   "keep",
@@ -96,6 +99,7 @@ func CheckPackHashVariesOnVariations(pack rio.PackFunc) {
 					// Pack (to /dev/null).
 					wareID, err := pack(
 						context.Background(),
+						packType,
 						tmpDir.String(),
 						api.FilesetFilters{
 							Uid:   "keep",

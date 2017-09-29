@@ -25,14 +25,14 @@ func TestTarUnpack(t *testing.T) {
 			Convey("Using kvfs warehouse, in content-addressable mode:", func() {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 					osfs.New(tmpDir).Mkdir(fs.MustRelPath("bounce"), 0755)
-					tests.CheckRoundTrip(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
+					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
 					// Following tests could be done in all modes, but isn't about warehouses, so would be redundant to do so.
-					tests.CheckCachePopulation(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
+					tests.CheckCachePopulation(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file+ca://%s/bounce", tmpDir)))
 				})
 			})
 			Convey("Using kvfs warehouse, in *non*-content-addressable mode:", func() {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-					tests.CheckRoundTrip(Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file://%s/bounce", tmpDir)))
+					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file://%s/bounce", tmpDir)))
 				})
 			})
 		}),

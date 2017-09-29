@@ -18,7 +18,7 @@ import (
 	"go.polydawn.net/rio/testutil"
 )
 
-func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
+func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
 	Convey("SPEC: Round-trip pack and unpack of fileset should work...", func() {
 		for _, fixture := range AllFixtures {
 			Convey(fmt.Sprintf("- Fixture %q", fixture.Name), func() {
@@ -29,6 +29,7 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 					// Pack up into our warehouseaddr.
 					wareID, err := pack(
 						context.Background(),
+						packType,
 						fixturePath.String(),
 						api.FilesetFilters{
 							Uid:   "keep",
@@ -75,7 +76,7 @@ func CheckRoundTrip(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.
 	})
 }
 
-func CheckCachePopulation(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
+func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
 	Convey("SPEC: Caching: unpack with 'none' placement should result in cache...", func() {
 		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 			// Bonk our own config env vars to isolate cache.
@@ -90,6 +91,7 @@ func CheckCachePopulation(pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAdd
 			// Pack up into our warehouseaddr.  (Not interesting, but we lack other fixtures.)
 			wareID, err := pack(
 				context.Background(),
+				packType,
 				fixturePath.String(),
 				api.FilesetFilters{Uid: "keep", Gid: "keep", Mtime: "keep"},
 				warehouseAddr,

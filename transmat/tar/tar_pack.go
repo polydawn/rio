@@ -30,12 +30,16 @@ var (
 
 func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
+	packType api.PackType, // The name of pack format.
 	path string, // The fileset to scan and pack (absolute path).
 	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (api.WareID, error) {
 	// Sanitize arguments.
+	if packType != PackType {
+		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, packType)
+	}
 	path2 := fs.MustAbsolutePath(path)
 	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposePack)
 	if err != nil {
