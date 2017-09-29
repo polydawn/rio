@@ -119,7 +119,7 @@ func (c cache) populate(
 	if err := fsOp.MkdirAll(osfs.New(fs.AbsolutePath{}), c.fs.BasePath().CoerceRelative(), 0700); err != nil {
 		return api.WareID{}, fs.RelPath{}, Errorf(rio.ErrLocalCacheProblem, "cannot initialize cache dirs: %s", err)
 	}
-	if err := fsOp.MkdirAll(c.fs, fs.MustRelPath(wareID.Type+"/fileset"), 0700); err != nil {
+	if err := fsOp.MkdirAll(c.fs, fs.MustRelPath(string(wareID.Type)+"/fileset"), 0700); err != nil {
 		return api.WareID{}, fs.RelPath{}, Errorf(rio.ErrLocalCacheProblem, "cannot initialize cache dirs: %s", err)
 	}
 

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
 	"github.com/polydawn/refmt/json"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -33,8 +34,9 @@ type baseCLI struct {
 	Test           string        // Testmode
 	Timeout        time.Duration // Timeout duration (exclusive with deadline) eg. "60s"
 	PackCLI        struct {
-		Filters             api.FilesetFilters // TODO: file filters for pack/unpack
+		PackType            string             // Pack type
 		Path                string             // Pack target path
+		Filters             api.FilesetFilters // TODO: file filters for pack/unpack
 		TargetWarehouseAddr string             // Warehouse address to push to
 	}
 	UnpackCLI struct {
@@ -53,6 +55,9 @@ type baseCLI struct {
 
 func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 	// Non-filter flags
+	appPack.Arg("pack", "Pack type").
+		Required().
+		StringVar(&cli.PackCLI.PackType)
 	appPack.Arg("path", "Target path").
 		Required().
 		StringVar(&cli.PackCLI.Path)
@@ -175,13 +180,12 @@ func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io
 		return rio.ExitUsage
 	}
 	var wareID api.WareID
-	// FIXME: We'll need to support more than tar eventually
 	switch cmd {
 	case appPack.FullCommand():
-		wareID, err = executePack(ctx, cli, rio.PackFunc(tar.Pack))
+		wareID, err = executePack(ctx, cli)
 		SerializeResult(cli.Format, wareID, err, stdout, stderr)
 	case appUnpack.FullCommand():
-		wareID, err = executeUnpack(ctx, cli, rio.UnpackFunc(tar.Unpack))
+		wareID, err = executeUnpack(ctx, cli)
 		SerializeResult(cli.Format, wareID, err, stdout, stderr)
 	case appMirror.FullCommand():
 		fmt.Fprintln(stderr, "not implemented")
@@ -223,20 +227,39 @@ func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
 	return result
 }
 
-func executeUnpack(ctx context.Context, cli baseCLI, unpackFn rio.UnpackFunc) (api.WareID, error) {
-	monitor := rio.Monitor{}
+func executeUnpack(ctx context.Context, cli baseCLI) (api.WareID, error) {
 	wareID, err := api.ParseWareID(cli.UnpackCLI.WareID)
 	if err != nil {
 		return api.WareID{}, err
 	}
+	var (
+		unpackFunc rio.UnpackFunc
+	)
+	switch wareID.Type {
+	case "tar":
+		unpackFunc = tar.Unpack
+	default:
+		return api.WareID{}, Errorf(rio.ErrUsage, "unsupported packtype %q", wareID.Type)
+	}
+	monitor := rio.Monitor{}
 	path := cli.UnpackCLI.Path
 	warehouses := convertWarehouseSlice(cli.UnpackCLI.SourcesWarehouseAddr)
-	return unpackFn(ctx, wareID, path, cli.UnpackCLI.Filters, rio.PlacementMode(cli.UnpackCLI.PlacementMode), warehouses, monitor)
+	return unpackFunc(ctx, wareID, path, cli.UnpackCLI.Filters, rio.PlacementMode(cli.UnpackCLI.PlacementMode), warehouses, monitor)
 }
 
-func executePack(ctx context.Context, cli baseCLI, packFn rio.PackFunc) (api.WareID, error) {
+func executePack(ctx context.Context, cli baseCLI) (api.WareID, error) {
+	var (
+		packType api.PackType
+		packFunc rio.PackFunc
+	)
+	switch cli.PackCLI.PackType {
+	case "tar":
+		packType, packFunc = tar.PackType, tar.Pack
+	default:
+		return api.WareID{}, Errorf(rio.ErrUsage, "unsupported packtype %q", cli.PackCLI.PackType)
+	}
 	monitor := rio.Monitor{}
 	warehouse := api.WarehouseAddr(cli.PackCLI.TargetWarehouseAddr)
 
-	return packFn(ctx, cli.PackCLI.Path, cli.PackCLI.Filters, warehouse, monitor)
+	return packFunc(ctx, packType, cli.PackCLI.Path, cli.PackCLI.Filters, warehouse, monitor)
 }

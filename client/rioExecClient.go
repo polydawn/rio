@@ -108,6 +108,7 @@ func UnpackFunc(
 
 func PackFunc(
 	ctx context.Context,
+	packType api.PackType,
 	path string,
 	filters api.FilesetFilters,
 	warehouse api.WarehouseAddr,
