@@ -38,7 +38,7 @@ type packResult struct {
 	Error  error
 }
 
-func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts []PackSpec) error {
+func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts []PackSpec) (map[api.AbsPath]api.WareID, error) {
 	// Since packfuncs do not mutate their target path, the order we launch them
 	//  is not actually important.  But we sort it anyway, just for consistency.
 	sort.Sort(PackSpecByPath(parts))
@@ -64,11 +64,16 @@ func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts
 		}(i, part)
 	}
 	wg.Wait()
-	// Yield up any errors from individual unpacks.
-	for _, result := range packResults {
-		if result.Error != nil {
-			return result.Error
+
+	// Gather results; any errors from individual packs error all.
+	//  In the event of multiple errors, only the first is reported.
+	var err error
+	var results = make(map[api.AbsPath]api.WareID, len(parts))
+	for i, result := range packResults {
+		results[api.AbsPath(parts[i].Path.String())] = result.WareID
+		if result.Error != nil && err == nil {
+			err = result.Error
 		}
 	}
-	return nil
+	return results, err
 }
