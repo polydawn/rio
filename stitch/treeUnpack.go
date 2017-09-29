@@ -161,12 +161,12 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 				if isSymlink {
 					// Future hackers: if you ever try to make this check cleverer,
 					//  also make sure you include a check for host mount crossings.
-					return fs.NewBreakoutError(
+					return Recategorize(fs.NewBreakoutError(
 						targetFs.BasePath(),
 						path,
 						parentPath,
 						target,
-					)
+					), rio.ErrAssemblyInvalid)
 				} else if err == nil {
 					continue
 				} else if Category(err) == fs.ErrNotExists {
@@ -176,7 +176,7 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 					a.fillerDirProps.Name = parentPath
 					// Could be cleaner: this PlaceFile call rechecks the symlink thing, but it's the shortest call for "make all props right plz".
 					if err := fsOp.PlaceFile(targetFs, a.fillerDirProps, nil, false); err != nil {
-						return err
+						return Errorf(rio.ErrAssemblyInvalid, "error creating parent dirs in tree unpack: %s", err)
 					}
 				} else {
 					// Halt assembly attempt for any unhandlable errors that come up during parent path establishment.
