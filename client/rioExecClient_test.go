@@ -13,6 +13,7 @@ import (
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/testutil"
+	"go.polydawn.net/rio/transmat/mixins/tests"
 )
 
 // This test is moderately terrifying because it does indeed and really exec.
@@ -28,6 +29,13 @@ func Test(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
+	Convey("Spec compliance: exec-RPC Tar pack", t,
+		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
+			tests.CheckPackProducesConsistentHash("tar", rioexecclient.PackFunc)
+			tests.CheckPackHashVariesOnVariations("tar", rioexecclient.PackFunc)
+		}),
+	)
 
 	Convey("exec client tests", t, func() {
 		Convey("unpacking tar fixtures (happy path)",
