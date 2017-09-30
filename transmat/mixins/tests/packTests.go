@@ -101,3 +101,24 @@ func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 		}
 	})
 }
+
+func CheckPackErrorsGracefully(packType api.PackType, pack rio.PackFunc) {
+	Convey("SPEC: the PackFunc handles errors gracefully", func() {
+		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+			Convey("Packing a nonexistent path should return a zero wareID", func() {
+				wareID, err := pack(
+					context.Background(),
+					packType,
+					tmpDir.String()+"/nonexistent",
+					api.Filter_NoMutation,
+					"",
+					rio.Monitor{},
+				)
+				So(err, ShouldBeNil)
+				So(wareID.Type, ShouldEqual, packType)
+				So(wareID.Hash, ShouldEqual, "")
+				So(wareID.String(), ShouldEqual, packType+":-")
+			})
+		})
+	})
+}

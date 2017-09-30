@@ -14,6 +14,7 @@ func TestTarPack(t *testing.T) {
 		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
 			tests.CheckPackProducesConsistentHash(PackType, Pack)
 			tests.CheckPackHashVariesOnVariations(PackType, Pack)
+			tests.CheckPackErrorsGracefully(PackType, Pack)
 		}),
 	)
 }
