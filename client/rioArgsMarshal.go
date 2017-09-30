@@ -54,3 +54,46 @@ func UnpackArgs(
 	// Done!
 	return args, nil
 }
+
+func PackArgs(
+	packType api.PackType,
+	path string,
+	filters api.FilesetFilters,
+	warehouse api.WarehouseAddr,
+	monitor rio.Monitor,
+) ([]string, error) {
+	// Required args.
+	args := []string{"pack", "--format=json"}
+
+	// Append filters if specified.
+	//  (We could just pass 'em all even when emptystr, but let's be nice to readers of 'ps'.)
+	if filters.Uid != "" {
+		args = append(args, "--uid="+filters.Uid)
+	}
+	if filters.Gid != "" {
+		args = append(args, "--gid="+filters.Gid)
+	}
+	if filters.Mtime != "" {
+		args = append(args, "--mtime="+filters.Mtime)
+	}
+	if filters.Sticky {
+		args = append(args, "--sticky")
+	}
+
+	// Append warehouse.
+	if warehouse != "" {
+		args = append(args, "--target="+string(warehouse))
+	}
+
+	// Append monitor options.
+	//  (Of which there are currently none meaningful implemented.)
+
+	// Suffix the main bits.
+	//  This is last so we can use the "--" to terminate acceptance of flags
+	//  (which is important because, well, what if someone really does want
+	//  to unpack into path "--lol"?).
+	args = append(args, "--", string(packType), path)
+
+	// Done!
+	return args, nil
+}

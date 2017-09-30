@@ -31,14 +31,41 @@ func UnpackFunc(
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
 ) (gotWareID api.WareID, err error) {
-	if monitor.Chan != nil {
-		defer close(monitor.Chan)
-	}
-
 	// Marshal args.
 	args, err := UnpackArgs(wareID, path, filters, placementMode, warehouses, monitor)
 	if err != nil {
 		return api.WareID{}, err
+	}
+	// Bulk of invoking and handling process messages is shared code.
+	return packOrUnpack(ctx, args, monitor)
+}
+
+func PackFunc(
+	ctx context.Context,
+	packType api.PackType,
+	path string,
+	filters api.FilesetFilters,
+	warehouse api.WarehouseAddr,
+	monitor rio.Monitor,
+) (api.WareID, error) {
+	// Marshal args.
+	args, err := PackArgs(packType, path, filters, warehouse, monitor)
+	if err != nil {
+		return api.WareID{}, err
+	}
+	// Bulk of invoking and handling process messages is shared code.
+	return packOrUnpack(ctx, args, monitor)
+}
+
+// internal implementation of message parsing for both pack and unpack.
+// (they "conincidentally" have the same API.)
+func packOrUnpack(
+	ctx context.Context,
+	args []string,
+	monitor rio.Monitor,
+) (gotWareID api.WareID, err error) {
+	if monitor.Chan != nil {
+		defer close(monitor.Chan)
 	}
 
 	// Spawn process.
@@ -111,18 +138,6 @@ func UnpackFunc(
 		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s (stderr: %q)", err, stderrBuf.String())
 	}
 	return
-}
-
-func PackFunc(
-	ctx context.Context,
-	packType api.PackType,
-	path string,
-	filters api.FilesetFilters,
-	warehouse api.WarehouseAddr,
-	monitor rio.Monitor,
-) (api.WareID, error) {
-	// TODO all of it
-	return api.WareID{}, nil
 }
 
 func MirrorFunc(
