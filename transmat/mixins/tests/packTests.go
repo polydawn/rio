@@ -26,11 +26,7 @@ func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.FilesetFilters{
-							Uid:   "keep",
-							Gid:   "keep",
-							Mtime: "keep",
-						},
+						api.Filter_NoMutation,
 						"",
 						rio.Monitor{},
 					)
@@ -40,11 +36,7 @@ func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.FilesetFilters{
-							Uid:   "keep",
-							Gid:   "keep",
-							Mtime: "keep",
-						},
+						api.Filter_NoMutation,
 						"",
 						rio.Monitor{},
 					)
@@ -70,11 +62,7 @@ func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 			context.Background(),
 			packType,
 			tmpDir.String(),
-			api.FilesetFilters{
-				Uid:   "keep",
-				Gid:   "keep",
-				Mtime: "keep",
-			},
+			api.Filter_NoMutation,
 			"",
 			rio.Monitor{},
 		)
@@ -101,11 +89,7 @@ func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.FilesetFilters{
-							Uid:   "keep",
-							Gid:   "keep",
-							Mtime: "keep",
-						},
+						api.Filter_NoMutation,
 						"",
 						rio.Monitor{},
 					)
