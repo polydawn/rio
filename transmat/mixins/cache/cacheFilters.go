@@ -2,6 +2,7 @@ package cache
 
 import (
 	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/util"
 )
 
 /*
@@ -12,16 +13,20 @@ import (
 	code (or, caching simply always missing in primitive implementations).
 */
 func isUnpackAltering(filters api.FilesetFilters) bool {
-	if filters.Uid != "keep" {
+	filt, err := apiutil.ProcessFilters(filters, apiutil.FilterPurposeUnpack)
+	if err != nil {
 		return true
 	}
-	if filters.Gid != "keep" {
+	if filt.Uid != apiutil.FilterKeep {
 		return true
 	}
-	if filters.Mtime != "" && filters.Mtime != "keep" {
+	if filt.Gid != apiutil.FilterKeep {
 		return true
 	}
-	if !filters.Sticky {
+	if filt.Mtime != nil {
+		return true
+	}
+	if !filt.Sticky {
 		return true
 	}
 	return false

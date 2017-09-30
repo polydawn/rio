@@ -27,8 +27,8 @@ func UnpackArgs(
 	if filters.Mtime != "" {
 		args = append(args, "--mtime="+filters.Mtime)
 	}
-	if filters.Sticky {
-		args = append(args, "--sticky")
+	if filters.Sticky != "" {
+		args = append(args, "--sticky="+filters.Sticky)
 	}
 
 	// Append placement mode if specified.
@@ -76,8 +76,8 @@ func PackArgs(
 	if filters.Mtime != "" {
 		args = append(args, "--mtime="+filters.Mtime)
 	}
-	if filters.Sticky {
-		args = append(args, "--sticky")
+	if filters.Sticky != "" {
+		args = append(args, "--sticky="+filters.Sticky)
 	}
 
 	// Append warehouse.
