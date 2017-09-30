@@ -2,6 +2,7 @@ package stitch
 
 import (
 	"go.polydawn.net/go-timeless-api"
+	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
 )
 
@@ -33,16 +34,22 @@ func FormulaToUnpackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []
 	Reduce a formula to a slice of []PackSpec, ready to be used
 	invoking PackMulti().
 
+	The filters given will be applied to all *unset* fields in the filters
+	already given by the formula outputs; set fields are not changed.
+	Typically the filters arg will be `api.Filter_DefaultFlatten`
+	(both `rio pack` and repeatr outputs default to this),
+	though other values are of course valid.
+
 	Whether the action, inputs, or fetchUrls are set is irrelevant;
 	they will be ignored completely.
 */
-func FormulaToPackSpecs(frm api.Formula) (parts []PackSpec) {
+func FormulaToPackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []PackSpec) {
 	for path, output := range frm.Outputs {
 		warehouse, _ := frm.SaveUrls[path]
 		parts = append(parts, PackSpec{
 			Path:      fs.MustAbsolutePath(string(path)),
 			PackType:  output.PackType,
-			Filters:   output.Filters,
+			Filters:   apiutil.MergeFilters(output.Filters, filters),
 			Warehouse: warehouse,
 		})
 	}
