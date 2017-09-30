@@ -31,7 +31,7 @@ var (
 func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	packType api.PackType, // The name of pack format.
-	path string, // The fileset to scan and pack (absolute path).
+	pathStr string, // The fileset to scan and pack (absolute path).
 	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
@@ -40,10 +40,27 @@ func Pack(
 	if packType != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, packType)
 	}
-	path2 := fs.MustAbsolutePath(path)
+	path, err := fs.ParseAbsolutePath(pathStr)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrUsage, "pack must be called with absolute path: %s", err)
+	}
 	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposePack)
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
+	}
+
+	// Short-circuit exit if the path does not exist.
+	//  We could let the errors later bubble, but, why bother opening a writeController,
+	//  etc, if we're just going to have to rm the resource a millisecond later?
+	afs := osfs.New(path)
+	_, err = afs.Stat(fs.RelPath{})
+	switch Category(err) {
+	case nil:
+		// pass
+	case fs.ErrNotExists:
+		return api.WareID{PackType, ""}, nil
+	default:
+		return api.WareID{}, Errorf(rio.ErrPackInvalid, "cannot read path for packing: %s", err)
 	}
 
 	// Connect to warehouse, and get write controller opened.
@@ -91,7 +108,7 @@ func Pack(
 	tarWriter := tar.NewWriter(gzWriter)
 
 	// Scan and tarify!
-	wareID, err := packTar(ctx, path2, filt2, tarWriter)
+	wareID, err := packTar(ctx, afs, filt2, tarWriter)
 	if err != nil {
 		return wareID, err
 	}
@@ -106,16 +123,13 @@ func Pack(
 
 func packTar(
 	ctx context.Context,
-	srcBasePath fs.AbsolutePath,
+	afs fs.FS,
 	filt apiutil.FilesetFilters,
 	tw *tar.Writer,
 ) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
 	bucket := &fshash.MemoryBucket{}
-
-	// Construct filesystem wrapper to use for all our ops.
-	afs := osfs.New(srcBasePath)
 
 	// Walk the filesystem, emitting tar entries and filling the bucket as we go.
 	tarHeader := &tar.Header{}
