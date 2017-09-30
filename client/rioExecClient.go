@@ -57,7 +57,7 @@ func UnpackFunc(
 	//  (No, you couldn't set this up without a goroutine -- you can't select with the IO we're about to do;
 	//  and No, you couldn't do it until after cmd.Start -- the Process handle doesn't exist until then.)
 	go func() {
-		<-ctx.Done()
+		<-ctx.Done() // FIXME goroutine leak occurs when the process ends gracefully
 		cmd.Process.Signal(os.Interrupt)
 		time.Sleep(100 * time.Millisecond)
 		cmd.Process.Signal(os.Kill)
