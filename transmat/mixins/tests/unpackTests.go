@@ -31,11 +31,7 @@ func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackF
 						context.Background(),
 						packType,
 						fixturePath.String(),
-						api.FilesetFilters{
-							Uid:   "keep",
-							Gid:   "keep",
-							Mtime: "keep",
-						},
+						api.Filter_NoMutation,
 						warehouseAddr,
 						rio.Monitor{},
 					)
@@ -46,9 +42,7 @@ func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackF
 						context.Background(),
 						wareID,
 						unpackPath.String(),
-						api.FilesetFilters{
-							Sticky: true,
-						},
+						api.Filter_NoMutation,
 						rio.Placement_Direct,
 						[]api.WarehouseAddr{warehouseAddr},
 						rio.Monitor{},
@@ -105,7 +99,7 @@ func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.U
 				context.Background(),
 				wareID,
 				unpackPath.String(),
-				api.FilesetFilters{Sticky: true},
+				api.Filter_NoMutation,
 				rio.Placement_None,
 				[]api.WarehouseAddr{warehouseAddr},
 				rio.Monitor{},

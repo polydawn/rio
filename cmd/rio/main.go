@@ -98,8 +98,10 @@ func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
 	appUnpack.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]").
 		Default("keep").
 		StringVar(&cli.UnpackCLI.Filters.Mtime)
-	appUnpack.Flag("sticky", "Keep setuid, setgid, and sticky bits").
-		BoolVar(&cli.UnpackCLI.Filters.Sticky)
+	appUnpack.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
+		Default("zero").
+		EnumVar(&cli.UnpackCLI.Filters.Sticky,
+			"keep", "zero")
 }
 
 func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
