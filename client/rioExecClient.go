@@ -83,7 +83,14 @@ func UnpackFunc(
 		// If it's the final "result" message, prepare to return.
 		if msgSlot.Result != nil {
 			gotWareID = msgSlot.Result.WareID
-			err = msgSlot.Result.Error
+			// A seemingly-redunant nil check is required here rather than just
+			// setting the value, because `msgSlot.Result.Error` may be a *typed*
+			// nil, and that causes all sorts of hell (often kilometers away).
+			// See https://golang.org/doc/faq#nil_error for discussion.
+			// This kind of shit makes me want to not write go anymore.
+			if msgSlot.Result.Error != nil {
+				err = msgSlot.Result.Error
+			}
 			break
 		}
 		// For all other messages: forward to the monitor channel (if it exists!)
