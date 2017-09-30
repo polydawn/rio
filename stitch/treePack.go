@@ -52,10 +52,11 @@ func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts
 			defer wg.Done()
 			res := &packResults[i]
 			// Unpack with placement=none to populate cache.
+			rerootedPath := targetFs.BasePath().Join(part.Path.CoerceRelative())
 			res.WareID, res.Error = packTool(
 				ctx, // TODO fork em out
 				part.PackType,
-				part.Path.String(),
+				rerootedPath.String(),
 				part.Filters,
 				part.Warehouse,
 				rio.Monitor{},
