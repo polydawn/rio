@@ -71,7 +71,10 @@ func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
 		StringVar(&cli.PackCLI.Filters.Gid)
 	appPack.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
 		StringVar(&cli.PackCLI.Filters.Mtime)
-	// Sticky flag not used for pack
+	appPack.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
+		Default("keep").
+		EnumVar(&cli.UnpackCLI.Filters.Sticky,
+			"keep", "zero")
 }
 
 func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
