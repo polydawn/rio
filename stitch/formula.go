@@ -17,9 +17,9 @@ import (
 	Whether the action, outputs, or saveUrls are set is irrelevant;
 	they will be ignored completely.
 */
-func FormulaToUnpackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []UnpackSpec) {
+func FormulaToUnpackSpecs(frm api.Formula, frmCtx api.FormulaContext, filters api.FilesetFilters) (parts []UnpackSpec) {
 	for path, wareID := range frm.Inputs {
-		warehouses, _ := frm.FetchUrls[path]
+		warehouses, _ := frmCtx.FetchUrls[path]
 		parts = append(parts, UnpackSpec{
 			Path:       fs.MustAbsolutePath(string(path)),
 			WareID:     wareID,
@@ -43,9 +43,9 @@ func FormulaToUnpackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []
 	Whether the action, inputs, or fetchUrls are set is irrelevant;
 	they will be ignored completely.
 */
-func FormulaToPackSpecs(frm api.Formula, filters api.FilesetFilters) (parts []PackSpec) {
+func FormulaToPackSpecs(frm api.Formula, frmCtx api.FormulaContext, filters api.FilesetFilters) (parts []PackSpec) {
 	for path, output := range frm.Outputs {
-		warehouse, _ := frm.SaveUrls[path]
+		warehouse, _ := frmCtx.SaveUrls[path]
 		parts = append(parts, PackSpec{
 			Path:      fs.MustAbsolutePath(string(path)),
 			PackType:  output.PackType,
