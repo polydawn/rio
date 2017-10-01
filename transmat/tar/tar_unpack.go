@@ -81,7 +81,7 @@ func unpack(
 			return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
 		}
 		switch u.Scheme {
-		case "file", "file+ca":
+		case "file", "ca+file":
 			whCtrl, err := kvfs.NewController(addr)
 			switch Category(err) {
 			case nil:
@@ -103,7 +103,7 @@ func unpack(
 				return api.WareID{}, err
 			}
 		default:
-			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file' or 'file+ca')", u.Scheme)
+			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file' or 'ca+file')", u.Scheme)
 		}
 	}
 	if reader == nil { // aka if no warehouses available:
