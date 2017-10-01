@@ -51,10 +51,10 @@ func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error
 	}
 	switch u.Scheme {
 	case "file":
-	case "file+ca":
+	case "ca+file":
 		whCtrl.ctntAddr = true
 	default:
-		return whCtrl, Errorf(rio.ErrUsage, "unsupported scheme in warehouse addr: %q (valid options are 'file' or 'file+ca')", u.Scheme)
+		return whCtrl, Errorf(rio.ErrUsage, "unsupported scheme in warehouse addr: %q (valid options are 'file' or 'ca+file')", u.Scheme)
 	}
 	absPth, err := filepath.Abs(filepath.Join(u.Host, u.Path))
 	if err != nil {
