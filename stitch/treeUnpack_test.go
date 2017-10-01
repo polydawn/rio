@@ -228,7 +228,7 @@ func TestTreeUnpack(t *testing.T) {
 							},
 						},
 					)
-					So(err, ShouldErrorWithCategory, rio.ErrAssemblyInvalid)
+					So(err, ErrorShouldHaveCategory, rio.ErrAssemblyInvalid)
 					So(cleanupFunc, ShouldBeNil)
 				})
 				Convey("Unpack with no explicit root should work:", func() {
@@ -297,7 +297,7 @@ func TestTreeUnpack(t *testing.T) {
 
 					// Okay here's the crux: files that existed in the first layer *must not be visible* when shadowed:
 					_, err = afs.LStat(fs.MustRelPath("deep/tree/f3"))
-					So(err, ShouldErrorWithCategory, fs.ErrNotExists)
+					So(err, ErrorShouldHaveCategory, fs.ErrNotExists)
 
 					So(cleanupFunc(), ShouldBeNil)
 				})

@@ -54,9 +54,9 @@ func NormalizeIOError(ioe error) error {
 	case nil:
 		return nil
 	case io.EOF, io.ErrUnexpectedEOF: // we don't believe in returning expected EOFs as errors.
-		return Recategorize(ioe, ErrUnexpectedEOF)
+		return Recategorize(ErrUnexpectedEOF, ioe)
 	case io.ErrShortWrite:
-		return Recategorize(ioe, ErrShortWrite)
+		return Recategorize(ErrShortWrite, ioe)
 	}
 	// Complicated things there are no stdlib predicates for.
 	switch e2 := ioe.(type) {
@@ -76,15 +76,15 @@ func NormalizeIOError(ioe error) error {
 		case *os.LinkError:
 			return ErrorDetailed(ErrNotExists, e2.Error(), map[string]string{"pathOld": e2.Old, "pathNew": e2.New})
 		case *os.SyscallError:
-			return Recategorize(ioe, ErrNotExists) // has no path info :(
+			return Recategorize(ErrNotExists, ioe) // has no path info :(
 		default: // 'os.ErrExist' is stringly typed :(
-			return Recategorize(ioe, ErrNotExists) // has no path info :(
+			return Recategorize(ErrNotExists, ioe) // has no path info :(
 		}
 	case os.IsExist(ioe):
-		return Recategorize(ioe, ErrAlreadyExists)
+		return Recategorize(ErrAlreadyExists, ioe)
 	}
 	// No matches.  Categorize to a placeholder.  At least it'll be serializable.
-	return Recategorize(ioe, ErrMisc)
+	return Recategorize(ErrMisc, ioe)
 }
 
 func NewBreakoutError(OpArea AbsolutePath, OpPath RelPath, LinkPath RelPath, LinkTarget string) error {
