@@ -95,7 +95,7 @@ func specPlacerGood(placeFunc Placer, tmpDir fs.AbsolutePath) {
 		So(ShouldStat(afs, fs.MustRelPath("dstParent/content")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content"), Type: fs.Type_Dir, Uid: 4000, Perms: 0755, Mtime: time.Date(2005, 01, 15, 0, 0, 0, 0, time.UTC)})
 		So(ShouldStat(afs, fs.MustRelPath("dstParent/content/file")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent/content/file"), Type: fs.Type_File, Perms: 0640, Mtime: time.Date(2006, 01, 15, 0, 0, 0, 0, time.UTC), Size: 4})
 		_, err = afs.LStat(fs.MustRelPath("dstParent/content/chump"))
-		So(err, errcat.ShouldErrorWithCategory, fs.ErrNotExists)
+		So(err, errcat.ErrorShouldHaveCategory, fs.ErrNotExists)
 		// Last (because you're most likely to screw this up) check the parent dir didn't get boinked.
 		So(ShouldStat(afs, fs.MustRelPath("dstParent")), ShouldResemble, fs.Metadata{Name: fs.MustRelPath("dstParent"), Type: fs.Type_Dir, Perms: 0755, Mtime: time.Date(2019, 01, 15, 0, 0, 0, 0, time.UTC)})
 

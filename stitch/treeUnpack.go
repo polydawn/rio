@@ -161,12 +161,13 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 				if isSymlink {
 					// Future hackers: if you ever try to make this check cleverer,
 					//  also make sure you include a check for host mount crossings.
-					return Recategorize(fs.NewBreakoutError(
-						targetFs.BasePath(),
-						path,
-						parentPath,
-						target,
-					), rio.ErrAssemblyInvalid)
+					return Recategorize(rio.ErrAssemblyInvalid,
+						fs.NewBreakoutError(
+							targetFs.BasePath(),
+							path,
+							parentPath,
+							target,
+						))
 				} else if err == nil {
 					continue
 				} else if Category(err) == fs.ErrNotExists {
