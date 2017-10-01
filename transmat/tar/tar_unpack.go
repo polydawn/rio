@@ -25,7 +25,9 @@ import (
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/util"
+	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
+	"go.polydawn.net/rio/warehouse/impl/kvhttp"
 )
 
 var (
@@ -80,30 +82,33 @@ func unpack(
 		if err != nil {
 			return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
 		}
+		var whCtrl warehouse.BlobstoreController
 		switch u.Scheme {
 		case "file", "ca+file":
-			whCtrl, err := kvfs.NewController(addr)
-			switch Category(err) {
-			case nil:
-				// pass
-			case rio.ErrWarehouseUnavailable:
-				// TODO log something to the monitor
-				continue // okay!  skip to the next one.
-			default:
-				return api.WareID{}, err
-			}
-			reader, err = whCtrl.OpenReader(wareID)
-			switch Category(err) {
-			case nil:
-				// pass
-			case rio.ErrWareNotFound:
-				// TODO log something to the monitor
-				continue // okay!  skip to the next one.
-			default:
-				return api.WareID{}, err
-			}
+			whCtrl, err = kvfs.NewController(addr)
+		case "http", "ca+http", "https", "ca+https":
+			whCtrl, err = kvhttp.NewController(addr)
 		default:
-			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file' or 'ca+file')", u.Scheme)
+			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
+		}
+		switch Category(err) {
+		case nil:
+			// pass
+		case rio.ErrWarehouseUnavailable:
+			// TODO log something to the monitor
+			continue // okay!  skip to the next one.
+		default:
+			return api.WareID{}, err
+		}
+		reader, err = whCtrl.OpenReader(wareID)
+		switch Category(err) {
+		case nil:
+			// pass
+		case rio.ErrWareNotFound:
+			// TODO log something to the monitor
+			continue // okay!  skip to the next one.
+		default:
+			return api.WareID{}, err
 		}
 	}
 	if reader == nil { // aka if no warehouses available:
