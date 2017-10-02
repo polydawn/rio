@@ -9,12 +9,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/polydawn/go-errcat"
 	"go.polydawn.net/go-timeless-api"
@@ -1070,7 +1068,6 @@ func TestReader(t *testing.T) {
 		warePath := absPath.Join(RelPathBare)
 		wareAddr := api.WarehouseAddr(warePath.String())
 		controller := mustNewController(t, nil, wareAddr)
-		// controller.Clone(ctx)
 		t.Run("test reader bad hash", func(t *testing.T) {
 			wareReader, err := controller.NewReader("bogus")
 			if err == nil {
@@ -1170,13 +1167,4 @@ func mustNewController(t *testing.T, workingDir riofs.FS, wareAddr api.Warehouse
 		t.FailNow()
 	}
 	return controller
-}
-
-func gitUploadPack(t *testing.T, dir string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := exec.CommandContext(ctx, "git-upload-pack", "--timout=5", dir).Run(); err != nil {
-		t.Fatal(err)
-	}
 }
