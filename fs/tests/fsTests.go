@@ -155,6 +155,20 @@ func CheckPerverseSymlinks(afs fs.FS) {
 			_, err := afs.ResolveLink(linkStr, d1l1)
 			So(err, errcat.ErrorShouldHaveCategory, fs.ErrRecursion)
 		})
+		Convey("symlink to cycle pair should error", func() {
+			l1 := fs.MustRelPath("l1")
+			link1Str := "./l2"
+			l2 := fs.MustRelPath("l2")
+			link2Str := "./l1"
+
+			So(afs.Mklink(l1, link1Str), ShouldBeNil)
+			So(afs.Mklink(l2, link2Str), ShouldBeNil)
+
+			_, err := afs.ResolveLink(link1Str, l1)
+			So(err, errcat.ErrorShouldHaveCategory, fs.ErrRecursion)
+			_, err = afs.ResolveLink(link2Str, l2)
+			So(err, errcat.ErrorShouldHaveCategory, fs.ErrRecursion)
+		})
 	})
 }
 

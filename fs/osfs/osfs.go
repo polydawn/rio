@@ -220,6 +220,13 @@ func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath,
 	if startingAt.GoesUp() {
 		return startingAt, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", startingAt)
 	}
+	return afs.resolveLink(symlink, startingAt, map[fs.RelPath]struct{}{})
+}
+func (afs *osFS) resolveLink(symlink string, startingAt fs.RelPath, seen map[fs.RelPath]struct{}) (fs.RelPath, error) {
+	if _, isSeen := seen[startingAt]; isSeen {
+		return startingAt, Errorf(fs.ErrRecursion, "cyclic symlinks detected from %q", startingAt)
+	}
+	seen[startingAt] = struct{}{}
 	segments := strings.Split(symlink, "/")
 	path := startingAt
 	if segments[0] == "" { // rooted
@@ -253,7 +260,7 @@ func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath,
 			return startingAt, err
 		}
 		if isLink {
-			path, err = afs.ResolveLink(morelink, path)
+			path, err = afs.resolveLink(morelink, path, seen)
 			if err != nil {
 				return startingAt, err
 			}
