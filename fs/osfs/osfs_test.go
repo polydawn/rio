@@ -1,10 +1,9 @@
 package osfs
 
 import (
-	"reflect"
-	"runtime"
-	"strings"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/tests"
@@ -12,26 +11,17 @@ import (
 )
 
 func TestAll(t *testing.T) {
-	for _, spec := range []func(*testing.T, fs.FS){
-		tests.CheckMkdirLstatRoundtrip,
-		tests.CheckDeepMkdirError,
-		tests.CheckMklinkLstatRoundtrip,
-		tests.CheckSymlinks,
-	} {
-		t.Run(fnname(spec), func(t *testing.T) {
-			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-				tfs := New(tmpDir)
-				boxPath := fs.MustRelPath("sandbox")
-				tfs.Mkdir(boxPath, 0755)
-				afs := New(tmpDir.Join(boxPath))
+	Convey("osfs spec compliance tests", t, func() {
+		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+			tfs := New(tmpDir)
+			boxPath := fs.MustRelPath("sandbox")
+			tfs.Mkdir(boxPath, 0755)
+			afs := New(tmpDir.Join(boxPath))
 
-				spec(t, afs)
-			})
+			tests.CheckMkdirLstatRoundtrip(afs)
+			tests.CheckDeepMkdirError(afs)
+			tests.CheckMklinkLstatRoundtrip(afs)
+			tests.CheckSymlinks(afs)
 		})
-	}
-}
-
-func fnname(fn interface{}) string {
-	fullname := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-	return fullname[strings.LastIndex(fullname, ".")+1:]
+	})
 }
