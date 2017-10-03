@@ -2,8 +2,6 @@ package guid
 
 import (
 	"fmt"
-	"runtime"
-	"sync"
 	"testing"
 	"time"
 )
@@ -35,33 +33,4 @@ func Test(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 		fmt.Printf("%s\n", New())
 	}
-}
-
-func doMany(t *testing.T, wg *sync.WaitGroup) {
-	ids := make(map[string]bool)
-	prev := ""
-	for i := 0; i < 100000; i++ {
-		id := New()
-		if _, exists := ids[id]; exists {
-			t.Fatalf("generated duplicate id '%s'", id)
-		}
-		ids[id] = true
-		if prev != "" {
-			if id <= prev {
-				t.Fatalf("id ('%s') must be > prev ('%s')", id, prev)
-			}
-		}
-		prev = id
-	}
-	wg.Done()
-}
-
-func TestMany(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go doMany(t, &wg)
-	}
-	wg.Wait()
 }

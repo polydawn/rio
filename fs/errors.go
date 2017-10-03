@@ -20,7 +20,8 @@ const (
 	ErrUnexpectedEOF ErrorCategory = "fs-unexpected-eof"
 	ErrNotExists     ErrorCategory = "fs-not-exists"
 	ErrAlreadyExists ErrorCategory = "fs-already-exists"
-	ErrNotDir        ErrorCategory = "fs-not-dir" // contextually, may be a form of either ErrNotExists or ErrAlready exists: shows up when e.g. lstat doesnotexist/deeper/path or mkdir aregularfile/deeper/path.
+	ErrNotDir        ErrorCategory = "fs-not-dir"   // contextually, may be a form of either ErrNotExists or ErrAlready exists: shows up when e.g. lstat doesnotexist/deeper/path or mkdir aregularfile/deeper/path.
+	ErrRecursion     ErrorCategory = "fs-recursion" // returned when cycles detected in symlinks.
 	ErrShortWrite    ErrorCategory = "fs-shortwrite"
 
 	/*
