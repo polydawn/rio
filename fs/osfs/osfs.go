@@ -230,14 +230,21 @@ func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath,
 	}
 	iLast := len(segments) - 1
 	for i, s := range segments {
+		// Identity segments can simply be skipped.
 		if s == "" || s == "." {
 			continue
 		}
+		// Excessive up segements aren't an error; they simply no-op when already at root.
+		if s == ".." && path == (fs.RelPath{}) {
+			continue
+		}
+		// Okay, join the segment and peek at it.
 		path = path.Join(fs.MustRelPath(s))
+		// Bail on cycles before considering recursion!
 		if path == startingAt {
 			return startingAt, Errorf(fs.ErrRecursion, "cyclic symlinks detected from %q", startingAt)
 		}
-		// if this is a symlink, we must recurse on it.
+		// Check if this is a symlink; if so we must recurse on it.
 		morelink, isLink, err := afs.Readlink(path)
 		if err != nil {
 			if i == iLast && Category(err) == fs.ErrNotExists {
