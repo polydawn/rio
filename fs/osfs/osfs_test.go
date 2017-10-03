@@ -1,6 +1,9 @@
 package osfs
 
 import (
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 
 	"go.polydawn.net/rio/fs"
@@ -9,12 +12,24 @@ import (
 )
 
 func TestAll(t *testing.T) {
-	testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-		tfs := New(tmpDir)
-		boxPath := fs.MustRelPath("sandbox")
-		tfs.Mkdir(boxPath, 0755)
-		afs := New(tmpDir.Join(boxPath))
+	for _, spec := range []func(*testing.T, fs.FS){
+		tests.CheckMkdirLstatRoundtrip,
+		tests.CheckDeepMkdirError,
+	} {
+		t.Run(fnname(spec), func(t *testing.T) {
+			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+				tfs := New(tmpDir)
+				boxPath := fs.MustRelPath("sandbox")
+				tfs.Mkdir(boxPath, 0755)
+				afs := New(tmpDir.Join(boxPath))
 
-		tests.CheckMkdirLstatRoundtrip(t, afs)
-	})
+				spec(t, afs)
+			})
+		})
+	}
+}
+
+func fnname(fn interface{}) string {
+	fullname := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	return fullname[strings.LastIndex(fullname, ".")+1:]
 }
