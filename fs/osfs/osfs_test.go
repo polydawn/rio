@@ -16,6 +16,7 @@ func TestAll(t *testing.T) {
 		tests.CheckMkdirLstatRoundtrip,
 		tests.CheckDeepMkdirError,
 		tests.CheckMklinkLstatRoundtrip,
+		tests.CheckSymlinks,
 	} {
 		t.Run(fnname(spec), func(t *testing.T) {
 			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {

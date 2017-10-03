@@ -2,7 +2,10 @@ package osfs
 
 import (
 	"os"
+	"strings"
 	"syscall"
+
+	. "github.com/polydawn/go-errcat"
 
 	"go.polydawn.net/rio/fs"
 )
@@ -175,6 +178,38 @@ func (afs *osFS) Readlink(path fs.RelPath) (string, bool, error) {
 	default:
 		return "", false, fs.NormalizeIOError(err)
 	}
+}
+
+func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath, error) {
+	segments := strings.Split(symlink, "/")
+	path := startingAt
+	if segments[0] == "" { // rooted
+		path = fs.RelPath{}
+		segments = segments[1:]
+	} else {
+		path = startingAt.Dir() // drop the link node itself
+	}
+	for _, s := range segments {
+		if s == "" || s == "." {
+			continue
+		}
+		path = path.Join(fs.MustRelPath(s))
+		if path == startingAt {
+			return startingAt, Errorf(fs.ErrRecursion, "cyclic symlinks detected from %q", startingAt)
+		}
+		// if this is a symlink, we must recurse on it.
+		morelink, isLink, err := afs.Readlink(path)
+		if err != nil {
+			return startingAt, err
+		}
+		if isLink {
+			path, err = afs.ResolveLink(morelink, path)
+			if err != nil {
+				return startingAt, err
+			}
+		}
+	}
+	return path, nil
 }
 
 func permsToOs(perms fs.Perms) (mode os.FileMode) {
