@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"sort"
+
 	"go.polydawn.net/rio/lib/treewalk"
 )
 
@@ -97,6 +99,7 @@ func (t *FilewalkNode) prepareChildren(afs FS) error {
 	if err != nil {
 		return err
 	}
+	sort.Strings(names)
 	t.children = make([]*FilewalkNode, len(names))
 	for i, name := range names {
 		t.children[i] = newFileWalkNode(afs, t.Info.Name.Join(RelPath{name, -1}))
