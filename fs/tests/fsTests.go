@@ -67,6 +67,18 @@ func CheckSymlinks(afs fs.FS) {
 				So(err, ShouldBeNil)
 				So(resolved, ShouldResemble, target)
 			})
+			Convey("rooted case", func() {
+				l1 := fs.MustRelPath("l1")
+				linkStr := "/target"
+				target := fs.MustRelPath("./target")
+
+				So(afs.Mklink(l1, linkStr), ShouldBeNil)
+				So(makeFile(afs, target, "body"), ShouldBeNil)
+
+				resolved, err := afs.ResolveLink(linkStr, l1)
+				So(err, ShouldBeNil)
+				So(resolved, ShouldResemble, target)
+			})
 			Convey("dotdot-overload case", func() {
 				d1l1 := fs.MustRelPath("d1/l1")
 				linkStr := ".././/../../../d2/target"
@@ -104,6 +116,17 @@ func CheckSymlinks(afs fs.FS) {
 				So(afs.Mkdir(target.Dir(), 0755), ShouldBeNil)
 
 				resolved, err := afs.ResolveLink(linkStr, d1l1)
+				So(err, ShouldBeNil)
+				So(resolved, ShouldResemble, target)
+			})
+			Convey("rooted case", func() {
+				l1 := fs.MustRelPath("l1")
+				linkStr := "/target"
+				target := fs.MustRelPath("./target")
+
+				So(afs.Mklink(l1, linkStr), ShouldBeNil)
+
+				resolved, err := afs.ResolveLink(linkStr, l1)
 				So(err, ShouldBeNil)
 				So(resolved, ShouldResemble, target)
 			})
