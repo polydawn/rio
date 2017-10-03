@@ -39,17 +39,31 @@ func CheckMklinkLstatRoundtrip(afs fs.FS) {
 }
 
 func CheckSymlinks(afs fs.FS) {
-	Convey("symlink resolve", func() {
+	Convey("SPEC: symlink resolve", func() {
 		Convey("symlinks to files resolve correctly", func() {
 			Convey("short relative case", func() {
 				l1 := fs.MustRelPath("l1")
-				targetStr := "./target"
-				target := fs.MustRelPath(targetStr)
+				linkStr := "./target"
+				target := fs.MustRelPath(linkStr)
 
-				So(afs.Mklink(l1, targetStr), ShouldBeNil)
+				So(afs.Mklink(l1, linkStr), ShouldBeNil)
 				So(makeFile(afs, target, "body"), ShouldBeNil)
 
-				resolved, err := afs.ResolveLink(targetStr, l1)
+				resolved, err := afs.ResolveLink(linkStr, l1)
+				So(err, ShouldBeNil)
+				So(resolved, ShouldResemble, target)
+			})
+			Convey("long relative case", func() {
+				d1l1 := fs.MustRelPath("d1/l1")
+				linkStr := ".././/d2/target"
+				target := fs.MustRelPath("d2/target")
+
+				So(afs.Mkdir(d1l1.Dir(), 0755), ShouldBeNil)
+				So(afs.Mklink(d1l1, linkStr), ShouldBeNil)
+				So(afs.Mkdir(target.Dir(), 0755), ShouldBeNil)
+				So(makeFile(afs, target, "body"), ShouldBeNil)
+
+				resolved, err := afs.ResolveLink(linkStr, d1l1)
 				So(err, ShouldBeNil)
 				So(resolved, ShouldResemble, target)
 			})
@@ -57,12 +71,25 @@ func CheckSymlinks(afs fs.FS) {
 		Convey("dangling symlinks resolve correctly", func() {
 			Convey("short relative case", func() {
 				l1 := fs.MustRelPath("l1")
-				targetStr := "./target"
-				target := fs.MustRelPath(targetStr)
+				linkStr := "./target"
+				target := fs.MustRelPath(linkStr)
 
-				So(afs.Mklink(l1, targetStr), ShouldBeNil)
+				So(afs.Mklink(l1, linkStr), ShouldBeNil)
 
-				resolved, err := afs.ResolveLink(targetStr, l1)
+				resolved, err := afs.ResolveLink(linkStr, l1)
+				So(err, ShouldBeNil)
+				So(resolved, ShouldResemble, target)
+			})
+			Convey("long relative case", func() {
+				d1l1 := fs.MustRelPath("d1/l1")
+				linkStr := ".././/d2/target"
+				target := fs.MustRelPath("d2/target")
+
+				So(afs.Mkdir(d1l1.Dir(), 0755), ShouldBeNil)
+				So(afs.Mklink(d1l1, linkStr), ShouldBeNil)
+				So(afs.Mkdir(target.Dir(), 0755), ShouldBeNil)
+
+				resolved, err := afs.ResolveLink(linkStr, d1l1)
 				So(err, ShouldBeNil)
 				So(resolved, ShouldResemble, target)
 			})
