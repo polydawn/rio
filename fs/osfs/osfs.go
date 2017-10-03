@@ -27,48 +27,75 @@ func (afs *osFS) BasePath() fs.AbsolutePath {
 }
 
 func (afs *osFS) OpenFile(path fs.RelPath, flag int, perms fs.Perms) (fs.File, error) {
+	if path.GoesUp() {
+		return nil, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	f, err := os.OpenFile(afs.basePath.Join(path).String(), flag, permsToOs(perms))
 	return f, fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Mkdir(path fs.RelPath, perms fs.Perms) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	err := os.Mkdir(afs.basePath.Join(path).String(), permsToOs(perms))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Mklink(path fs.RelPath, target string) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	err := os.Symlink(target, afs.basePath.Join(path).String())
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Mkfifo(path fs.RelPath, perms fs.Perms) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	err := syscall.Mkfifo(afs.basePath.Join(path).String(), uint32(perms&07777))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) MkdevBlock(path fs.RelPath, major int64, minor int64, perms fs.Perms) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	mode := uint32(perms&07777) | syscall.S_IFBLK
 	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.Perms) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	mode := uint32(perms&07777) | syscall.S_IFCHR
 	err := syscall.Mknod(afs.basePath.Join(path).String(), mode, int(devModesJoin(major, minor)))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Lchown(path fs.RelPath, uid uint32, gid uint32) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	err := os.Lchown(afs.basePath.Join(path).String(), int(uid), int(gid))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Chmod(path fs.RelPath, perms fs.Perms) error {
+	if path.GoesUp() {
+		return Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	err := os.Chmod(afs.basePath.Join(path).String(), permsToOs(perms))
 	return fs.NormalizeIOError(err)
 }
 
 func (afs *osFS) Stat(path fs.RelPath) (*fs.Metadata, error) {
+	if path.GoesUp() {
+		return nil, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	fi, err := os.Stat(afs.basePath.Join(path).String())
 	if err != nil {
 		return nil, fs.NormalizeIOError(err)
@@ -77,6 +104,9 @@ func (afs *osFS) Stat(path fs.RelPath) (*fs.Metadata, error) {
 }
 
 func (afs *osFS) LStat(path fs.RelPath) (*fs.Metadata, error) {
+	if path.GoesUp() {
+		return nil, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	fi, err := os.Lstat(afs.basePath.Join(path).String())
 	if err != nil {
 		return nil, fs.NormalizeIOError(err)
@@ -153,6 +183,9 @@ func (afs *osFS) convertFileinfo(path fs.RelPath, fi os.FileInfo) (*fs.Metadata,
 }
 
 func (afs *osFS) ReadDirNames(path fs.RelPath) ([]string, error) {
+	if path.GoesUp() {
+		return nil, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	f, err := os.Open(afs.basePath.Join(path).String())
 	if err != nil {
 		return nil, fs.NormalizeIOError(err)
@@ -166,6 +199,9 @@ func (afs *osFS) ReadDirNames(path fs.RelPath) ([]string, error) {
 }
 
 func (afs *osFS) Readlink(path fs.RelPath) (string, bool, error) {
+	if path.GoesUp() {
+		return "", false, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", path)
+	}
 	target, err := os.Readlink(afs.basePath.Join(path).String())
 	switch {
 	case err == nil:
@@ -181,6 +217,9 @@ func (afs *osFS) Readlink(path fs.RelPath) (string, bool, error) {
 }
 
 func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath, error) {
+	if startingAt.GoesUp() {
+		return startingAt, Errorf(fs.ErrBreakout, "fs: invalid path %q: must not depart basepath", startingAt)
+	}
 	segments := strings.Split(symlink, "/")
 	path := startingAt
 	if segments[0] == "" { // rooted

@@ -117,6 +117,14 @@ func (p RelPath) Split() []RelPath {
 }
 
 /*
+	Predicate for if this path goes "up" -- in other words, if it starts with
+	"..".
+*/
+func (p RelPath) GoesUp() bool {
+	return len(p.path) >= 2 && p.path[0:2] == ".."
+}
+
+/*
 	Relative paths and absolute paths are not interchangeable.
 	Using these path structures aids in keeping these ideas separate and
 	hopefully prevent certain kinds of errors caused by accidentally using the incorrect path type.
