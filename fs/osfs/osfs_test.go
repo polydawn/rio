@@ -15,6 +15,7 @@ func TestAll(t *testing.T) {
 	for _, spec := range []func(*testing.T, fs.FS){
 		tests.CheckMkdirLstatRoundtrip,
 		tests.CheckDeepMkdirError,
+		tests.CheckMklinkLstatRoundtrip,
 	} {
 		t.Run(fnname(spec), func(t *testing.T) {
 			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
