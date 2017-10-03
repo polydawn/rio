@@ -18,11 +18,13 @@ func TestAll(t *testing.T) {
 			tfs.Mkdir(boxPath, 0755)
 			afs := New(tmpDir.Join(boxPath))
 
+			tests.CheckBaseLstat(afs)
 			tests.CheckMkdirLstatRoundtrip(afs)
 			tests.CheckDeepMkdirError(afs)
 			tests.CheckMklinkLstatRoundtrip(afs)
 			tests.CheckSymlinks(afs)
-			tests.CheckPerverseSymlinks(afs)
+			tests.CheckPerniciousSymlinks(afs)
+			tests.CheckOpsTraversingSymlinks(afs)
 		})
 	})
 }

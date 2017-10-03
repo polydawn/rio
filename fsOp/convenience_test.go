@@ -57,6 +57,9 @@ func TestMkdirAll(t *testing.T) {
 			Convey("MkdirAll with a dangling symlink should error...", func() {
 				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("lnk"), Type: fs.Type_Symlink, Linkname: "./dir"}, nil)
 
+				// In case you're wondering, yes, this is the same as
+				//  `os.MkdirAll(afs.BasePath().String()+"/lnk/woo", 0755)`
+				//  which would also error with "file exists".
 				So(MkdirAll(afs, fs.MustRelPath("lnk/woo"), 0755), errcat.ErrorShouldHaveCategory, fs.ErrNotDir)
 			})
 			Convey("MkdirAll traversing symlink to a file should error...", func() {
