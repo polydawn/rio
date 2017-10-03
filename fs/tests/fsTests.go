@@ -18,7 +18,7 @@ func CheckMkdirLstatRoundtrip(t *testing.T, afs fs.FS) {
 		t.Fatalf("lstat on just-created dir failed: %s", err)
 	}
 	if stat.Type != fs.Type_Dir {
-		t.Fatalf("lstat on just-created dir returned bogus type: %s", stat.Type)
+		t.Errorf("lstat on just-created dir returned bogus type: %s", stat.Type)
 	}
 }
 
@@ -29,7 +29,7 @@ func CheckDeepMkdirError(t *testing.T, afs fs.FS) {
 	}
 	_, err := afs.LStat(d1d2)
 	if errcat.Category(err) != fs.ErrNotExists {
-		t.Fatalf("deep mkdir without parents error with category %q: got %q", fs.ErrNotExists, errcat.Category(err))
+		t.Errorf("deep mkdir without parents error with category %q: got %q", fs.ErrNotExists, errcat.Category(err))
 	}
 }
 
@@ -43,6 +43,6 @@ func CheckMklinkLstatRoundtrip(t *testing.T, afs fs.FS) {
 		t.Fatalf("lstat on just-created symlink failed: %s", err)
 	}
 	if stat.Type != fs.Type_Symlink {
-		t.Fatalf("lstat on just-created symlink returned bogus type: %s", stat.Type)
+		t.Errorf("lstat on just-created symlink returned bogus type: %s", stat.Type)
 	}
 }
