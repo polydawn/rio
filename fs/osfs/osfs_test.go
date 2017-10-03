@@ -22,6 +22,7 @@ func TestAll(t *testing.T) {
 			tests.CheckDeepMkdirError(afs)
 			tests.CheckMklinkLstatRoundtrip(afs)
 			tests.CheckSymlinks(afs)
+			tests.CheckPerverseSymlinks(afs)
 		})
 	})
 }

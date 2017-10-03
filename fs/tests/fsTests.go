@@ -134,6 +134,30 @@ func CheckSymlinks(afs fs.FS) {
 	})
 }
 
+func CheckPerverseSymlinks(afs fs.FS) {
+	Convey("SPEC: perverse symlinks error (and do not hang!)", func() {
+		Convey("symlink to self should error", func() {
+			l1 := fs.MustRelPath("l1")
+			linkStr := "./l1"
+
+			So(afs.Mklink(l1, linkStr), ShouldBeNil)
+
+			_, err := afs.ResolveLink(linkStr, l1)
+			So(err, errcat.ErrorShouldHaveCategory, fs.ErrRecursion)
+		})
+		Convey("symlink to self via dotdot should error", func() {
+			d1l1 := fs.MustRelPath("d1/l1")
+			linkStr := "../d1/l1"
+
+			So(afs.Mkdir(d1l1.Dir(), 0755), ShouldBeNil)
+			So(afs.Mklink(d1l1, linkStr), ShouldBeNil)
+
+			_, err := afs.ResolveLink(linkStr, d1l1)
+			So(err, errcat.ErrorShouldHaveCategory, fs.ErrRecursion)
+		})
+	})
+}
+
 func makeFile(afs fs.FS, path fs.RelPath, body string) error {
 	f, err := afs.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
