@@ -54,6 +54,19 @@ func CheckSymlinks(afs fs.FS) {
 				So(resolved, ShouldResemble, target)
 			})
 		})
+		Convey("dangling symlinks resolve correctly", func() {
+			Convey("short relative case", func() {
+				l1 := fs.MustRelPath("l1")
+				targetStr := "./target"
+				target := fs.MustRelPath(targetStr)
+
+				So(afs.Mklink(l1, targetStr), ShouldBeNil)
+
+				resolved, err := afs.ResolveLink(targetStr, l1)
+				So(err, ShouldBeNil)
+				So(resolved, ShouldResemble, target)
+			})
+		})
 	})
 }
 

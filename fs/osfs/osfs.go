@@ -189,7 +189,8 @@ func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath,
 	} else {
 		path = startingAt.Dir() // drop the link node itself
 	}
-	for _, s := range segments {
+	iLast := len(segments) - 1
+	for i, s := range segments {
 		if s == "" || s == "." {
 			continue
 		}
@@ -200,6 +201,9 @@ func (afs *osFS) ResolveLink(symlink string, startingAt fs.RelPath) (fs.RelPath,
 		// if this is a symlink, we must recurse on it.
 		morelink, isLink, err := afs.Readlink(path)
 		if err != nil {
+			if i == iLast && Category(err) == fs.ErrNotExists {
+				return path, nil
+			}
 			return startingAt, err
 		}
 		if isLink {
