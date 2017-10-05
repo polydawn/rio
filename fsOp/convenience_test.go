@@ -83,6 +83,35 @@ func TestMkdirAll(t *testing.T) {
 	})
 }
 
+func TestMkdirUsable(t *testing.T) {
+	// Note that all of these are assuming PlaceFile already works just fine.
+	Convey("MkdirUsable:", t,
+		testutil.Requires(testutil.RequiresCanManageOwnership, func() {
+			testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+				afs := osfs.New(tmpDir)
+				Convey("MkdirUsable on an empty path should work...", func() {
+					So(MkdirUsable(afs, fs.MustRelPath("dir"), 1, 2), ShouldBeNil)
+
+					stat, err := afs.LStat(fs.MustRelPath("dir"))
+					So(err, ShouldBeNil)
+					So(stat.Type, ShouldEqual, fs.Type_Dir)
+					So(stat.Uid, ShouldEqual, 1)
+					So(stat.Gid, ShouldEqual, 2)
+				})
+				Convey("MkdirUsable on a deep path should work...", func() {
+					So(MkdirUsable(afs, fs.MustRelPath("dir/a/b"), 1, 2), ShouldBeNil)
+
+					stat, err := afs.LStat(fs.MustRelPath("dir/a/b"))
+					So(err, ShouldBeNil)
+					So(stat.Type, ShouldEqual, fs.Type_Dir)
+					So(stat.Uid, ShouldEqual, 1)
+					So(stat.Gid, ShouldEqual, 2)
+				})
+			})
+		}),
+	)
+}
+
 func mustPlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) {
 	if fmeta.Type == fs.Type_File && body == nil {
 		body = &bytes.Buffer{}

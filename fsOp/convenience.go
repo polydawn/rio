@@ -57,6 +57,54 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 }
 
 /*
+	A form of MkdirAll, recursively creating parent directories as necessary,
+	but with more behaviors: the final directory will have all its metadata
+	and permissions forced to the given uid+gid and its permissions bitwise
+	`|0700` (owner rw), and all parents bitwise `|0001` (everyone-traversable),
+	and all affected dirs and their parents will have their mtimes repaired.
+
+	If intermediate path segements are not dirs, errors will be returned.
+
+	Long story short, it makes sure the given path is read-write *usable* to
+	the given uid+gid.
+	(Repeatr leans on this in the "cradle" functionality.)
+*/
+func MkdirUsable(afs fs.FS, path fs.RelPath, uid, gid uint32) error {
+	for _, segment := range path.Split() {
+		defer RepairMtime(afs, segment.Dir())()
+		mergeBits := fs.Perms(01)
+		if segment == path {
+			mergeBits = 0700
+		}
+		stat, err := afs.LStat(segment)
+		switch Category(err) {
+		case nil: // already exists
+			if stat.Type == fs.Type_Dir {
+				newMode := stat.Perms | mergeBits
+				if newMode != stat.Perms {
+					if err := afs.Chmod(segment, newMode); err != nil {
+						return err
+					}
+				}
+			} else {
+				return Errorf(fs.ErrNotDir, "%s already exists and is a %s not %s", afs.BasePath().Join(path), stat.Type, fs.Type_Dir)
+			}
+		case fs.ErrNotExists:
+			if err := afs.Mkdir(segment, 0755); err != nil {
+				return err
+			}
+		default:
+			return err
+		}
+	}
+	defer RepairMtime(afs, path)()
+	if err := afs.Lchown(path, uid, gid); err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
 	Records the mtime property currently set on a path and returns a function which
 	will force it to that value again.
 
