@@ -31,10 +31,11 @@ func TestTreeUnpack(t *testing.T) {
 				os.Setenv("RIO_BASE", tmpBase.String())
 
 				// Set up the utils.
-				assembler, err := NewAssembler(tartrans.Unpack, fs.Metadata{
-					Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
-				})
+				assembler, err := NewAssembler(tartrans.Unpack)
 				So(err, ShouldBeNil)
+				defaultFillerProps := fs.Metadata{
+					Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
+				}
 
 				Convey("Single-entry unpack should work:", func() {
 					afs := osfs.New(tmpDir.Join(fs.MustRelPath("tree")))
@@ -49,6 +50,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
@@ -80,6 +82,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
@@ -134,6 +137,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
@@ -179,6 +183,7 @@ func TestTreeUnpack(t *testing.T) {
 								WareID: api.WareID{"mount", "rw:" + tmpDir.Join(fs.MustRelPath("mount")).String()},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
@@ -229,6 +234,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ErrorShouldHaveCategory, rio.ErrAssemblyInvalid)
 					So(cleanupFunc, ShouldBeNil)
@@ -246,6 +252,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
@@ -283,6 +290,7 @@ func TestTreeUnpack(t *testing.T) {
 								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
+						defaultFillerProps,
 					)
 					So(err, ShouldBeNil)
 
