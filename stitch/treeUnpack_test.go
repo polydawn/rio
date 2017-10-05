@@ -31,7 +31,9 @@ func TestTreeUnpack(t *testing.T) {
 				os.Setenv("RIO_BASE", tmpBase.String())
 
 				// Set up the utils.
-				assembler, err := NewAssembler(tartrans.Unpack)
+				assembler, err := NewAssembler(tartrans.Unpack, fs.Metadata{
+					Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
+				})
 				So(err, ShouldBeNil)
 
 				Convey("Single-entry unpack should work:", func() {
