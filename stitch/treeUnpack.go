@@ -49,26 +49,24 @@ type unpackResult struct {
 }
 
 type Assembler struct {
-	cache          fs.FS
-	unpackTool     rio.UnpackFunc
-	placerTool     placer.Placer
-	fillerDirProps fs.Metadata
+	cache      fs.FS
+	unpackTool rio.UnpackFunc
+	placerTool placer.Placer
 }
 
-func NewAssembler(unpackTool rio.UnpackFunc, fillerDirProps fs.Metadata) (*Assembler, error) {
+func NewAssembler(unpackTool rio.UnpackFunc) (*Assembler, error) {
 	placerTool, err := placer.GetMountPlacer()
 	if err != nil {
 		return nil, err
 	}
 	return &Assembler{
-		cache:          osfs.New(config.GetCacheBasePath()),
-		unpackTool:     unpackTool,
-		placerTool:     placerTool,
-		fillerDirProps: fillerDirProps,
+		cache:      osfs.New(config.GetCacheBasePath()),
+		unpackTool: unpackTool,
+		placerTool: placerTool,
 	}, nil
 }
 
-func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec) (func() error, error) {
+func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec, fillerDirProps fs.Metadata) (func() error, error) {
 	sort.Sort(UnpackSpecByPath(parts))
 
 	// Unpacking either wares or more mounts into paths under mounts is seriously illegal.
@@ -172,9 +170,9 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec)
 					// Capture the parent mtime for restoration before issuing a syscall that bonks it.
 					defer fsOp.RepairMtime(targetFs, parentPath.Dir())()
 					// Make the parent dir if it does not exist.
-					a.fillerDirProps.Name = parentPath
+					fillerDirProps.Name = parentPath
 					// Could be cleaner: this PlaceFile call rechecks the symlink thing, but it's the shortest call for "make all props right plz".
-					if err := fsOp.PlaceFile(targetFs, a.fillerDirProps, nil, false); err != nil {
+					if err := fsOp.PlaceFile(targetFs, fillerDirProps, nil, false); err != nil {
 						return Errorf(rio.ErrAssemblyInvalid, "error creating parent dirs in tree unpack: %s", err)
 					}
 				} else {
