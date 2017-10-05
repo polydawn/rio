@@ -55,18 +55,16 @@ type Assembler struct {
 	fillerDirProps fs.Metadata
 }
 
-func NewAssembler(unpackTool rio.UnpackFunc) (*Assembler, error) {
+func NewAssembler(unpackTool rio.UnpackFunc, fillerDirProps fs.Metadata) (*Assembler, error) {
 	placerTool, err := placer.GetMountPlacer()
 	if err != nil {
 		return nil, err
 	}
 	return &Assembler{
-		cache:      osfs.New(config.GetCacheBasePath()),
-		unpackTool: unpackTool,
-		placerTool: placerTool,
-		fillerDirProps: fs.Metadata{
-			Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
-		},
+		cache:          osfs.New(config.GetCacheBasePath()),
+		unpackTool:     unpackTool,
+		placerTool:     placerTool,
+		fillerDirProps: fillerDirProps,
 	}, nil
 }
 
