@@ -63,13 +63,18 @@ func MkdirAll(afs fs.FS, path fs.RelPath, perms fs.Perms) error {
 	`|0700` (owner rw), and all parents bitwise `|0001` (everyone-traversable),
 	and all affected dirs and their parents will have their mtimes repaired.
 
+	The preferredProps metadata is only partially followed, as the rules
+	above take precidence; but the preferredProps will be used for any
+	dirs that need be created.
+
 	If intermediate path segements are not dirs, errors will be returned.
 
 	Long story short, it makes sure the given path is read-write *usable* to
 	the given uid+gid.
 	(Repeatr leans on this in the "cradle" functionality.)
 */
-func MkdirUsable(afs fs.FS, path fs.RelPath, uid, gid uint32) error {
+func MkdirUsable(afs fs.FS, path fs.RelPath, preferredProps fs.Metadata) error {
+	preferredProps.Type = fs.Type_Dir
 	for _, segment := range path.Split() {
 		defer RepairMtime(afs, segment.Dir())()
 		mergeBits := fs.Perms(01)
@@ -90,7 +95,8 @@ func MkdirUsable(afs fs.FS, path fs.RelPath, uid, gid uint32) error {
 				return Errorf(fs.ErrNotDir, "%s already exists and is a %s not %s", afs.BasePath().Join(path), stat.Type, fs.Type_Dir)
 			}
 		case fs.ErrNotExists:
-			if err := afs.Mkdir(segment, 0755); err != nil {
+			preferredProps.Name = segment
+			if err := PlaceFile(afs, preferredProps, nil, false); err != nil {
 				return err
 			}
 		default:
@@ -98,7 +104,7 @@ func MkdirUsable(afs fs.FS, path fs.RelPath, uid, gid uint32) error {
 		}
 	}
 	defer RepairMtime(afs, path)()
-	if err := afs.Lchown(path, uid, gid); err != nil {
+	if err := afs.Lchown(path, preferredProps.Uid, preferredProps.Gid); err != nil {
 		return err
 	}
 	return nil
