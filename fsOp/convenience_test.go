@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/testutil"
+	. "go.polydawn.net/rio/testutil"
 )
 
 func TestMkdirAll(t *testing.T) {
 	// Note that all of these are assuming PlaceFile already works just fine.
 	Convey("MkdirAll:", t, func() {
-		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
+		WithTmpdir(func(tmpDir fs.AbsolutePath) {
 			afs := osfs.New(tmpDir)
 			Convey("MkdirAll on an existing path should work...", func() {
 				mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Perms: 0755}, nil)
@@ -81,6 +82,79 @@ func TestMkdirAll(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestMkdirUsable(t *testing.T) {
+	// Note that all of these are assuming PlaceFile already works just fine.
+	Convey("MkdirUsable:", t,
+		Requires(RequiresCanManageOwnership, func() {
+			var (
+				preferredTime  = time.Unix(500004440, 0).UTC()
+				otherTime      = time.Unix(500000220, 0).UTC()
+				preferredProps = fs.Metadata{
+					Perms: 0755,
+					Uid:   1,
+					Gid:   2,
+					Mtime: preferredTime,
+				}
+			)
+			WithTmpdir(func(tmpDir fs.AbsolutePath) {
+				afs := osfs.New(tmpDir)
+				Convey("MkdirUsable on an empty path should work...", func() {
+					So(MkdirUsable(afs, fs.MustRelPath("dir"), preferredProps), ShouldBeNil)
+
+					stat, err := afs.LStat(fs.MustRelPath("dir"))
+					So(err, ShouldBeNil)
+					So(stat.Type, ShouldEqual, fs.Type_Dir)
+					So(stat.Uid, ShouldEqual, 1)
+					So(stat.Gid, ShouldEqual, 2)
+				})
+				Convey("MkdirUsable on a deep path should work...", func() {
+					So(MkdirUsable(afs, fs.MustRelPath("dir/a/b"), preferredProps), ShouldBeNil)
+
+					stat, err := afs.LStat(fs.MustRelPath("dir/a/b"))
+					So(err, ShouldBeNil)
+					So(stat.Type, ShouldEqual, fs.Type_Dir)
+					So(stat.Uid, ShouldEqual, 1)
+					So(stat.Gid, ShouldEqual, 2)
+				})
+				Convey("MkdirUsable on a mostly extant path (add last dir only) should work...", func() {
+					mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Perms: 0755, Mtime: otherTime}, nil)
+
+					So(MkdirUsable(afs, fs.MustRelPath("dir/tgt"), preferredProps), ShouldBeNil)
+
+					So(ShouldStat(afs, fs.MustRelPath("dir/tgt")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir/tgt"), Type: fs.Type_Dir, Uid: 1, Gid: 2, Perms: 0755, Mtime: preferredTime})
+					So(ShouldStat(afs, fs.MustRelPath("dir")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: otherTime})
+				})
+				Convey("MkdirUsable on a partially extant path (add several dirs) should work...", func() {
+					mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Perms: 0755, Mtime: otherTime}, nil)
+
+					So(MkdirUsable(afs, fs.MustRelPath("dir/a/b/tgt"), preferredProps), ShouldBeNil)
+
+					So(ShouldStat(afs, fs.MustRelPath("dir/a/b/tgt")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir/a/b/tgt"), Type: fs.Type_Dir, Uid: 1, Gid: 2, Perms: 0755, Mtime: preferredTime})
+					So(ShouldStat(afs, fs.MustRelPath("dir/a/b")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir/a/b"), Type: fs.Type_Dir, Uid: 1, Gid: 2, Perms: 0755, Mtime: preferredTime})
+					So(ShouldStat(afs, fs.MustRelPath("dir/a")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir/a"), Type: fs.Type_Dir, Uid: 1, Gid: 2, Perms: 0755, Mtime: preferredTime})
+					So(ShouldStat(afs, fs.MustRelPath("dir")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0755, Mtime: otherTime})
+				})
+				Convey("MkdirUsable on a needing to repair parent perms should work...", func() {
+					mustPlaceFile(afs, fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Perms: 0700, Mtime: otherTime}, nil)
+
+					So(MkdirUsable(afs, fs.MustRelPath("dir/tgt"), preferredProps), ShouldBeNil)
+
+					So(ShouldStat(afs, fs.MustRelPath("dir/tgt")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir/tgt"), Type: fs.Type_Dir, Uid: 1, Gid: 2, Perms: 0755, Mtime: preferredTime})
+					So(ShouldStat(afs, fs.MustRelPath("dir")), ShouldResemble,
+						fs.Metadata{Name: fs.MustRelPath("dir"), Type: fs.Type_Dir, Uid: 0, Gid: 0, Perms: 0701, Mtime: otherTime})
+				})
+			})
+		}),
+	)
 }
 
 func mustPlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader) {
