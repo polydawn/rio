@@ -66,7 +66,6 @@ func Test(t *testing.T) {
 						nil,
 						rio.Monitor{},
 					)
-					So(err, ShouldNotBeNil)
 					So(err, ShouldResemble, &rio.Error{rio.ErrWarehouseUnavailable, "no warehouses were available!", nil})
 				})
 			},
