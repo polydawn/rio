@@ -116,18 +116,11 @@ func unpack(
 	}
 	defer reader.Close()
 
-	// Wrap input stream with decompression as necessary.
-	//  Which kind of decompression to use can be autodetected by magic bytes.
-	reader2, err := Decompress(reader)
-	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
-	}
-
-	// Convert the raw byte reader to a tar stream.
-	tarReader := tar.NewReader(reader2)
+	// Construct filesystem wrapper to use for all our ops.
+	afs := osfs.New(path2)
 
 	// Extract.
-	gotWare, err := unpackTar(ctx, path2, filt2, tarReader)
+	gotWare, err := unpackTar(ctx, afs, filt2, reader)
 	if err != nil {
 		return gotWare, err
 	}
@@ -149,16 +142,23 @@ func unpack(
 
 func unpackTar(
 	ctx context.Context,
-	destBasePath fs.AbsolutePath,
+	afs fs.FS,
 	filt apiutil.FilesetFilters,
-	tr *tar.Reader,
+	reader io.Reader,
 ) (api.WareID, error) {
+	// Wrap input stream with decompression as necessary.
+	//  Which kind of decompression to use can be autodetected by magic bytes.
+	reader2, err := Decompress(reader)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
+	}
+
+	// Convert the raw byte reader to a tar stream.
+	tr := tar.NewReader(reader2)
+
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
 	bucket := &fshash.MemoryBucket{}
-
-	// Construct filesystem wrapper to use for all our ops.
-	afs := osfs.New(destBasePath)
 
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
@@ -195,7 +195,7 @@ func unpackTar(
 		// tars with repeated filenames are just asking for trouble and shall be rejected without
 		// ceremony because they're just a ridiculous idea.
 		for parent := fmeta.Name.Dir(); parent != (fs.RelPath{}); parent = parent.Dir() {
-			_, err := os.Lstat(destBasePath.Join(parent).String())
+			_, err := afs.LStat(parent)
 			// if it already exists, move along; if the error is anything interesting, let PlaceFile decide how to deal with it
 			if err == nil || !os.IsNotExist(err) {
 				continue
