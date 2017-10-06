@@ -93,7 +93,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 							wareID,
 							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 							fmt.Sprintf("--source=%s", source),
-							fmt.Sprintf("--format=%s", FmtJson),
+							fmt.Sprintf("--format=%s", format_Json),
 						}, rio.ExitSuccess, fmt.Sprintf(`{"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
 					} {
 						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
