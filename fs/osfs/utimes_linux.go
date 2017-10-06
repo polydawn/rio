@@ -15,6 +15,11 @@ import (
 )
 
 func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time) error {
+	rpath, err := afs.realpath(path, false)
+	if err != nil {
+		return err
+	}
+
 	var utimes [2]syscall.Timespec
 	utimes[0] = syscall.NsecToTimespec(atime.UnixNano())
 	utimes[1] = syscall.NsecToTimespec(mtime.UnixNano())
@@ -24,7 +29,7 @@ func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time
 	AT_SYMLINK_NOFOLLOW := 0x100
 
 	var _path *byte
-	_path, err := syscall.BytePtrFromString(afs.basePath.Join(path).String())
+	_path, err = syscall.BytePtrFromString(rpath)
 	if err != nil { // EINVAL if the path string contains NUL bytes.
 		return fs.NormalizeIOError(err)
 	}
@@ -38,12 +43,17 @@ func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time
 }
 
 func (afs *osFS) SetTimesNano(path fs.RelPath, mtime time.Time, atime time.Time) error {
+	rpath, err := afs.realpath(path, true)
+	if err != nil {
+		return err
+	}
+
 	// Note that this is disambiguated from plain `os.Chtimes` only in that it refuses to fall back to lower precision on old kernels.
 	// Like LUtimesNano, it depends on kernel 2.6.22 or newer.
 	var utimes [2]syscall.Timespec
 	utimes[0] = syscall.NsecToTimespec(atime.UnixNano())
 	utimes[1] = syscall.NsecToTimespec(mtime.UnixNano())
-	if err := syscall.UtimesNano(afs.basePath.Join(path).String(), utimes[0:]); err != nil {
+	if err := syscall.UtimesNano(rpath, utimes[0:]); err != nil {
 		return fs.NormalizeIOError(err)
 	}
 	return nil
