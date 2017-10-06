@@ -20,10 +20,7 @@ func main() {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	go CancelOnInterrupt(cancel)
-	bhv := Main(ctx, os.Args, os.Stdin, os.Stdout, os.Stderr)
-	err := bhv.action()
-	_ = err       // FIXME rio.GetExitCode(err)
-	exitCode := 0 // FIXME rio.GetExitCode(err)
+	exitCode := Main(ctx, os.Args, os.Stdin, os.Stdout, os.Stderr)
 	os.Exit(exitCode)
 }
 
@@ -50,12 +47,20 @@ const (
 	format_Json = "json"
 )
 
-func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) behavior {
+func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	bhv := Parse(ctx, args, stdin, stdout, stderr)
+	err := bhv.action()
+	_ = err
+	return 0 // FIXME rio.GetExitCode(err)
+}
+
+func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) behavior {
 	// CLI boilerplate.
 	app := kingpin.New("rio", "Repeatable I/O.")
 	app.HelpFlag.Short('h')
 	app.UsageWriter(stderr)
 	app.ErrorWriter(stderr)
+	app.Terminate(func(int) {})
 
 	// Output control helper.
 	//  Declared early because we reference it in action thunks;
