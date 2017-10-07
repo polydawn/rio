@@ -154,9 +154,9 @@ var _ fs.File = nilFile{}
 
 type nilFile struct{}
 
-func (nilFile) Close() error                       { return nil }
-func (nilFile) Read([]byte) (int, error)           { return 0, nil }
-func (nilFile) ReadAt([]byte, int64) (int, error)  { return 0, nil }
-func (nilFile) Seek(int64, int) (int64, error)     { return 0, nil }
-func (nilFile) Write([]byte) (int, error)          { return 0, nil }
-func (nilFile) WriteAt([]byte, int64) (int, error) { return 0, nil }
+func (nilFile) Close() error                            { return nil }
+func (nilFile) Read(bs []byte) (int, error)             { return len(bs), nil }
+func (nilFile) ReadAt(bs []byte, _ int64) (int, error)  { return len(bs), nil }
+func (nilFile) Seek(int64, int) (int64, error)          { return 0, nil }
+func (nilFile) Write(bs []byte) (int, error)            { return len(bs), nil }
+func (nilFile) WriteAt(bs []byte, _ int64) (int, error) { return len(bs), nil }
