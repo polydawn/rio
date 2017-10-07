@@ -179,6 +179,48 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			return nil
 		}}
 	}
+	{
+		cmd := app.Command("scan", "Scan some existing data stream see if it's a known packed format, and compute its WareID if so.  (Mostly used for importing tars from the interweb.)")
+		args := struct {
+			PackType            string             // Pack type
+			Filters             api.FilesetFilters // Filters for pack
+			SourceWarehouseAddr string             // Warehouse address of data to scan
+		}{}
+		cmd.Arg("pack", "Pack type").
+			Required().
+			StringVar(&args.PackType)
+		cmd.Flag("source", "Address to of the data to scan.").
+			StringVar(&args.SourceWarehouseAddr)
+		cmd.Flag("uid", "Set UID filter [keep, <int>]").
+			StringVar(&args.Filters.Uid)
+		cmd.Flag("gid", "Set GID filter [keep, <int>]").
+			StringVar(&args.Filters.Gid)
+		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
+			StringVar(&args.Filters.Mtime)
+		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
+			Default("keep").
+			EnumVar(&args.Filters.Sticky,
+				"keep", "zero")
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+			scanFunc, err := demuxScanTool(string(args.PackType))
+			if err != nil {
+				return err
+			}
+			resultWareID, err := scanFunc(
+				ctx,
+				api.PackType(args.PackType),
+				args.Filters,
+				rio.Placement_Direct,
+				api.WarehouseAddr(args.SourceWarehouseAddr),
+				rio.Monitor{},
+			)
+			if err != nil {
+				return err
+			}
+			oc.EmitResult(resultWareID, nil)
+			return nil
+		}}
+	}
 	// Okay now let's be clear: actually all of these behaviors should, end of day,
 	//  actually send their errors through our output control.
 	//  We still also return it, both so you can write tests around this
