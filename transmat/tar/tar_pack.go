@@ -162,7 +162,7 @@ func packTar(
 		// Flip our metadata to tar header format, and flush it.
 		MetadataToTarHdr(fmeta, tarHeader)
 		if err := tw.WriteHeader(tarHeader); err != nil {
-			return err // FIXME categorize
+			return Errorf(rio.ErrWarehouseUnwritable, "error while writing pack: %s", err)
 		}
 
 		// If it's a file, stream the body into the tar while hashing; for all,

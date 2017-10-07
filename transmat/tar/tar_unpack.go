@@ -210,7 +210,7 @@ func unpackTar(
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
 			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
-				return api.WareID{}, err // FIXME these errors should be category'd here
+				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(conjuredFmeta, nil)
 		}
@@ -220,12 +220,12 @@ func unpackTar(
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
 			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
-				return api.WareID{}, err // FIXME these errors should be category'd here
+				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 		default:
 			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
-				return api.WareID{}, err // FIXME these errors should be category'd here
+				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, nil)
 		}
@@ -240,11 +240,11 @@ func unpackTar(
 		}
 		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultAtime)
 	}); err != nil {
-		return api.WareID{}, err // FIXME these errors should be category'd here
+		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 	// Bucket processing may have created a root node if missing.  If so, make sure we apply its props (all of them, not just time).
 	if err := fsOp.PlaceFile(afs, bucket.Root().Metadata, nil, false); err != nil {
-		return api.WareID{}, err // FIXME these errors should be category'd here
+		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 
 	// Hash the thing!
