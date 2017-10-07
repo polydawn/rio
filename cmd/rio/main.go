@@ -50,8 +50,7 @@ const (
 func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	bhv := Parse(ctx, args, stdin, stdout, stderr)
 	err := bhv.action()
-	_ = err
-	return 0 // FIXME rio.GetExitCode(err)
+	return rio.ExitCodeForError(err)
 }
 
 func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) behavior {
