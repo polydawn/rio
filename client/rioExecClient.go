@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"time"
 
+	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
 	"github.com/polydawn/refmt/json"
 
-	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 )
@@ -63,7 +63,7 @@ func packOrUnpack(
 	ctx context.Context,
 	args []string,
 	monitor rio.Monitor,
-) (gotWareID api.WareID, err error) {
+) (api.WareID, error) {
 	if monitor.Chan != nil {
 		defer close(monitor.Chan)
 	}
@@ -91,6 +91,9 @@ func packOrUnpack(
 	}()
 
 	// Consume stdout, converting it to Monitor.Chan sends.
+	//  When exiting because the child sent its 'result' message correctly, the
+	//  msgSlot will hold the final data (or error); we'll return it at the end,
+	//  but we also check the exit code for a match.
 	//  (We're relying on the child proc getting signal'd to close the stdout pipe
 	//  and in turn release us here in case of ctx.done.)
 	unmarshaller := refmt.NewUnmarshallerAtlased(json.DecodeOptions{}, stdout, rio.Atlas)
@@ -109,15 +112,7 @@ func packOrUnpack(
 
 		// If it's the final "result" message, prepare to return.
 		if msgSlot.Result != nil {
-			gotWareID = msgSlot.Result.WareID
-			// A seemingly-redunant nil check is required here rather than just
-			// setting the value, because `msgSlot.Result.Error` may be a *typed*
-			// nil, and that causes all sorts of hell (often kilometers away).
-			// See https://golang.org/doc/faq#nil_error for discussion.
-			// This kind of shit makes me want to not write go anymore.
-			if msgSlot.Result.Error != nil {
-				err = msgSlot.Result.Error
-			}
+			// Bail.  We'll review this last message frame in a second.
 			break
 		}
 		// For all other messages: forward to the monitor channel (if it exists!)
@@ -132,12 +127,31 @@ func packOrUnpack(
 	}
 
 	// Wait for process complete.
-	//  We don't actually have much use for the exit code,
-	//  because we already got the serialized form of error.
-	if err := cmd.Wait(); err != nil {
+	//  The exit code SHOULD be redundant with the error we SHOULD have already
+	//  deserialized... but we check that it all matches up.
+	code, err := waitFor(cmd)
+	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: wait error: %s (stderr: %q)", err, stderrBuf.String())
 	}
-	return
+	if code == 0 {
+		// If the exit code was success, we'd sure better have gotten the rightly formatted result message.
+		if msgSlot.Result == nil {
+			return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: exited zero, but no clear result?! (stderr: %q)", err, stderrBuf.String())
+		}
+		if msgSlot.Result.Error != nil {
+			return api.WareID{}, Errorf(rio.ErrRPCBreakdown, "fork rio: exited zero, but result had error, category=%s: %s", msgSlot.Result.Error.Category, msgSlot.Result.Error)
+		}
+		return msgSlot.Result.WareID, nil // This is the happy path return!
+	}
+	// For non-zero exits: Check match for sanity.
+	exitCategory := rio.CategoryForExitCode(code)
+	if msgSlot.Result == nil {
+		return api.WareID{}, Errorf(exitCategory, "no message available (stderr: %q)", stderrBuf.String())
+	}
+	if msgSlot.Result.Error.Category() != exitCategory {
+		return api.WareID{}, Errorf(exitCategory, "no message available (stderr: %q)", stderrBuf.String())
+	}
+	return api.WareID{}, msgSlot.Result.Error // This is the clean error path!
 }
 
 func MirrorFunc(

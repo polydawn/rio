@@ -24,7 +24,7 @@ func stdBuffers() (stdin, stdout, stderr *bytes.Buffer) {
 type unpackTest struct {
 	Name           string
 	Args           []string
-	ExpectedExit   rio.ExitCode
+	ExpectedExit   int
 	ExpectedStdout string
 	ExpectedStderr string
 }
@@ -36,15 +36,13 @@ func TestWithoutArgs(t *testing.T) {
 
 		ctx := context.Background()
 		exitCode := Main(ctx, args, stdin, stdout, stderr)
-		t.Log(string(stdout.Bytes()))
-		t.Log(string(stderr.Bytes()))
 		So(string(stdout.Bytes()), ShouldBeBlank)
 		So(string(stderr.Bytes()), ShouldNotBeBlank)
 		firstLine, err := stderr.ReadString('\n')
 		So(err, ShouldBeNil)
 		So(string(firstLine), ShouldContainSubstring, "usage: rio [<flags>] <command> [<args> ...]")
 		So(string(stderr.Bytes()), ShouldNotContainSubstring, "usage: rio [<flags>] <command> [<args> ...]")
-		So(exitCode, ShouldEqual, rio.ExitUsage)
+		So(exitCode, ShouldEqual, rio.ExitCodeForCategory(rio.ErrUsage))
 	})
 }
 
@@ -55,12 +53,9 @@ func TestUnpackBogusFlag(t *testing.T) {
 
 		ctx := context.Background()
 		exitCode := Main(ctx, args, stdin, stdout, stderr)
-		t.Log(string(stdout.Bytes()))
-		t.Log(string(stderr.Bytes()))
 		So(string(stdout.Bytes()), ShouldBeBlank)
-		So(string(stderr.Bytes()), ShouldNotBeBlank)
-		So(string(stderr.Bytes()), ShouldEqual, "unknown long flag '--bogus'\n")
-		So(exitCode, ShouldEqual, rio.ExitUsage)
+		So(string(stderr.Bytes()), ShouldResemble, "error parsing args: unknown long flag '--bogus'\n")
+		So(exitCode, ShouldEqual, rio.ExitCodeForCategory(rio.ErrUsage))
 	})
 }
 
@@ -85,7 +80,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 							wareID,
 							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 							fmt.Sprintf("--source=%s", source),
-						}, rio.ExitSuccess, wareID + "\n", ""},
+						}, 0, wareID + "\n", ""},
 						{"UnpackJsonFormat", []string{
 							"rio",
 							"unpack",
@@ -93,8 +88,8 @@ func TestTarFixtureUnpack(t *testing.T) {
 							wareID,
 							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 							fmt.Sprintf("--source=%s", source),
-							fmt.Sprintf("--format=%s", FmtJson),
-						}, rio.ExitSuccess, fmt.Sprintf(`{"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
+							fmt.Sprintf("--format=%s", format_Json),
+						}, 0, fmt.Sprintf(`{"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
 					} {
 						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
 							stdin, stdout, stderr := stdBuffers()
@@ -102,7 +97,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 							So(string(stdout.Bytes()), ShouldEqual, fixture.ExpectedStdout)
 							So(string(stderr.Bytes()), ShouldEqual, fixture.ExpectedStderr)
 							So(exitCode, ShouldEqual, fixture.ExpectedExit)
-							if fixture.ExpectedExit != rio.ExitSuccess {
+							if fixture.ExpectedExit != 0 {
 								Convey("The filesystem should not have things", func() {
 									afs := osfs.New(tmpDir)
 									_, err := afs.LStat(fs.MustRelPath("."))

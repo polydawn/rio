@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"time"
 
 	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
@@ -15,112 +14,17 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	tar "go.polydawn.net/rio/transmat/tar"
 )
 
-/*
-	Output serialization formats
-*/
-const (
-	FmtJson = "json"
-	FmtDumb = "dumb"
-)
-
-type baseCLI struct {
-	Deadline       string        // Deadline time (RFC3339 or @UNIX)
-	Format         string        // Output api format, eg. json
-	ProgressEnable bool          // Emit progress notification yes/no
-	ProgressRate   time.Duration // How frequently to emit progress notification
-	Test           string        // Testmode
-	Timeout        time.Duration // Timeout duration (exclusive with deadline) eg. "60s"
-	PackCLI        struct {
-		PackType            string             // Pack type
-		Path                string             // Pack target path
-		Filters             api.FilesetFilters // TODO: file filters for pack/unpack
-		TargetWarehouseAddr string             // Warehouse address to push to
-	}
-	UnpackCLI struct {
-		WareID               string // Ware id string "<kind>:<hash>"
-		Path                 string // Unpack target path
-		Filters              api.FilesetFilters
-		PlacementMode        string   // Placement mode enum
-		SourcesWarehouseAddr []string // Warehouse address to push to
-	}
-	MirrorCLI struct {
-		SourcesWarehouseAddr []string // Warehouse addresses to fetch from
-		TargetWarehouseAddr  string   // Warehouse address to push to
-		WareID               string   // Ware id string "<kind>:<hash>"
-	}
+func main() {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	go CancelOnInterrupt(cancel)
+	exitCode := Main(ctx, os.Args, os.Stdin, os.Stdout, os.Stderr)
+	os.Exit(exitCode)
 }
 
-func configurePack(cli *baseCLI, appPack *kingpin.CmdClause) {
-	// Non-filter flags
-	appPack.Arg("pack", "Pack type").
-		Required().
-		StringVar(&cli.PackCLI.PackType)
-	appPack.Arg("path", "Target path").
-		Required().
-		StringVar(&cli.PackCLI.Path)
-	appPack.Flag("target", "Warehouse in which to place the ware").
-		StringVar(&cli.PackCLI.TargetWarehouseAddr)
-
-	// Filter flags
-	appPack.Flag("uid", "Set UID filter [keep, <int>]").
-		StringVar(&cli.PackCLI.Filters.Uid)
-	appPack.Flag("gid", "Set GID filter [keep, <int>]").
-		StringVar(&cli.PackCLI.Filters.Gid)
-	appPack.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
-		StringVar(&cli.PackCLI.Filters.Mtime)
-	appPack.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
-		Default("keep").
-		EnumVar(&cli.UnpackCLI.Filters.Sticky,
-			"keep", "zero")
-}
-
-func configureUnpack(cli *baseCLI, appUnpack *kingpin.CmdClause) {
-	// Non-filter flags
-	appUnpack.Arg("path", "Target path").
-		Required().
-		StringVar(&cli.UnpackCLI.Path)
-	appUnpack.Arg("ware", "Ware ID").
-		Required().
-		StringVar(&cli.UnpackCLI.WareID)
-	appUnpack.Flag("placer", "Placement mode to use [copy, direct, mount, none]").
-		EnumVar(&cli.UnpackCLI.PlacementMode,
-			string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
-	appUnpack.Flag("source", "Warehouses from which to fetch the ware").
-		StringsVar(&cli.UnpackCLI.SourcesWarehouseAddr)
-
-	// Filter flags
-	appUnpack.Flag("uid", "Set UID filter [keep, mine, <int>]").
-		Default("mine").
-		StringVar(&cli.UnpackCLI.Filters.Uid)
-	appUnpack.Flag("gid", "Set GID filter [keep, mine, <int>]").
-		Default("mine").
-		StringVar(&cli.UnpackCLI.Filters.Gid)
-	appUnpack.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]").
-		Default("keep").
-		StringVar(&cli.UnpackCLI.Filters.Mtime)
-	appUnpack.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
-		Default("zero").
-		EnumVar(&cli.UnpackCLI.Filters.Sticky,
-			"keep", "zero")
-}
-
-func configureMirror(cli *baseCLI, appMirror *kingpin.CmdClause) {
-	appMirror.Arg("ware", "Ware ID").
-		Required().
-		StringVar(&cli.MirrorCLI.WareID)
-	appMirror.Arg("target", "Warehouse in which to place the ware").
-		Required().
-		StringVar(&cli.MirrorCLI.TargetWarehouseAddr)
-	appMirror.Flag("source", "Warehouses from which to fetch the ware").
-		StringsVar(&cli.MirrorCLI.SourcesWarehouseAddr)
-}
-
-/*
-	Blocks until a sigint is received, then calls cancel.
-*/
+// Blocks until a sigint is received, then calls cancel.
 func CancelOnInterrupt(cancel context.CancelFunc) {
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, os.Interrupt)
@@ -129,98 +33,212 @@ func CancelOnInterrupt(cancel context.CancelFunc) {
 	close(signalChan)
 }
 
-func main() {
-	ctx := context.Background()
-	exitCode := Main(ctx, os.Args, os.Stdin, os.Stdout, os.Stderr)
-	os.Exit(int(exitCode))
+// Holder type which makes it easier for us to inspect
+//  the args parser result in test code before running logic.
+type behavior struct {
+	parsedArgs interface{}
+	action     func() error
 }
 
-func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) rio.ExitCode {
-	exitCode := rio.ExitSuccess
-	ctx, cancel := context.WithCancel(ctx)
-	go CancelOnInterrupt(cancel)
+type format string
 
-	cli := baseCLI{}
+const (
+	format_Dumb = "dumb"
+	format_Json = "json"
+)
 
-	app := kingpin.New("rio", "Repeatable I/O")
+func Main(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	bhv := Parse(ctx, args, stdin, stdout, stderr)
+	err := bhv.action()
+	return rio.ExitCodeForError(err)
+}
+
+func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) behavior {
+	// CLI boilerplate.
+	app := kingpin.New("rio", "Repeatable I/O.")
 	app.HelpFlag.Short('h')
-
 	app.UsageWriter(stderr)
 	app.ErrorWriter(stderr)
+	app.Terminate(func(int) {})
 
-	app.Flag("deadline", "Deadline (RFC3339)").
-		StringVar(&cli.Deadline)
-	app.Flag("timeout", "Timeout for command").
-		DurationVar(&cli.Timeout)
+	// Output control helper.
+	//  Declared early because we reference it in action thunks;
+	//  however its format field may not end up set until much lower in the file.
+	oc := &outputController{"", stdout, stderr}
+
+	// Args struct defs and flag declarations.
+	bhvs := map[string]*behavior{}
+	baseArgs := struct {
+		Format string
+	}{}
 	app.Flag("format", "Output api format").
-		Default(FmtDumb).
-		EnumVar(&cli.Format, FmtJson, FmtDumb)
-	app.Flag("progress-rate", "How frequently to emit progress notification").
-		DurationVar(&cli.ProgressRate)
-	app.Flag("progress", "Emit progress notification").
-		BoolVar(&cli.ProgressEnable)
-	app.Flag("test", "Testmodes").
-		StringVar(&cli.Test)
+		Default(format_Dumb).
+		EnumVar(&baseArgs.Format,
+			format_Dumb, format_Json)
+	{
+		cmd := app.Command("pack", "Pack a Fileset into a Ware.")
+		args := struct {
+			PackType            string             // Pack type
+			Path                string             // Pack target path, abs or rel
+			Filters             api.FilesetFilters // Filters for pack
+			TargetWarehouseAddr string             // Warehouse address to push to
+		}{}
+		cmd.Arg("pack", "Pack type").
+			Required().
+			StringVar(&args.PackType)
+		cmd.Arg("path", "Target path").
+			Required().
+			StringVar(&args.Path)
+		cmd.Flag("target", "Warehouse in which to place the ware").
+			StringVar(&args.TargetWarehouseAddr)
+		cmd.Flag("uid", "Set UID filter [keep, <int>]").
+			StringVar(&args.Filters.Uid)
+		cmd.Flag("gid", "Set GID filter [keep, <int>]").
+			StringVar(&args.Filters.Gid)
+		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
+			StringVar(&args.Filters.Mtime)
+		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
+			Default("keep").
+			EnumVar(&args.Filters.Sticky,
+				"keep", "zero")
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+			packFunc, err := demuxPackTool(args.PackType)
+			if err != nil {
+				return err
+			}
+			resultWareID, err := packFunc(
+				ctx,
+				api.PackType(args.PackType),
+				args.Path,
+				args.Filters,
+				api.WarehouseAddr(args.TargetWarehouseAddr),
+				rio.Monitor{},
+			)
+			if err != nil {
+				return err
+			}
+			oc.EmitResult(resultWareID, nil)
+			return nil
+		}}
+	}
+	{
+		cmd := app.Command("unpack", "Unpack a Ware into a Fileset on your local filesystem.")
+		args := struct {
+			WareID               string             // Ware id string "<kind>:<hash>"
+			Path                 string             // Unpack target path, may be abs or rel
+			Filters              api.FilesetFilters // Filters for unpack
+			PlacementMode        string             // Placement mode enum
+			SourcesWarehouseAddr []string           // Warehouse address to fetch from
+		}{}
+		cmd.Arg("path", "Target path").
+			Required().
+			StringVar(&args.Path)
+		cmd.Arg("ware", "Ware ID").
+			Required().
+			StringVar(&args.WareID)
+		cmd.Flag("placer", "Placement mode to use [copy, direct, mount, none]").
+			EnumVar(&args.PlacementMode,
+				string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
+		cmd.Flag("source", "Warehouses from which to fetch the ware").
+			StringsVar(&args.SourcesWarehouseAddr)
+		cmd.Flag("uid", "Set UID filter [keep, mine, <int>]").
+			Default("mine").
+			StringVar(&args.Filters.Uid)
+		cmd.Flag("gid", "Set GID filter [keep, mine, <int>]").
+			Default("mine").
+			StringVar(&args.Filters.Gid)
+		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]").
+			Default("keep").
+			StringVar(&args.Filters.Mtime)
+		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
+			Default("zero").
+			EnumVar(&args.Filters.Sticky,
+				"keep", "zero")
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+			wareID, err := api.ParseWareID(args.WareID)
+			if err != nil {
+				return err
+			}
+			unpackFunc, err := demuxUnpackTool(string(wareID.Type))
+			if err != nil {
+				return err
+			}
+			resultWareID, err := unpackFunc(
+				ctx,
+				wareID,
+				args.Path,
+				args.Filters,
+				rio.PlacementMode(args.PlacementMode),
+				convertWarehouseSlice(args.SourcesWarehouseAddr),
+				rio.Monitor{},
+			)
+			if err != nil {
+				return err
+			}
+			oc.EmitResult(resultWareID, nil)
+			return nil
+		}}
+	}
+	// Okay now let's be clear: actually all of these behaviors should, end of day,
+	//  actually send their errors through our output control.
+	//  We still also return it, both so you can write tests around this
+	//  method as a whole, and so the top of the program can choose an exit code!
+	for _, bhv := range bhvs {
+		_action := bhv.action
+		bhv.action = func() error {
+			err := _action()
+			if err != nil {
+				oc.EmitResult(api.WareID{}, err)
+			}
+			return err
+		}
+	}
 
-	appPack := app.Command("pack", "pack a fileset into a ware")
-	configurePack(&cli, appPack)
-
-	appUnpack := app.Command("unpack", "fetch a ware")
-	configureUnpack(&cli, appUnpack)
-
-	appMirror := app.Command("mirror", "mirror a ware to another warehouse")
-	configureUnpack(&cli, appMirror)
-
-	var termErr error
-	app.Terminate(func(status int) {
-		termErr = fmt.Errorf("parsing error: %d\n", status)
-	})
-	cmd, err := app.Parse(args[1:])
+	// Parse!
+	parsedCmdStr, err := app.Parse(args[1:])
+	oc.format = format(baseArgs.Format)
 	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return rio.ExitUsage
+		return behavior{
+			parsedArgs: err,
+			action: func() error {
+				err := Errorf(rio.ErrUsage, "error parsing args: %s", err)
+				oc.EmitResult(api.WareID{}, err)
+				return err
+			},
+		}
 	}
-	if termErr != nil {
-		fmt.Fprintln(stderr, termErr)
-		return rio.ExitUsage
+	// Return behavior named by the command and subcommand strings.
+	if bhv, ok := bhvs[parsedCmdStr]; ok {
+		return *bhv
 	}
-	var wareID api.WareID
-	switch cmd {
-	case appPack.FullCommand():
-		wareID, err = executePack(ctx, cli)
-		SerializeResult(cli.Format, wareID, err, stdout, stderr)
-	case appUnpack.FullCommand():
-		wareID, err = executeUnpack(ctx, cli)
-		SerializeResult(cli.Format, wareID, err, stdout, stderr)
-	case appMirror.FullCommand():
-		fmt.Fprintln(stderr, "not implemented")
-		return rio.ExitNotImplemented
-	}
-
-	return exitCode
+	panic("unreachable, cli parser must error on unknown commands")
 }
 
-func SerializeResult(format string, wareID api.WareID, resultErr error, stdout io.Writer, stderr io.Writer) {
-	result := &rio.Event_Result{
-		WareID: wareID,
-	}
-	result.SetError(resultErr)
-	ev := rio.Event{Result: result}
-	switch format {
-	case FmtJson:
-		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, stdout, rio.Atlas)
-		err := marshaller.Marshal(&ev)
+type outputController struct {
+	format         format
+	stdout, stderr io.Writer
+}
+
+func (oc outputController) EmitResult(wareID api.WareID, err error) {
+	result := &rio.Event_Result{}
+	result.WareID = wareID
+	result.SetError(err)
+	evt := rio.Event{Result: result}
+	switch oc.format {
+	case "", format_Dumb:
+		if err != nil {
+			fmt.Fprintln(oc.stderr, err)
+		} else {
+			fmt.Fprintln(oc.stdout, wareID)
+		}
+	case format_Json:
+		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, oc.stdout, rio.Atlas)
+		err := marshaller.Marshal(evt)
 		if err != nil {
 			panic(err)
 		}
-	case FmtDumb:
-		if resultErr != nil {
-			fmt.Fprintln(stderr, resultErr)
-		} else {
-			fmt.Fprintln(stdout, wareID)
-		}
 	default:
-		panic(fmt.Errorf("rio: invalid format %s", format))
+		panic(fmt.Errorf("rio: invalid format %s", oc.format))
 	}
 }
 
@@ -230,41 +248,4 @@ func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
 		result[idx] = api.WarehouseAddr(item)
 	}
 	return result
-}
-
-func executeUnpack(ctx context.Context, cli baseCLI) (api.WareID, error) {
-	wareID, err := api.ParseWareID(cli.UnpackCLI.WareID)
-	if err != nil {
-		return api.WareID{}, err
-	}
-	var (
-		unpackFunc rio.UnpackFunc
-	)
-	switch wareID.Type {
-	case "tar":
-		unpackFunc = tar.Unpack
-	default:
-		return api.WareID{}, Errorf(rio.ErrUsage, "unsupported packtype %q", wareID.Type)
-	}
-	monitor := rio.Monitor{}
-	path := cli.UnpackCLI.Path
-	warehouses := convertWarehouseSlice(cli.UnpackCLI.SourcesWarehouseAddr)
-	return unpackFunc(ctx, wareID, path, cli.UnpackCLI.Filters, rio.PlacementMode(cli.UnpackCLI.PlacementMode), warehouses, monitor)
-}
-
-func executePack(ctx context.Context, cli baseCLI) (api.WareID, error) {
-	var (
-		packType api.PackType
-		packFunc rio.PackFunc
-	)
-	switch cli.PackCLI.PackType {
-	case "tar":
-		packType, packFunc = tar.PackType, tar.Pack
-	default:
-		return api.WareID{}, Errorf(rio.ErrUsage, "unsupported packtype %q", cli.PackCLI.PackType)
-	}
-	monitor := rio.Monitor{}
-	warehouse := api.WarehouseAddr(cli.PackCLI.TargetWarehouseAddr)
-
-	return packFunc(ctx, packType, cli.PackCLI.Path, cli.PackCLI.Filters, warehouse, monitor)
 }
