@@ -274,6 +274,9 @@ func (oc outputController) EmitResult(wareID api.WareID, err error) {
 			fmt.Fprintln(oc.stdout, wareID)
 		}
 	case format_Json:
+		if err != nil {
+			fmt.Fprintln(oc.stderr, err)
+		}
 		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, oc.stdout, rio.Atlas)
 		err := marshaller.Marshal(evt)
 		if err != nil {

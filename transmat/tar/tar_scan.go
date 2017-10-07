@@ -38,7 +38,9 @@ func Scan(
 	placementMode rio.PlacementMode, // For scanning only "None" (cache; the default) and "Direct" (don't cache) are valid.
 	addr api.WarehouseAddr, // The *one* warehouse to fetch from.  Must be a monowarehouse (not a CA-mode).
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
-) (api.WareID, error) {
+) (_ api.WareID, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Sanitize arguments.
 	if packType != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, packType)
