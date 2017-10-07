@@ -42,7 +42,9 @@ func Unpack(
 	placementMode rio.PlacementMode, // Optionally: a placement mode (default is "copy").
 	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
 	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
-) (api.WareID, error) {
+) (_ api.WareID, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Sanitize arguments.
 	if wareID.Type != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, wareID.Type)
@@ -65,7 +67,9 @@ func unpack(
 	placementMode rio.PlacementMode,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
-) (api.WareID, error) {
+) (_ api.WareID, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
 	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
@@ -145,7 +149,9 @@ func unpackTar(
 	afs fs.FS,
 	filt apiutil.FilesetFilters,
 	reader io.Reader,
-) (api.WareID, error) {
+) (_ api.WareID, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Wrap input stream with decompression as necessary.
 	//  Which kind of decompression to use can be autodetected by magic bytes.
 	reader2, err := Decompress(reader)
