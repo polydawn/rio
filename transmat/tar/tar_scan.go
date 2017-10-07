@@ -27,6 +27,10 @@ import (
 // you *should not* do it in the middle of a script; you
 // should be doing it *once* and then referencing hitch.
 
+var (
+	_ rio.ScanFunc = Scan
+)
+
 func Scan(
 	ctx context.Context, // Long-running call.  Cancellable.
 	packType api.PackType, // The name of pack format.

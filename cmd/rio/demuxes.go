@@ -24,3 +24,12 @@ func demuxUnpackTool(packType string) (rio.UnpackFunc, error) {
 		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
 	}
 }
+
+func demuxScanTool(packType string) (rio.ScanFunc, error) {
+	switch packType {
+	case "tar":
+		return tartrans.Scan, nil
+	default:
+		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
+	}
+}
