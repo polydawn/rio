@@ -23,6 +23,7 @@ const (
 	ErrNotDir        ErrorCategory = "fs-not-dir"   // contextually, may be a form of either ErrNotExists or ErrAlready exists: shows up when e.g. lstat doesnotexist/deeper/path or mkdir aregularfile/deeper/path.
 	ErrRecursion     ErrorCategory = "fs-recursion" // returned when cycles detected in symlinks.
 	ErrShortWrite    ErrorCategory = "fs-shortwrite"
+	ErrPermission    ErrorCategory = "fs-permission"
 
 	/*
 		Error returned when operating in a confined filesystem slice and an
@@ -83,6 +84,8 @@ func NormalizeIOError(ioe error) error {
 		}
 	case os.IsExist(ioe):
 		return Recategorize(ErrAlreadyExists, ioe)
+	case os.IsPermission(ioe):
+		return Recategorize(ErrPermission, ioe)
 	}
 	// No matches.  Categorize to a placeholder.  At least it'll be serializable.
 	return Recategorize(ErrMisc, ioe)
