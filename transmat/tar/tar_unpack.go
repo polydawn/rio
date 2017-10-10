@@ -24,6 +24,7 @@ import (
 	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/transmat/util"
 	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
@@ -66,7 +67,7 @@ func unpack(
 	filt api.FilesetFilters,
 	placementMode rio.PlacementMode,
 	warehouses []api.WarehouseAddr,
-	monitor rio.Monitor,
+	mon rio.Monitor,
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -99,7 +100,7 @@ func unpack(
 		case nil:
 			// pass
 		case rio.ErrWarehouseUnavailable:
-			// TODO log something to the monitor
+			log.WarehouseUnavailable(mon, err, addr, wareID, "read")
 			continue // okay!  skip to the next one.
 		default:
 			return api.WareID{}, err

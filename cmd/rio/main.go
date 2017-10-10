@@ -112,7 +112,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Path,
 				args.Filters,
 				api.WarehouseAddr(args.TargetWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -170,7 +170,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Filters,
 				rio.PlacementMode(args.PlacementMode),
 				convertWarehouseSlice(args.SourcesWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -212,7 +212,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Filters,
 				rio.Placement_Direct,
 				api.WarehouseAddr(args.SourceWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -285,6 +285,39 @@ func (oc outputController) EmitResult(wareID api.WareID, err error) {
 	default:
 		panic(fmt.Errorf("rio: invalid format %s", oc.format))
 	}
+}
+
+func (oc outputController) WireMonitor(m rio.Monitor) rio.Monitor {
+	ch := make(chan rio.Event)
+	m.Chan = ch
+	switch oc.format {
+	case "", format_Dumb:
+		go func() {
+			for evt := range ch {
+				switch {
+				case evt.Log != nil:
+					fmt.Fprintf(oc.stderr, "log: lvl=%s msg=%s\n", evt.Log.Level, evt.Log.Msg)
+				case evt.Progress != nil:
+					// pass... for now
+				case evt.Result != nil:
+					// pass
+				}
+			}
+		}()
+	case format_Json:
+		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, oc.stdout, rio.Atlas)
+		go func() {
+			for evt := range ch {
+				err := marshaller.Marshal(evt)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}()
+	default:
+		panic(fmt.Errorf("rio: invalid format %s", oc.format))
+	}
+	return m
 }
 
 func convertWarehouseSlice(slice []string) []api.WarehouseAddr {

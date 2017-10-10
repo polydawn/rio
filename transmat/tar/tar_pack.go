@@ -20,6 +20,7 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/warehouse"
 	"go.polydawn.net/rio/warehouse/impl/kvfs"
 )
@@ -34,7 +35,7 @@ func Pack(
 	pathStr string, // The fileset to scan and pack (absolute path).
 	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
-	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
+	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -81,6 +82,7 @@ func Pack(
 		case nil:
 			// pass
 		case rio.ErrWarehouseUnavailable:
+			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
 			return api.WareID{}, err
 		default:
 			return api.WareID{}, err
