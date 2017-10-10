@@ -78,13 +78,13 @@ func (i *memoryBucketIterator) NextChild() treewalk.Node {
 	thisName := i.lines[i.this].Name
 	// is the next one still a child?
 	if strings.HasPrefix(nextName, thisName) {
-		// check for missing trees
-		if strings.ContainsRune(nextName[len(thisName):len(nextName)-1], '/') {
-			panic(ErrInvalidFilesystem{fmt.Sprintf("missing tree: %q followed %q", nextName, thisName)})
-		}
 		// check for repeated names
 		if i.lines[*i.that].Name == nextName {
 			panic(ErrInvalidFilesystem{fmt.Sprintf("repeated path: %q", nextName)})
+		}
+		// check for missing trees
+		if strings.ContainsRune(nextName[len(thisName):len(nextName)-1], '/') {
+			panic(ErrInvalidFilesystem{fmt.Sprintf("missing tree: %q followed %q", nextName, thisName)})
 		}
 		// step forward
 		*i.that = next

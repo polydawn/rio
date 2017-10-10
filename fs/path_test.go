@@ -184,6 +184,31 @@ func TestRelPathSplits(t *testing.T) {
 	})
 }
 
+func TestRelPathSplitParent(t *testing.T) {
+	Convey("RelPath.SplitParent suite:", t, func() {
+		for _, tr := range []struct {
+			title string
+			p1    RelPath
+			ps    []RelPath
+		}{
+			{"zero values",
+				RelPath{},
+				[]RelPath{}},
+			{"len=1 values",
+				MustRelPath("./a"),
+				[]RelPath{RelPath{}}},
+			{"len=3 values",
+				MustRelPath("./a/bb/c"),
+				[]RelPath{RelPath{}, MustRelPath("a"), MustRelPath("a/bb")}},
+		} {
+			Convey(tr.title, func() {
+				v := tr.p1.SplitParent()
+				So(v, ShouldResemble, tr.ps)
+			})
+		}
+	})
+}
+
 //--------------
 // AbsolutePath
 //--------------
