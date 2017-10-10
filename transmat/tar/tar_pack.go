@@ -37,6 +37,9 @@ func Pack(
 	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
 	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
+	if mon.Chan != nil {
+		defer close(mon.Chan)
+	}
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// Sanitize arguments.
@@ -92,6 +95,7 @@ func Pack(
 		case nil:
 			// pass
 		case rio.ErrWarehouseUnwritable:
+			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
 			return api.WareID{}, err
 		default:
 			return api.WareID{}, err

@@ -264,9 +264,6 @@ type outputController struct {
 }
 
 func (oc *outputController) EmitResult(wareID api.WareID, err error) {
-	if oc.monChan != nil {
-		close(oc.monChan)
-	}
 	oc.monWg.Wait()
 	result := &rio.Event_Result{}
 	result.WareID = wareID
