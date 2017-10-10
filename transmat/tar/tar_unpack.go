@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/polydawn/refmt/misc"
@@ -209,11 +208,16 @@ func unpackTar(
 		// It may well be possible to construct a tar like that, but it's already well established that
 		// tars with repeated filenames are just asking for trouble and shall be rejected without
 		// ceremony because they're just a ridiculous idea.
-		for parent := fmeta.Name.Dir(); parent != (fs.RelPath{}); parent = parent.Dir() {
+		for _, parent := range fmeta.Name.SplitParent() {
 			_, err := afs.LStat(parent)
 			// if it already exists, move along; if the error is anything interesting, let PlaceFile decide how to deal with it
-			if err == nil || !os.IsNotExist(err) {
+			switch Category(err) {
+			case nil:
 				continue
+			case fs.ErrNotExists:
+				// pass
+			default:
+				break
 			}
 			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
 			conjuredFmeta := fshash.DefaultDirMetadata()

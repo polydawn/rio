@@ -96,9 +96,6 @@ func (p RelPath) Join(p2 RelPath) RelPath {
 	Returns a slice of relative paths for each segment in the path.
 
 	E.g. for "./a/b/c" it will return [".", "./a", "./a/b", "./a/b/c"].
-
-	For some path where you wish to create all parent paths, it may be useful
-	to `range path.Dir().Split()`.
 */
 func (p RelPath) Split() []RelPath {
 	if p.path == "" {
@@ -110,6 +107,34 @@ func (p RelPath) Split() []RelPath {
 	n := strings.Count(p.path, "/") + 1
 	slice := make([]RelPath, n+1)
 	slice[n] = p
+	for i := n - 1; i >= 0; i-- {
+		slice[i] = slice[i+1].Dir()
+	}
+	return slice
+}
+
+/*
+	Returns a slice of relative paths for each segment in the path, minus the
+	path itself.
+
+	E.g. for "./a/b/c" it will return [".", "./a", "./a/b"].
+	Importantly, for "." it will return [] -- an empty list (note that this
+	is different than the behavior of `path.Dir().Split()`, which would still
+	yield ["."].)
+
+	For some path where you wish to create all parent paths, it may be useful
+	to `range path.SplitParent()`.
+*/
+func (p RelPath) SplitParent() []RelPath {
+	if p.path == "" {
+		return []RelPath{}
+	}
+	if p.lastSplit == -1 {
+		return []RelPath{RelPath{}}
+	}
+	n := strings.Count(p.path, "/")
+	slice := make([]RelPath, n+1)
+	slice[n] = p.Dir()
 	for i := n - 1; i >= 0; i-- {
 		slice[i] = slice[i+1].Dir()
 	}
