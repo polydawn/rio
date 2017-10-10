@@ -33,6 +33,7 @@ type UnpackSpec struct {
 	WareID     api.WareID
 	Filters    api.FilesetFilters
 	Warehouses []api.WarehouseAddr
+	Monitor    rio.Monitor
 }
 
 // Cast slices to this type to sort by target path (which is effectively mountability order).
@@ -123,7 +124,7 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec,
 				part.Filters,
 				rio.Placement_None,
 				part.Warehouses,
-				rio.Monitor{},
+				part.Monitor,
 			)
 			if err != nil {
 				res.Error = err

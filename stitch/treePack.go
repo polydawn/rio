@@ -24,6 +24,7 @@ type PackSpec struct {
 	PackType  api.PackType
 	Filters   api.FilesetFilters
 	Warehouse api.WarehouseAddr
+	Monitor   rio.Monitor
 }
 
 // Cast slices to this type to sort by target path (which is effectively mountability order).
@@ -59,7 +60,7 @@ func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts
 				rerootedPath.String(),
 				part.Filters,
 				part.Warehouse,
-				rio.Monitor{},
+				part.Monitor,
 			)
 			// TODO if any error, fan out cancellations
 		}(i, part)
