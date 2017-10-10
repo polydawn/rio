@@ -44,7 +44,9 @@ func (c cache) Unpack(
 	placementMode rio.PlacementMode,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
-) (api.WareID, error) {
+) (_ api.WareID, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Zeroth thing: caches are by hash, but remember that filters can give you a
 	//  result hash which is different than the requested ware hash.
 	//  Right now we deal with this simply/stupidly: if you used filters, no cache for you.
@@ -57,7 +59,7 @@ func (c cache) Unpack(
 	//  (This must be first because we're willing to read cache even in "direct" mode, but
 	//  yet *not* willing to even initialize empty cache dirs in that mode.)
 	shelf := ShelfFor(resultWareID)
-	_, err := c.fs.Stat(shelf)
+	_, err = c.fs.Stat(shelf)
 	switch Category(err) {
 	case fs.ErrNotExists: // "not exists" is just a cache miss...
 		switch placementMode {
@@ -101,7 +103,7 @@ func (c cache) Unpack(
 		case rio.Placement_Direct:
 			return c.unpackTool(ctx, wareID, path, filt, rio.Placement_Direct, warehouses, monitor)
 		default:
-			return api.WareID{}, err
+			return api.WareID{}, Errorf(rio.ErrLocalCacheProblem, "error reading cache: %s", err)
 		}
 	}
 }
@@ -112,7 +114,9 @@ func (c cache) populate(
 	filt api.FilesetFilters,
 	warehouses []api.WarehouseAddr,
 	monitor rio.Monitor,
-) (api.WareID, fs.RelPath, error) {
+) (_ api.WareID, _ fs.RelPath, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 	// Initialize cache.
 	//  Ensure the cache commit root dir exists.
 	//  Also ensure the cache parent dir exists... no bound on recursion.
