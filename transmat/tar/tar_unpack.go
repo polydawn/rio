@@ -84,6 +84,7 @@ func unpack(
 	// Pick a warehouse.
 	//  With K/V warehouses, this takes the form of "pick the first one that answers".
 	var reader io.ReadCloser
+	var anyWarehouses bool // for clarity in final error messages
 	for _, addr := range warehouses {
 		// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
 		u, err := url.Parse(string(addr))
@@ -101,6 +102,7 @@ func unpack(
 		}
 		switch Category(err) {
 		case nil:
+			anyWarehouses = true
 			// pass
 		case rio.ErrWarehouseUnavailable:
 			log.WarehouseUnavailable(mon, err, addr, wareID, "read")
@@ -119,8 +121,11 @@ func unpack(
 			return api.WareID{}, err
 		}
 	}
-	if reader == nil { // aka if no warehouses available:
+	if !anyWarehouses {
 		return api.WareID{}, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
+	}
+	if reader == nil {
+		return api.WareID{}, Errorf(rio.ErrWareNotFound, "none of the available warehouses have ware %q!", wareID)
 	}
 	defer reader.Close()
 
