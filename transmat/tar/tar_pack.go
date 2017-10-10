@@ -95,6 +95,7 @@ func Pack(
 		case nil:
 			// pass
 		case rio.ErrWarehouseUnwritable:
+			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
 			return api.WareID{}, err
 		default:
 			return api.WareID{}, err
