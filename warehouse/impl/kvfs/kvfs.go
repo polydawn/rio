@@ -99,9 +99,9 @@ func (whCtrl Controller) OpenReader(wareID api.WareID) (io.ReadCloser, error) {
 	case err == nil:
 		return file, nil
 	case os.IsNotExist(err):
-		return file, Errorf(rio.ErrWareNotFound, "ware %s not found in warehouse %s", wareID, whCtrl.addr)
+		return nil, Errorf(rio.ErrWareNotFound, "ware %s not found in warehouse %s", wareID, whCtrl.addr)
 	default:
-		return file, Errorf(rio.ErrWarehouseUnavailable, "ware %s could not be retrieved from warehouse %s: %s", wareID, whCtrl.addr, err)
+		return nil, Errorf(rio.ErrWarehouseUnavailable, "ware %s could not be retrieved from warehouse %s: %s", wareID, whCtrl.addr, err)
 	}
 }
 
