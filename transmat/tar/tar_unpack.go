@@ -110,7 +110,7 @@ func unpack(
 		case nil:
 			// pass
 		case rio.ErrWareNotFound:
-			// TODO log something to the monitor
+			log.WareNotFound(mon, err, addr, wareID)
 			continue // okay!  skip to the next one.
 		default:
 			return api.WareID{}, err
