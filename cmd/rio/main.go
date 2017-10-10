@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"sync"
 
 	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
@@ -30,7 +31,6 @@ func CancelOnInterrupt(cancel context.CancelFunc) {
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
 	cancel()
-	close(signalChan)
 }
 
 // Holder type which makes it easier for us to inspect
@@ -64,7 +64,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	// Output control helper.
 	//  Declared early because we reference it in action thunks;
 	//  however its format field may not end up set until much lower in the file.
-	oc := &outputController{"", stdout, stderr}
+	oc := &outputController{"", stdout, stderr, nil, sync.WaitGroup{}}
 
 	// Args struct defs and flag declarations.
 	bhvs := map[string]*behavior{}
@@ -112,7 +112,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Path,
 				args.Filters,
 				api.WarehouseAddr(args.TargetWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -170,7 +170,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Filters,
 				rio.PlacementMode(args.PlacementMode),
 				convertWarehouseSlice(args.SourcesWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -212,7 +212,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				args.Filters,
 				rio.Placement_Direct,
 				api.WarehouseAddr(args.SourceWarehouseAddr),
-				rio.Monitor{},
+				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
 				return err
@@ -259,9 +259,15 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 type outputController struct {
 	format         format
 	stdout, stderr io.Writer
+	monChan        chan rio.Event // set up when calling WireMonitor
+	monWg          sync.WaitGroup
 }
 
-func (oc outputController) EmitResult(wareID api.WareID, err error) {
+func (oc *outputController) EmitResult(wareID api.WareID, err error) {
+	if oc.monChan != nil {
+		close(oc.monChan)
+	}
+	oc.monWg.Wait()
 	result := &rio.Event_Result{}
 	result.WareID = wareID
 	result.SetError(err)
@@ -285,6 +291,58 @@ func (oc outputController) EmitResult(wareID api.WareID, err error) {
 	default:
 		panic(fmt.Errorf("rio: invalid format %s", oc.format))
 	}
+}
+
+func (oc *outputController) WireMonitor(ctx context.Context, m rio.Monitor) rio.Monitor {
+	oc.monChan = make(chan rio.Event)
+	oc.monWg.Add(1)
+	m.Chan = oc.monChan
+	switch oc.format {
+	case "", format_Dumb:
+		go func() {
+			defer oc.monWg.Done()
+			for {
+				select {
+				case evt, ok := <-oc.monChan:
+					if !ok {
+						return
+					}
+					switch {
+					case evt.Log != nil:
+						fmt.Fprintf(oc.stderr, "log: lvl=%s msg=%s\n", evt.Log.Level, evt.Log.Msg)
+					case evt.Progress != nil:
+						// pass... for now
+					case evt.Result != nil:
+						// pass
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	case format_Json:
+		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, oc.stdout, rio.Atlas)
+		go func() {
+			defer oc.monWg.Done()
+			for {
+				select {
+				case evt, ok := <-oc.monChan:
+					if !ok {
+						return
+					}
+					err := marshaller.Marshal(evt)
+					if err != nil {
+						panic(err)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	default:
+		panic(fmt.Errorf("rio: invalid format %s", oc.format))
+	}
+	return m
 }
 
 func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
