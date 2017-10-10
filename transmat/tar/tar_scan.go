@@ -37,8 +37,11 @@ func Scan(
 	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
 	placementMode rio.PlacementMode, // For scanning only "None" (cache; the default) and "Direct" (don't cache) are valid.
 	addr api.WarehouseAddr, // The *one* warehouse to fetch from.  Must be a monowarehouse (not a CA-mode).
-	monitor rio.Monitor, // Optionally: callbacks for progress monitoring.
+	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
+	if mon.Chan != nil {
+		defer close(mon.Chan)
+	}
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// Sanitize arguments.

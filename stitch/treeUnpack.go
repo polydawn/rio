@@ -98,7 +98,11 @@ func (a *Assembler) Run(ctx context.Context, targetFs fs.FS, parts []UnpackSpec,
 			defer wg.Done()
 			res := &unpackResults[i]
 			// If it's a mount, do some parsing, and that's it for prep work.
+			//  Also close the monitor channel, because every other unpack tool would.
 			if part.WareID.Type == "mount" {
+				if part.Monitor.Chan != nil {
+					close(part.Monitor.Chan)
+				}
 				ss := strings.SplitN(part.WareID.Hash, ":", 2)
 				if len(ss) != 2 {
 					res.Error = Errorf(rio.ErrAssemblyInvalid, "invalid inputs config: mounts must specify mode (e.g. \"ro:/path\" or \"rw:/path\"")
