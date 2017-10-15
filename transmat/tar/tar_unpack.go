@@ -76,7 +76,7 @@ func unpack(
 	}
 
 	// Pick a warehouse and get a reader.
-	reader, err := PickReader(wareID, warehouses, mon)
+	reader, err := PickReader(wareID, warehouses, false, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}

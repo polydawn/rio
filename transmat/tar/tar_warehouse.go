@@ -21,6 +21,7 @@ import (
 func PickReader(
 	wareID api.WareID,
 	warehouses []api.WarehouseAddr,
+	requireMono bool,
 	mon rio.Monitor,
 ) (_ io.ReadCloser, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
@@ -35,18 +36,31 @@ func PickReader(
 		}
 		var whCtrl warehouse.BlobstoreController
 		switch u.Scheme {
-		case "file", "ca+file":
+		case "ca+file":
+			if requireMono {
+				return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
+			}
+			fallthrough
+		case "file":
 			whCtrl, err = kvfs.NewController(addr)
-		case "http", "ca+http", "https", "ca+https":
+		case "ca+http", "ca+https":
+			if requireMono {
+				return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
+			}
+			fallthrough
+		case "http", "https":
 			whCtrl, err = kvhttp.NewController(addr)
 		default:
-			return nil, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
+			return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
 		}
 		switch Category(err) {
 		case nil:
 			anyWarehouses = true
 			// pass
 		case rio.ErrWarehouseUnavailable:
+			if requireMono {
+				return nil, err
+			}
 			log.WarehouseUnavailable(mon, err, addr, wareID, "read")
 			continue // okay!  skip to the next one.
 		default:
