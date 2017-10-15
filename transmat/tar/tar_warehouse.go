@@ -38,20 +38,20 @@ func PickReader(
 		switch u.Scheme {
 		case "ca+file":
 			if requireMono {
-				return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
+				return nil, Errorf(rio.ErrUsage, "this fetch operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
 			}
 			fallthrough
 		case "file":
 			whCtrl, err = kvfs.NewController(addr)
 		case "ca+http", "ca+https":
 			if requireMono {
-				return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
+				return nil, Errorf(rio.ErrUsage, "this fetch operation doesn't support %q scheme (a single-ware warehouse is required, not CA-mode)", u.Scheme)
 			}
 			fallthrough
 		case "http", "https":
 			whCtrl, err = kvhttp.NewController(addr)
 		default:
-			return nil, Errorf(rio.ErrUsage, "this operation doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
+			return nil, Errorf(rio.ErrUsage, "this fetch operation doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
 		}
 		switch Category(err) {
 		case nil:
@@ -84,4 +84,46 @@ func PickReader(
 		return nil, Errorf(rio.ErrWareNotFound, "none of the available warehouses have ware %q!", wareID)
 	}
 	return reader, nil
+}
+
+func OpenWriteController(
+	warehouseAddr api.WarehouseAddr,
+	packType api.PackType,
+	mon rio.Monitor,
+) (wc warehouse.BlobstoreWriteController, err error) {
+	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
+	// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
+	u, err := url.Parse(string(warehouseAddr))
+	if err != nil {
+		return nil, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
+	}
+	switch u.Scheme {
+	case "":
+		wc = warehouse.NullBlobstoreWriteController{}
+		return wc, nil
+	case "file", "ca+file":
+		whCtrl, err := kvfs.NewController(warehouseAddr)
+		switch Category(err) {
+		case nil:
+			// pass
+		case rio.ErrWarehouseUnavailable:
+			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
+			return nil, err
+		default:
+			return nil, err
+		}
+		wc, err = whCtrl.OpenWriter()
+		switch Category(err) {
+		case nil:
+			return wc, nil // Yayy!
+		case rio.ErrWarehouseUnwritable:
+			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
+			return nil, err
+		default:
+			return nil, err
+		}
+	default:
+		return nil, Errorf(rio.ErrUsage, "this save operation doesn't support %q scheme (valid options are 'file' or 'ca+file')", u.Scheme)
+	}
 }
