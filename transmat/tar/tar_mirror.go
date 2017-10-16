@@ -2,6 +2,7 @@ package tartrans
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	. "github.com/polydawn/go-errcat"
@@ -53,9 +54,24 @@ func Mirror(
 
 	// "unpack", scanningly.  This drives the copy.
 	filt, _ := apiutil.ProcessFilters(api.Filter_NoMutation, apiutil.FilterPurposeUnpack)
-	unpackTar(ctx, afs, filt, reader)
+	gotWare, err := unpackTar(ctx, afs, filt, reader)
+	if err != nil {
+		return gotWare, err
+	}
 
-	return wareID, nil
+	// Check for hash mismatch before returning, because that IS an error,
+	//  but also return the hash we got either way.
+	if gotWare != wareID {
+		return gotWare, ErrorDetailed(
+			rio.ErrWareHashMismatch,
+			fmt.Sprintf("hash mismatch: expected %q, got %q", wareID, gotWare),
+			map[string]string{
+				"expected": wareID.String(),
+				"actual":   gotWare.String(),
+			},
+		)
+	}
+	return gotWare, nil
 }
 
 // Proxy read calls, also copying each buffer into another write.
