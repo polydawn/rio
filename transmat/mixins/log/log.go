@@ -16,6 +16,22 @@ import (
 	"go.polydawn.net/go-timeless-api/rio"
 )
 
+func CacheHasIt(mon rio.Monitor, ware api.WareID) {
+	if mon.Chan == nil {
+		return
+	}
+	mon.Chan <- rio.Event{
+		Log: &rio.Event_Log{
+			Time:  time.Now(),
+			Level: rio.LogInfo,
+			Msg:   fmt.Sprintf("cache already has ware %q", ware),
+			Detail: [][2]string{
+				{"wareID", ware.String()},
+			},
+		},
+	}
+}
+
 // Log path for a 'rio.ErrWarehouseUnavailable'; mode is "read" or "write".
 func WarehouseUnavailable(mon rio.Monitor, err error, wh api.WarehouseAddr, ware api.WareID, mode string) {
 	if mon.Chan == nil {

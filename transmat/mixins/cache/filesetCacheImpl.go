@@ -14,6 +14,7 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/lib/guid"
 	"go.polydawn.net/rio/stitch/placer"
+	"go.polydawn.net/rio/transmat/mixins/log"
 )
 
 var ShelfFor = cacheapi.ShelfFor
@@ -73,29 +74,11 @@ func (c cache) Unpack(
 		if err != nil {
 			return resultWareID, err
 		}
-		// Now that the cache has it, we can fallthrough into the "cache already had it" path.
-		fallthrough
+		// Now place it from the cache shelf.
+		return resultWareID, c.place(ctx, placementMode, shelf, path)
 	case nil: // Cache has it!  Reaction varies.
-		absShelf := c.fs.BasePath().Join(shelf)
-		switch placementMode {
-		case rio.Placement_None: // If no placement, cache having it is victory!
-			return wareID, nil
-		case rio.Placement_Direct: // In direct mode, copy.
-			_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(path), true)
-			return wareID, err
-		case rio.Placement_Copy: // In copy mode, ... well obviously copy.
-			_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(path), true)
-			return wareID, err
-		case rio.Placement_Mount: // In mount mode, mount.
-			placerFn, err := placer.GetMountPlacer()
-			if err != nil {
-				return api.WareID{}, err
-			}
-			_, err = placerFn(absShelf, fs.MustAbsolutePath(path), true)
-			return wareID, err
-		default:
-			panic("unreachable")
-		}
+		log.CacheHasIt(monitor, wareID)
+		return resultWareID, c.place(ctx, placementMode, shelf, path)
 	default:
 		// Unknown errors reading cache are mostly considered game over.  Except:
 		//  Since direct mode has no responsibility to the cache, it can still go.
@@ -105,6 +88,34 @@ func (c cache) Unpack(
 		default:
 			return api.WareID{}, Errorf(rio.ErrLocalCacheProblem, "error reading cache: %s", err)
 		}
+	}
+}
+
+func (c cache) place(
+	ctx context.Context,
+	placementMode rio.PlacementMode,
+	shelf fs.RelPath,
+	destination string, // still a string at this phase because it's either abs or "-"
+) error {
+	absShelf := c.fs.BasePath().Join(shelf)
+	switch placementMode {
+	case rio.Placement_None: // If no placement, cache having it is victory!
+		return nil
+	case rio.Placement_Direct: // In direct mode, copy.
+		_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(destination), true)
+		return err
+	case rio.Placement_Copy: // In copy mode, ... well obviously copy.
+		_, err := placer.CopyPlacer(absShelf, fs.MustAbsolutePath(destination), true)
+		return err
+	case rio.Placement_Mount: // In mount mode, mount.
+		placerFn, err := placer.GetMountPlacer()
+		if err != nil {
+			return err
+		}
+		_, err = placerFn(absShelf, fs.MustAbsolutePath(destination), true)
+		return err
+	default:
+		panic("unreachable")
 	}
 }
 
