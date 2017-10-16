@@ -56,13 +56,16 @@ func Mirror(
 	filt, _ := apiutil.ProcessFilters(api.Filter_NoMutation, apiutil.FilterPurposeUnpack)
 	gotWare, err := unpackTar(ctx, afs, filt, reader)
 	if err != nil {
-		return gotWare, err
+		// If errors at this stage: still return a blank wareID, because
+		//  we haven't finished *uploading* it.
+		return api.WareID{}, err
 	}
 
-	// Check for hash mismatch before returning, because that IS an error,
-	//  but also return the hash we got either way.
+	// Check for hash mismatch; abort if detected.
+	//  Again, return a blank wareID, because we haven't *uploaded* it.
+	//  You'll have no choice but to inspect the error details if you need the value.
 	if gotWare != wareID {
-		return gotWare, ErrorDetailed(
+		return api.WareID{}, ErrorDetailed(
 			rio.ErrWareHashMismatch,
 			fmt.Sprintf("hash mismatch: expected %q, got %q", wareID, gotWare),
 			map[string]string{
@@ -71,7 +74,9 @@ func Mirror(
 			},
 		)
 	}
-	return gotWare, nil
+
+	// All's quiet: flush and commit.
+	return gotWare, wc.Commit(wareID)
 }
 
 // Proxy read calls, also copying each buffer into another write.

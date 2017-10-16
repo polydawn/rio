@@ -12,7 +12,7 @@ import (
 	"go.polydawn.net/rio/testutil"
 )
 
-func CheckMirror(packType api.PackType, mirror rio.MirrorFunc, pack rio.PackFunc, target api.WarehouseAddr, source api.WarehouseAddr) {
+func CheckMirror(packType api.PackType, mirror rio.MirrorFunc, pack rio.PackFunc, unpack rio.UnpackFunc, target api.WarehouseAddr, source api.WarehouseAddr) {
 	testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 		// Initialization: make a pack to test against, put it in source warehouse.
 		fixturePath := tmpDir.Join(fs.MustRelPath("fixture"))
@@ -40,6 +40,20 @@ func CheckMirror(packType api.PackType, mirror rio.MirrorFunc, pack rio.PackFunc
 			)
 			So(err, ShouldBeNil)
 			So(mirroredWareID, ShouldResemble, wareID)
+
+			Convey("unpack from mirror should succeed", func() {
+				unpackedWareID, err := unpack(
+					context.Background(),
+					wareID,
+					"-",
+					api.Filter_NoMutation,
+					rio.Placement_None,
+					[]api.WarehouseAddr{target},
+					rio.Monitor{},
+				)
+				So(err, ShouldBeNil)
+				So(unpackedWareID, ShouldResemble, wareID)
+			})
 		})
 	})
 }

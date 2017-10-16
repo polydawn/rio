@@ -23,7 +23,7 @@ func TestTarMirror(t *testing.T) {
 					srcAddr := api.WarehouseAddr(fmt.Sprintf("ca+file://%s/src", tmpDir))
 					dstAddr := api.WarehouseAddr(fmt.Sprintf("ca+file://%s/dst", tmpDir))
 
-					tests.CheckMirror(PackType, Mirror, Pack, dstAddr, srcAddr)
+					tests.CheckMirror(PackType, Mirror, Pack, Unpack, dstAddr, srcAddr)
 				})
 			})
 		}),
