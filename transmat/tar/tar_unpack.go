@@ -6,12 +6,11 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 
+	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt/misc"
 
-	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/go-timeless-api/util"
@@ -23,11 +22,7 @@ import (
 	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
-	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/transmat/util"
-	"go.polydawn.net/rio/warehouse"
-	"go.polydawn.net/rio/warehouse/impl/kvfs"
-	"go.polydawn.net/rio/warehouse/impl/kvhttp"
 )
 
 var (
@@ -80,51 +75,10 @@ func unpack(
 		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
 	}
 
-	// Pick a warehouse.
-	//  With K/V warehouses, this takes the form of "pick the first one that answers".
-	var reader io.ReadCloser
-	var anyWarehouses bool // for clarity in final error messages
-	for _, addr := range warehouses {
-		// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
-		u, err := url.Parse(string(addr))
-		if err != nil {
-			return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
-		}
-		var whCtrl warehouse.BlobstoreController
-		switch u.Scheme {
-		case "file", "ca+file":
-			whCtrl, err = kvfs.NewController(addr)
-		case "http", "ca+http", "https", "ca+https":
-			whCtrl, err = kvhttp.NewController(addr)
-		default:
-			return api.WareID{}, Errorf(rio.ErrUsage, "tar unpack doesn't support %q scheme (valid options are 'file', 'ca+file', 'http', 'ca+http', 'https', or 'ca+https')", u.Scheme)
-		}
-		switch Category(err) {
-		case nil:
-			anyWarehouses = true
-			// pass
-		case rio.ErrWarehouseUnavailable:
-			log.WarehouseUnavailable(mon, err, addr, wareID, "read")
-			continue // okay!  skip to the next one.
-		default:
-			return api.WareID{}, err
-		}
-		reader, err = whCtrl.OpenReader(wareID)
-		switch Category(err) {
-		case nil:
-			// pass
-		case rio.ErrWareNotFound:
-			log.WareNotFound(mon, err, addr, wareID)
-			continue // okay!  skip to the next one.
-		default:
-			return api.WareID{}, err
-		}
-	}
-	if !anyWarehouses {
-		return api.WareID{}, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
-	}
-	if reader == nil {
-		return api.WareID{}, Errorf(rio.ErrWareNotFound, "none of the available warehouses have ware %q!", wareID)
+	// Pick a warehouse and get a reader.
+	reader, err := PickReader(wareID, warehouses, false, mon)
+	if err != nil {
+		return api.WareID{}, err
 	}
 	defer reader.Close()
 

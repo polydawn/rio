@@ -2,7 +2,6 @@ package tartrans
 
 import (
 	"context"
-	"net/url"
 
 	. "github.com/polydawn/go-errcat"
 	"go.polydawn.net/go-timeless-api"
@@ -11,9 +10,6 @@ import (
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/nilfs"
 	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/warehouse"
-	"go.polydawn.net/rio/warehouse/impl/kvfs"
-	"go.polydawn.net/rio/warehouse/impl/kvhttp"
 )
 
 // A "scan" is roughly the same as an unpack to /dev/null,
@@ -61,36 +57,8 @@ func Scan(
 	// Dial warehouse.
 	//  Note how this is a subset of the usual accepted warehouses;
 	//  it must be a monowarehouse, not a legit CA storage bucket.
-	u, err := url.Parse(string(addr))
+	reader, err := PickReader(api.WareID{"tar", "-"}, []api.WarehouseAddr{addr}, true, mon)
 	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
-	}
-	var whCtrl warehouse.BlobstoreController
-	switch u.Scheme {
-	case "file":
-		whCtrl, err = kvfs.NewController(addr)
-	case "http", "https":
-		whCtrl, err = kvhttp.NewController(addr)
-	case "ca+file", "ca+http", "ca+https":
-		return api.WareID{}, Errorf(rio.ErrUsage, "tar scan doesn't support %q scheme -- content-addressable warehouses contain many wares; which to scan?", u.Scheme)
-	default:
-		return api.WareID{}, Errorf(rio.ErrUsage, "tar scan doesn't support %q scheme (valid options are 'file', 'http', or 'https')", u.Scheme)
-	}
-	switch Category(err) {
-	case nil:
-		// pass
-	case rio.ErrWarehouseUnavailable:
-		fallthrough // actually fatal here since it's just the one
-	default:
-		return api.WareID{}, err
-	}
-	reader, err := whCtrl.OpenReader(api.WareID{"tar", "-"})
-	switch Category(err) {
-	case nil:
-		// pass
-	case rio.ErrWareNotFound:
-		fallthrough // actually fatal here since it's just the one
-	default:
 		return api.WareID{}, err
 	}
 	defer reader.Close()

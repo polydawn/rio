@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/sha512"
 	"io"
-	"net/url"
 	"time"
 
 	"github.com/polydawn/refmt/misc"
@@ -20,9 +19,6 @@ import (
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
-	"go.polydawn.net/rio/transmat/mixins/log"
-	"go.polydawn.net/rio/warehouse"
-	"go.polydawn.net/rio/warehouse/impl/kvfs"
 )
 
 var (
@@ -70,38 +66,9 @@ func Pack(
 	}
 
 	// Connect to warehouse, and get write controller opened.
-	var wc warehouse.BlobstoreWriteController
-	// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
-	u, err := url.Parse(string(warehouseAddr))
+	wc, err := OpenWriteController(warehouseAddr, packType, mon)
 	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
-	}
-	switch u.Scheme {
-	case "":
-		wc = warehouse.NullBlobstoreWriteController{}
-	case "file", "ca+file":
-		whCtrl, err := kvfs.NewController(warehouseAddr)
-		switch Category(err) {
-		case nil:
-			// pass
-		case rio.ErrWarehouseUnavailable:
-			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
-			return api.WareID{}, err
-		default:
-			return api.WareID{}, err
-		}
-		wc, err = whCtrl.OpenWriter()
-		switch Category(err) {
-		case nil:
-			// pass
-		case rio.ErrWarehouseUnwritable:
-			log.WarehouseUnavailable(mon, err, warehouseAddr, api.WareID{packType, "?"}, "write")
-			return api.WareID{}, err
-		default:
-			return api.WareID{}, err
-		}
-	default:
-		return api.WareID{}, Errorf(rio.ErrUsage, "tar pack doesn't support %q scheme (valid options are 'file' or 'ca+file')", u.Scheme)
+		return api.WareID{}, err
 	}
 	defer wc.Close()
 
