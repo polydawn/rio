@@ -33,3 +33,12 @@ func demuxScanTool(packType string) (rio.ScanFunc, error) {
 		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
 	}
 }
+
+func demuxMirrorTool(packType string) (rio.MirrorFunc, error) {
+	switch packType {
+	case "tar":
+		return tartrans.Mirror, nil
+	default:
+		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
+	}
+}
