@@ -221,6 +221,43 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			return nil
 		}}
 	}
+	{
+		cmd := app.Command("mirror", "Store already-packed wares in one warehouse, copying from other warehouses.")
+		args := struct {
+			WareID               string   // WareID to mirror
+			TargetWarehouseAddr  string   // Warehouse to mirror into
+			SourceWarehouseAddrs []string // Warehouses we can fetch from
+		}{}
+		cmd.Arg("ware", "Ware ID").
+			Required().
+			StringVar(&args.WareID)
+		cmd.Flag("target", "Warehouse in which to place the ware").
+			StringVar(&args.TargetWarehouseAddr)
+		cmd.Flag("source", "Warehouses from which to fetch the ware").
+			StringsVar(&args.SourceWarehouseAddrs)
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+			wareID, err := api.ParseWareID(args.WareID)
+			if err != nil {
+				return err
+			}
+			mirrorFunc, err := demuxMirrorTool(string(wareID.Type))
+			if err != nil {
+				return err
+			}
+			resultWareID, err := mirrorFunc(
+				ctx,
+				wareID,
+				api.WarehouseAddr(args.TargetWarehouseAddr),
+				convertWarehouseSlice(args.SourceWarehouseAddrs),
+				oc.WireMonitor(ctx, rio.Monitor{}),
+			)
+			if err != nil {
+				return err
+			}
+			oc.EmitResult(resultWareID, nil)
+			return nil
+		}}
+	}
 	// Okay now let's be clear: actually all of these behaviors should, end of day,
 	//  actually send their errors through our output control.
 	//  We still also return it, both so you can write tests around this
