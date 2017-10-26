@@ -99,7 +99,7 @@ type flippingReader struct {
 func (fr flippingReader) Read(b []byte) (int, error) {
 	n, err := fr.read.Read(b)
 	if err == nil || err == io.EOF {
-		n2, err2 := fr.dup.Write(b)
+		n2, err2 := fr.dup.Write(b[:n])
 		if n2 < n {
 			return n, io.ErrShortWrite
 		}
