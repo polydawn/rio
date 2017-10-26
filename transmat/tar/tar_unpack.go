@@ -86,24 +86,25 @@ func unpack(
 	afs := osfs.New(path2)
 
 	// Extract.
-	gotWare, err := unpackTar(ctx, afs, filt2, reader)
+	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt2, reader)
 	if err != nil {
-		return gotWare, err
+		return unpackWareID, err
 	}
 
 	// Check for hash mismatch before returning, because that IS an error,
 	//  but also return the hash we got either way.
-	if gotWare != wareID {
-		return gotWare, ErrorDetailed(
+	if prefilterWareID != wareID {
+		return unpackWareID, ErrorDetailed(
 			rio.ErrWareHashMismatch,
-			fmt.Sprintf("hash mismatch: expected %q, got %q", wareID, gotWare),
+			fmt.Sprintf("hash mismatch: expected %q, got %q (filtered %q)", wareID, prefilterWareID, unpackWareID),
 			map[string]string{
 				"expected": wareID.String(),
-				"actual":   gotWare.String(),
+				"actual":   prefilterWareID.String(),
+				"filtered": unpackWareID.String(),
 			},
 		)
 	}
-	return gotWare, nil
+	return unpackWareID, nil
 }
 
 func unpackTar(
@@ -111,14 +112,18 @@ func unpackTar(
 	afs fs.FS,
 	filt apiutil.FilesetFilters,
 	reader io.Reader,
-) (_ api.WareID, err error) {
+) (
+	prefilterWareID api.WareID,
+	actualWareID api.WareID,
+	err error,
+) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// Wrap input stream with decompression as necessary.
 	//  Which kind of decompression to use can be autodetected by magic bytes.
 	reader2, err := Decompress(reader)
 	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
+		return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
 	}
 
 	// Convert the raw byte reader to a tar stream.
@@ -126,7 +131,10 @@ func unpackTar(
 
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
-	bucket := &fshash.MemoryBucket{}
+	// We keep one for the raw ware data as we consume it, so we can verify no fuckery;
+	// we keep a second, separate one for the filtered data, which will compute a different hash.
+	prefilterBucket := &fshash.MemoryBucket{}
+	filteredBucket := &fshash.MemoryBucket{}
 
 	// Also allocate a map for keeping records of which dirs we've created.
 	// This is necessary for correct bookkeepping in the face of the tar format's
@@ -143,22 +151,19 @@ func unpackTar(
 			break // sucess!  end of archive.
 		}
 		if err != nil {
-			return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
 		}
 		if ctx.Err() != nil {
-			return api.WareID{}, Errorf(rio.ErrCancelled, "cancelled")
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrCancelled, "cancelled")
 		}
 
 		// Reshuffle metainfo to our default format.
 		if err := TarHdrToMetadata(thdr, &fmeta); err != nil {
-			return api.WareID{}, err
+			return api.WareID{}, api.WareID{}, err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
-			return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
 		}
-
-		// Apply filters.
-		filters.Apply(filt, &fmeta)
 
 		// Infer parents, if necessary.  The tar format allows implicit parent dirs.
 		//
@@ -175,47 +180,57 @@ func unpackTar(
 			// If we're missing a dir, conjure a node with defaulted values.
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
+			prefilterBucket.AddRecord(conjuredFmeta, nil)
 			filters.Apply(filt, &conjuredFmeta)
+			filteredBucket.AddRecord(conjuredFmeta, nil)
 			dirs[conjuredFmeta.Name] = struct{}{}
 			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
-				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			bucket.AddRecord(conjuredFmeta, nil)
 		}
+
+		// Apply filters.
+		//  ... uck, to one copy of the meta.  We can't add either to their buckets
+		//  until after the file is placed because we need the content hash.
+		filteredFmeta := fmeta
+		filters.Apply(filt, &filteredFmeta)
 
 		// Place the file.
 		switch fmeta.Type {
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
-			if err := fsOp.PlaceFile(afs, fmeta, reader, filt.SkipChown); err != nil {
-				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			if err := fsOp.PlaceFile(afs, filteredFmeta, reader, filt.SkipChown); err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
+			prefilterBucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
+			filteredBucket.AddRecord(filteredFmeta, reader.Hasher.Sum(nil))
 		case fs.Type_Dir:
 			dirs[fmeta.Name] = struct{}{}
 			fallthrough
 		default:
-			if err := fsOp.PlaceFile(afs, fmeta, nil, filt.SkipChown); err != nil {
-				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, filt.SkipChown); err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			bucket.AddRecord(fmeta, nil)
+			prefilterBucket.AddRecord(fmeta, nil)
+			filteredBucket.AddRecord(filteredFmeta, nil)
 		}
 	}
 
 	// Cleanup dir times with a post-order traversal over the bucket.
 	//  Files and dirs placed inside dirs cause the parent's mtime to update, so we have to re-pave them.
-	if err := treewalk.Walk(bucket.Iterator(), nil, func(node treewalk.Node) error {
+	if err := treewalk.Walk(filteredBucket.Iterator(), nil, func(node treewalk.Node) error {
 		record := node.(fshash.RecordIterator).Record()
 		if record.Metadata.Type != fs.Type_Dir {
 			return nil
 		}
 		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultAtime)
 	}); err != nil {
-		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+		return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 
 	// Hash the thing!
-	hash := fshash.HashBucket(bucket, sha512.New384)
+	prefilterHash := fshash.HashBucket(prefilterBucket, sha512.New384)
+	filteredHash := fshash.HashBucket(filteredBucket, sha512.New384)
 
-	return api.WareID{"tar", misc.Base58Encode(hash)}, nil
+	return api.WareID{"tar", misc.Base58Encode(prefilterHash)}, api.WareID{"tar", misc.Base58Encode(filteredHash)}, nil
 }
