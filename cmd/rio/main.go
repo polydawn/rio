@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 
 	. "github.com/polydawn/go-errcat"
@@ -106,10 +107,14 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return err
 			}
+			path, err := filepath.Abs(args.Path)
+			if err != nil {
+				return Recategorize(rio.ErrUsage, err)
+			}
 			resultWareID, err := packFunc(
 				ctx,
 				api.PackType(args.PackType),
-				args.Path,
+				path,
 				args.Filters,
 				api.WarehouseAddr(args.TargetWarehouseAddr),
 				oc.WireMonitor(ctx, rio.Monitor{}),
@@ -163,10 +168,14 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return err
 			}
+			path, err := filepath.Abs(args.Path)
+			if err != nil {
+				return Recategorize(rio.ErrUsage, err)
+			}
 			resultWareID, err := unpackFunc(
 				ctx,
 				wareID,
-				args.Path,
+				path,
 				args.Filters,
 				rio.PlacementMode(args.PlacementMode),
 				convertWarehouseSlice(args.SourcesWarehouseAddr),
