@@ -1,8 +1,15 @@
 package filters
 
 import (
+	"os"
+
 	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
+)
+
+var (
+	myUid = uint32(os.Getuid())
+	myGid = uint32(os.Getgid())
 )
 
 /*
@@ -18,7 +25,7 @@ func Apply(filters apiutil.FilesetFilters, fmeta *fs.Metadata) {
 	case apiutil.FilterKeep:
 		// pass
 	case apiutil.FilterMine:
-		// TODO need some magic numberssss
+		fmeta.Uid = myUid
 	default:
 		fmeta.Uid = uint32(filters.Uid)
 	}
@@ -28,7 +35,7 @@ func Apply(filters apiutil.FilesetFilters, fmeta *fs.Metadata) {
 	case apiutil.FilterKeep:
 		// pass
 	case apiutil.FilterMine:
-		// TODO need some magic numberssss
+		fmeta.Gid = myGid
 	default:
 		fmeta.Gid = uint32(filters.Gid)
 	}

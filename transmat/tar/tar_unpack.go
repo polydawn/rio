@@ -128,6 +128,11 @@ func unpackTar(
 	// the full tree hash will be computed from this at the end.
 	bucket := &fshash.MemoryBucket{}
 
+	// Also allocate a map for keeping records of which dirs we've created.
+	// This is necessary for correct bookkeepping in the face of the tar format's
+	// allowance for implicit parent dirs.
+	dirs := map[fs.RelPath]struct{}{}
+
 	// Iterate over each tar entry, mutating filesystem as we go.
 	for {
 		fmeta := fs.Metadata{}
@@ -163,20 +168,16 @@ func unpackTar(
 		// tars with repeated filenames are just asking for trouble and shall be rejected without
 		// ceremony because they're just a ridiculous idea.
 		for _, parent := range fmeta.Name.SplitParent() {
-			_, err := afs.LStat(parent)
-			// if it already exists, move along; if the error is anything interesting, let PlaceFile decide how to deal with it
-			switch Category(err) {
-			case nil:
-				continue
-			case fs.ErrNotExists:
-				// pass
-			default:
+			// If we already initialized this parent, superb; move along.
+			if _, exists := dirs[parent]; exists {
 				break
 			}
-			// if we're missing a dir, conjure a node with defaulted values (same as we do for "./")
+			// If we're missing a dir, conjure a node with defaulted values.
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
-			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
+			filters.Apply(filt, &conjuredFmeta)
+			dirs[conjuredFmeta.Name] = struct{}{}
+			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(conjuredFmeta, nil)
@@ -186,12 +187,15 @@ func unpackTar(
 		switch fmeta.Type {
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
-			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, reader, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
+		case fs.Type_Dir:
+			dirs[fmeta.Name] = struct{}{}
+			fallthrough
 		default:
-			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, nil, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, nil)
@@ -207,10 +211,6 @@ func unpackTar(
 		}
 		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultAtime)
 	}); err != nil {
-		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
-	}
-	// Bucket processing may have created a root node if missing.  If so, make sure we apply its props (all of them, not just time).
-	if err := fsOp.PlaceFile(afs, bucket.Root().Metadata, nil, false); err != nil {
 		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 
