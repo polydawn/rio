@@ -1,6 +1,8 @@
 package fsOp
 
 import (
+	"os"
+
 	. "github.com/polydawn/go-errcat"
 
 	"go.polydawn.net/rio/fs"
@@ -127,4 +129,32 @@ func RepairMtime(afs fs.FS, path fs.RelPath) func() {
 	return func() {
 		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultAtime)
 	}
+}
+
+/*
+	Remove all files and dirs in a dir (if it exists; if not, no-op), recursing
+	as necessary.
+
+	This can be useful to do before e.g. some 'unpack' operation, to make sure
+	no content collides, while also avoiding unlinking the top level dir, in case
+	the current process would lack permission to create it again.
+
+	As an additional edge case, if the given path is a file and not a dir, the file
+	will also be removed (so, the consistent logic here is you will be ready to have
+	a dir in this path (aka, target an unpack here) when this function returns).
+*/
+func RemoveDirContent(afs fs.FS, path fs.RelPath) error {
+	// Lazy implementation... assumes osfs, and slinks back out to stdlib, because
+	// it so happens all of our real usage is fine with that.
+	children, err := afs.ReadDirNames(path)
+	if err != nil {
+		return err
+	}
+	for _, child := range children {
+		err := os.RemoveAll(afs.BasePath().Join(path).String() + "/" + child)
+		if err != nil {
+			return fs.NormalizeIOError(err)
+		}
+	}
+	return nil
 }
