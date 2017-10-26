@@ -29,6 +29,15 @@ func Mirror(
 		defer close(mon.Chan)
 	}
 
+	// Try to read is from the target first, no-op out if success.
+	//  We don't fully re-verify the content, because that requires a time
+	//  committment, and we want this command to be fast when run repeatedly.
+	reader, err := PickReader(wareID, []api.WarehouseAddr{target}, false, mon)
+	if err == nil {
+		reader.Close()
+		return api.WareID{}, nil
+	}
+
 	// Connect to target warehouse, and get write controller opened.
 	//  During mirroring, unlike unpacking, we actually *do* know the hash
 	//  of what we'll be uploading... but there's nothing dramatically better
@@ -40,7 +49,7 @@ func Mirror(
 	defer wc.Close()
 
 	// Pick a source warehouse and get a reader.
-	reader, err := PickReader(wareID, sources, false, mon)
+	reader, err = PickReader(wareID, sources, false, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}
