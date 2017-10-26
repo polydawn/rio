@@ -47,6 +47,7 @@ func Scan(
 	if placementMode == "" {
 		placementMode = rio.Placement_None
 	}
+	filt = apiutil.MergeFilters(filt, api.Filter_NoMutation)
 	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
