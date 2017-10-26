@@ -61,7 +61,7 @@ func Mirror(
 	//  It would be unfortunate to accidentally foist corrupted or
 	//  wrongly identified content onto a mirror.
 	reader = flippingReader{reader, wc}
-	afs := nilFS.New()
+	afs := nilFS.New(true)
 
 	// "unpack", scanningly.  This drives the copy.
 	filt, _ := apiutil.ProcessFilters(api.Filter_NoMutation, apiutil.FilterPurposeUnpack)

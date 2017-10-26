@@ -1,6 +1,7 @@
 package nilFS
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/polydawn/go-errcat"
@@ -8,12 +9,21 @@ import (
 	"go.polydawn.net/rio/fs"
 )
 
-func New() fs.FS {
-	return &nilFS{fs.MustAbsolutePath("/-")}
+func New(rememberDirs bool) fs.FS {
+	afs := &nilFS{basePath: fs.MustAbsolutePath("/-")}
+	if rememberDirs {
+		afs.dirs = make(map[fs.RelPath]struct{})
+	}
+	return afs
 }
 
 type nilFS struct {
 	basePath fs.AbsolutePath
+
+	// Optional mode: map keys set for paths that have been mkdir'd.
+	// (This is useful for mocking out logic around implicit dir creates,
+	// because enabling lets other calls return ErrNotExists for missing parents.)
+	dirs map[fs.RelPath]struct{}
 }
 
 func (afs *nilFS) BasePath() fs.AbsolutePath {
@@ -33,6 +43,15 @@ func (afs *nilFS) Mkdir(path fs.RelPath, perms fs.Perms) error {
 	if err != nil {
 		return err
 	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+		if _, exists := afs.dirs[path.Dir()]; path != (fs.RelPath{}) && !exists {
+			return ErrorDetailed(fs.ErrNotExists, fmt.Sprintf("%s does not exist", path.Dir()), map[string]string{"path": path.Dir().String()})
+		}
+		afs.dirs[path] = struct{}{}
+	}
 	return nil
 }
 
@@ -40,6 +59,14 @@ func (afs *nilFS) Mklink(path fs.RelPath, target string) error {
 	_, err := afs.realpath(path, false)
 	if err != nil {
 		return err
+	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+		if _, exists := afs.dirs[path.Dir()]; !exists {
+			return ErrorDetailed(fs.ErrNotExists, fmt.Sprintf("%s does not exist", path.Dir()), map[string]string{"path": path.Dir().String()})
+		}
 	}
 	return nil
 }
@@ -49,6 +76,14 @@ func (afs *nilFS) Mkfifo(path fs.RelPath, perms fs.Perms) error {
 	if err != nil {
 		return err
 	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+		if _, exists := afs.dirs[path.Dir()]; !exists {
+			return ErrorDetailed(fs.ErrNotExists, fmt.Sprintf("%s does not exist", path.Dir()), map[string]string{"path": path.Dir().String()})
+		}
+	}
 	return nil
 }
 
@@ -57,6 +92,14 @@ func (afs *nilFS) MkdevBlock(path fs.RelPath, major int64, minor int64, perms fs
 	if err != nil {
 		return err
 	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+		if _, exists := afs.dirs[path.Dir()]; !exists {
+			return ErrorDetailed(fs.ErrNotExists, fmt.Sprintf("%s does not exist", path.Dir()), map[string]string{"path": path.Dir().String()})
+		}
+	}
 	return nil
 }
 
@@ -64,6 +107,14 @@ func (afs *nilFS) MkdevChar(path fs.RelPath, major int64, minor int64, perms fs.
 	_, err := afs.realpath(path, false)
 	if err != nil {
 		return err
+	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+		if _, exists := afs.dirs[path.Dir()]; !exists {
+			return ErrorDetailed(fs.ErrNotExists, fmt.Sprintf("%s does not exist", path.Dir()), map[string]string{"path": path.Dir().String()})
+		}
 	}
 	return nil
 }
@@ -105,6 +156,13 @@ func (afs *nilFS) Stat(path fs.RelPath) (*fs.Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return &fs.Metadata{Type: fs.Type_Dir}, nil
+		} else { // The possibility of anything but dirs is discounted; this mode is a very leaky abstraction.
+			return nil, ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
+	}
 	return &fs.Metadata{}, nil
 }
 
@@ -112,6 +170,13 @@ func (afs *nilFS) LStat(path fs.RelPath) (*fs.Metadata, error) {
 	_, err := afs.realpath(path, false)
 	if err != nil {
 		return nil, err
+	}
+	if afs.dirs != nil {
+		if _, exists := afs.dirs[path]; exists {
+			return &fs.Metadata{Type: fs.Type_Dir}, nil
+		} else { // The possibility of anything but dirs is discounted; this mode is a very leaky abstraction.
+			return nil, ErrorDetailed(fs.ErrAlreadyExists, fmt.Sprintf("%s exists", path), map[string]string{"path": path.String()})
+		}
 	}
 	return &fs.Metadata{}, nil
 }

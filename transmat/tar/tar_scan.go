@@ -71,7 +71,7 @@ func Scan(
 	case rio.Placement_None:
 		afs = osfs.New(fs.MustAbsolutePath("/nope/nope")) // TODO cache
 	case rio.Placement_Direct:
-		afs = nilFS.New()
+		afs = nilFS.New(true)
 	default:
 		panic("unreachable")
 
