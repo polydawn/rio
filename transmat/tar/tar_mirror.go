@@ -30,7 +30,7 @@ func Mirror(
 		defer close(mon.Chan)
 	}
 
-	// Try to read is from the target first, no-op out if success.
+	// Try to read the ware from the target first; if successfull, no-op out.
 	//  We don't fully re-verify the content, because that requires a time
 	//  committment, and we want this command to be fast when run repeatedly.
 	reader, err := PickReader(wareID, []api.WarehouseAddr{target}, false, mon)
