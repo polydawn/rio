@@ -29,14 +29,7 @@ func Mirror(
 		defer close(mon.Chan)
 	}
 
-	// Pick a warehouse and get a reader.
-	reader, err := PickReader(wareID, sources, false, mon)
-	if err != nil {
-		return api.WareID{}, err
-	}
-	defer reader.Close()
-
-	// Connect to warehouse, and get write controller opened.
+	// Connect to target warehouse, and get write controller opened.
 	//  During mirroring, unlike unpacking, we actually *do* know the hash
 	//  of what we'll be uploading... but there's nothing dramatically better
 	//  we can do with that knowledge.
@@ -45,6 +38,13 @@ func Mirror(
 		return api.WareID{}, err
 	}
 	defer wc.Close()
+
+	// Pick a source warehouse and get a reader.
+	reader, err := PickReader(wareID, sources, false, mon)
+	if err != nil {
+		return api.WareID{}, err
+	}
+	defer reader.Close()
 
 	// Prepare to scan this as we process.
 	//  It would be unfortunate to accidentally foist corrupted or
