@@ -57,15 +57,6 @@ type RecordIterator interface {
 }
 
 /*
-	Node used for the root (Name = "./") path, if one isn't provided.
-*/
-var DefaultRoot = Record{
-	"./",
-	DefaultDirMetadata(),
-	nil,
-}
-
-/*
 	Returns a new, consistent, "blank" metadata for a directory.
 	You must assign the `Name` metadata.
 */

@@ -31,7 +31,7 @@ func (b *MemoryBucket) AddRecord(metadata fs.Metadata, contentHash []byte) {
 
 	This applies some "finalization" operations before starting the walk:
 	  - All records will be sorted.
-	  - If there isn't a root node (i.e. Name = "./"), one will be added.
+	  - As a sanity check, if records exist, the first one must be ".".
 
 	This is only safe for non-concurrent use and depth-first traversal.
 	If the data structure is changed, or (sub)iterators used out of order,
@@ -39,13 +39,11 @@ func (b *MemoryBucket) AddRecord(metadata fs.Metadata, contentHash []byte) {
 */
 func (b *MemoryBucket) Iterator() RecordIterator {
 	sort.Sort(recordsByFilename(b.lines))
-	// check for rootedness.  make a reasonable default one if not present.
-	if len(b.lines) == 0 || b.lines[0].Metadata.Name != (fs.RelPath{}) {
-		// this is stupidly expensive but checking for it without sorting would be even worse, so
-		lines := make([]Record, len(b.lines)+1)
-		lines[0] = DefaultRoot
-		copy(lines[1:], b.lines)
-		b.lines = lines
+	if len(b.lines) > 0 {
+		firstPath := b.lines[0].Metadata.Name
+		if firstPath != (fs.RelPath{}) {
+			panic(ErrInvalidFilesystem{fmt.Sprintf("missing root (first entry: %q)", firstPath)})
+		}
 	}
 	var that int
 	return &memoryBucketIterator{b.lines, 0, &that}

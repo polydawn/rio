@@ -209,10 +209,6 @@ func unpackTar(
 	}); err != nil {
 		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
-	// Bucket processing may have created a root node if missing.  If so, make sure we apply its props (all of them, not just time).
-	if err := fsOp.PlaceFile(afs, bucket.Root().Metadata, nil, false); err != nil {
-		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
-	}
 
 	// Hash the thing!
 	hash := fshash.HashBucket(bucket, sha512.New384)
