@@ -177,7 +177,7 @@ func unpackTar(
 			conjuredFmeta.Name = parent
 			filters.Apply(filt, &conjuredFmeta)
 			dirs[conjuredFmeta.Name] = struct{}{}
-			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
+			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(conjuredFmeta, nil)
@@ -187,7 +187,7 @@ func unpackTar(
 		switch fmeta.Type {
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
-			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, reader, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
@@ -195,7 +195,7 @@ func unpackTar(
 			dirs[fmeta.Name] = struct{}{}
 			fallthrough
 		default:
-			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, nil, filt.SkipChown); err != nil {
 				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			bucket.AddRecord(fmeta, nil)
