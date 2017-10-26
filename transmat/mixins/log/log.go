@@ -69,3 +69,20 @@ func WareNotFound(mon rio.Monitor, err error, wh api.WarehouseAddr, ware api.War
 		},
 	}
 }
+
+func MirrorNoop(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
+	if mon.Chan == nil {
+		return
+	}
+	mon.Chan <- rio.Event{
+		Log: &rio.Event_Log{
+			Time:  time.Now(),
+			Level: rio.LogInfo,
+			Msg:   fmt.Sprintf("mirror skip: warehouse at %q already has ware %q", wh, ware),
+			Detail: [][2]string{
+				{"warehouse", string(wh)},
+				{"wareID", ware.String()},
+			},
+		},
+	}
+}

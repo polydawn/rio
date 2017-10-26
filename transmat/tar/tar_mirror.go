@@ -11,6 +11,7 @@ import (
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs/nilfs"
+	"go.polydawn.net/rio/transmat/mixins/log"
 )
 
 var (
@@ -34,8 +35,9 @@ func Mirror(
 	//  committment, and we want this command to be fast when run repeatedly.
 	reader, err := PickReader(wareID, []api.WarehouseAddr{target}, false, mon)
 	if err == nil {
+		log.MirrorNoop(mon, target, wareID)
 		reader.Close()
-		return api.WareID{}, nil
+		return wareID, nil
 	}
 
 	// Connect to target warehouse, and get write controller opened.
