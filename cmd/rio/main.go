@@ -16,6 +16,9 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fs/osfs"
+	"go.polydawn.net/rio/fsOp"
 )
 
 func main() {
@@ -171,6 +174,10 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			path, err := filepath.Abs(args.Path)
 			if err != nil {
 				return Recategorize(rio.ErrUsage, err)
+			}
+			err = fsOp.RemoveDirContent(osfs.New(fs.MustAbsolutePath(path)), fs.RelPath{})
+			if err != nil {
+				return err
 			}
 			resultWareID, err := unpackFunc(
 				ctx,
