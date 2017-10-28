@@ -26,7 +26,6 @@ func PickReader(
 ) (_ io.ReadCloser, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
-	var reader io.ReadCloser
 	var anyWarehouses bool // for clarity in final error messages
 	for _, addr := range warehouses {
 		// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
@@ -66,10 +65,11 @@ func PickReader(
 		default:
 			return nil, err
 		}
-		reader, err = whCtrl.OpenReader(wareID)
+		reader, err := whCtrl.OpenReader(wareID)
 		switch Category(err) {
 		case nil:
-			// pass
+			log.WareReaderOpened(mon, addr, wareID)
+			return reader, nil // happy path return!
 		case rio.ErrWareNotFound:
 			log.WareNotFound(mon, err, addr, wareID)
 			continue // okay!  skip to the next one.
@@ -80,10 +80,7 @@ func PickReader(
 	if !anyWarehouses {
 		return nil, Errorf(rio.ErrWarehouseUnavailable, "no warehouses were available!")
 	}
-	if reader == nil {
-		return nil, Errorf(rio.ErrWareNotFound, "none of the available warehouses have ware %q!", wareID)
-	}
-	return reader, nil
+	return nil, Errorf(rio.ErrWareNotFound, "none of the available warehouses have ware %q!", wareID)
 }
 
 func OpenWriteController(
