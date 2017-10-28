@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -73,31 +74,41 @@ func TestTarFixtureUnpack(t *testing.T) {
 					wareID := "tar:5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"
 					source := "file://../../transmat/tar/fixtures/tar_withBase.tgz"
 					for _, fixture := range []unpackTest{
-						{"UnpackBasic", []string{
-							"rio",
-							"unpack",
-							tmpDir.String(),
+						{"UnpackBasic",
+							[]string{
+								"rio",
+								"unpack",
+								tmpDir.String(),
+								wareID,
+								"--uid=keep", "--gid=keep",
+								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
+								fmt.Sprintf("--source=%s", source),
+							},
+							0,
 							wareID,
-							"--uid=keep", "--gid=keep",
-							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
-							fmt.Sprintf("--source=%s", source),
-						}, 0, wareID + "\n", ""},
-						{"UnpackJsonFormat", []string{
-							"rio",
-							"unpack",
-							tmpDir.String(),
-							wareID,
-							"--uid=keep", "--gid=keep",
-							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
-							fmt.Sprintf("--source=%s", source),
-							fmt.Sprintf("--format=%s", format_Json),
-						}, 0, fmt.Sprintf(`{"log":null,"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
+							fmt.Sprintf(`log: lvl=info msg=read for ware "%s" opened from warehouse "%s"`, wareID, source),
+						},
+						{"UnpackJsonFormat",
+							[]string{
+								"rio",
+								"unpack",
+								tmpDir.String(),
+								wareID,
+								"--uid=keep", "--gid=keep",
+								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
+								fmt.Sprintf("--source=%s", source),
+								fmt.Sprintf("--format=%s", format_Json),
+							},
+							0,
+							fmt.Sprintf(`{"log":null,"prog":null,"result":{"wareID":"%s","error":null}}`, wareID),
+							"",
+						},
 					} {
 						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
 							stdin, stdout, stderr := stdBuffers()
 							exitCode := Main(ctx, fixture.Args, stdin, stdout, stderr)
-							So(string(stdout.Bytes()), ShouldEqual, fixture.ExpectedStdout)
-							So(string(stderr.Bytes()), ShouldEqual, fixture.ExpectedStderr)
+							So(lastLine(string(stdout.Bytes())), ShouldEqual, fixture.ExpectedStdout)
+							So(lastLine(string(stderr.Bytes())), ShouldEqual, fixture.ExpectedStderr)
 							So(exitCode, ShouldEqual, fixture.ExpectedExit)
 							if fixture.ExpectedExit != 0 {
 								Convey("The filesystem should not have things", func() {
@@ -140,4 +151,11 @@ func TestTarFixtureUnpack(t *testing.T) {
 			})
 		}),
 	)
+}
+
+func lastLine(str string) string {
+	str = strings.TrimRight(str, "\n")
+	ss := strings.Split(str, "\n")
+	fmt.Printf("::goddamnit \n\t%#v\n", ss)
+	return ss[len(ss)-1]
 }

@@ -70,6 +70,23 @@ func WareNotFound(mon rio.Monitor, err error, wh api.WarehouseAddr, ware api.War
 	}
 }
 
+func WareReaderOpened(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
+	if mon.Chan == nil {
+		return
+	}
+	mon.Chan <- rio.Event{
+		Log: &rio.Event_Log{
+			Time:  time.Now(),
+			Level: rio.LogInfo,
+			Msg:   fmt.Sprintf("read for ware %q opened from warehouse %q", ware, wh),
+			Detail: [][2]string{
+				{"warehouse", string(wh)},
+				{"wareID", ware.String()},
+			},
+		},
+	}
+}
+
 func MirrorNoop(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
 	if mon.Chan == nil {
 		return
