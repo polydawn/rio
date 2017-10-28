@@ -65,7 +65,8 @@ func Mirror(
 
 	// "unpack", scanningly.  This drives the copy.
 	filt, _ := apiutil.ProcessFilters(api.Filter_NoMutation, apiutil.FilterPurposeUnpack)
-	gotWare, err := unpackTar(ctx, afs, filt, reader)
+	// We can ignore the pre/post filter wareIDs, since we know its a no-mutation filter.
+	gotWare, _, err := unpackTar(ctx, afs, filt, reader)
 	if err != nil {
 		// If errors at this stage: still return a blank wareID, because
 		//  we haven't finished *uploading* it.

@@ -8,6 +8,7 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/go-timeless-api/util"
 	cacheapi "go.polydawn.net/rio/cache"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
@@ -52,7 +53,11 @@ func (c cache) Unpack(
 	//  result hash which is different than the requested ware hash.
 	//  Right now we deal with this simply/stupidly: if you used filters, no cache for you.
 	resultWareID := wareID
-	if isUnpackAltering(filt) {
+	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
+	if err != nil {
+		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
+	}
+	if filt2.IsHashAltering() {
 		resultWareID = api.WareID{"-", "-"} // This value forces cache miss.
 	}
 
