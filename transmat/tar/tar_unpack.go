@@ -229,8 +229,15 @@ func unpackTar(
 	}
 
 	// Hash the thing!
-	prefilterHash := fshash.HashBucket(prefilterBucket, sha512.New384)
-	filteredHash := fshash.HashBucket(filteredBucket, sha512.New384)
+	prefilterHash := misc.Base58Encode(fshash.HashBucket(prefilterBucket, sha512.New384))
+	filteredHash := misc.Base58Encode(fshash.HashBucket(filteredBucket, sha512.New384))
+	if !filt.IsHashAltering() {
+		// Paranoia check for new feature.
+		//  When paranoia reduced, replace with skipping the double computation.
+		if prefilterHash != filteredHash {
+			panic(fmt.Errorf("prefilterHash %q != filteredHash %q", prefilterHash, filteredHash))
+		}
+	}
 
-	return api.WareID{"tar", misc.Base58Encode(prefilterHash)}, api.WareID{"tar", misc.Base58Encode(filteredHash)}, nil
+	return api.WareID{"tar", prefilterHash}, api.WareID{"tar", filteredHash}, nil
 }
