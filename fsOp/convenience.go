@@ -147,7 +147,12 @@ func RemoveDirContent(afs fs.FS, path fs.RelPath) error {
 	// Lazy implementation... assumes osfs, and slinks back out to stdlib, because
 	// it so happens all of our real usage is fine with that.
 	children, err := afs.ReadDirNames(path)
-	if err != nil {
+	switch Category(err) {
+	case nil:
+		// pass
+	case fs.ErrNotExists:
+		return nil // great
+	default:
 		return err
 	}
 	for _, child := range children {
