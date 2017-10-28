@@ -105,7 +105,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			Default("keep").
 			EnumVar(&args.Filters.Sticky,
 				"keep", "zero")
-		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
+			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 			packFunc, err := demuxPackTool(args.PackType)
 			if err != nil {
 				return err
@@ -162,7 +164,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			Default("zero").
 			EnumVar(&args.Filters.Sticky,
 				"keep", "zero")
-		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
+			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 			wareID, err := api.ParseWareID(args.WareID)
 			if err != nil {
 				return err
@@ -173,11 +177,11 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			}
 			path, err := filepath.Abs(args.Path)
 			if err != nil {
-				return Recategorize(rio.ErrUsage, err)
+				return Recategorize(rio.ErrInoperablePath, err)
 			}
 			err = fsOp.RemoveDirContent(osfs.New(fs.MustAbsolutePath(path)), fs.RelPath{})
 			if err != nil {
-				return err
+				return Recategorize(rio.ErrInoperablePath, err)
 			}
 			resultWareID, err := unpackFunc(
 				ctx,
@@ -217,7 +221,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			Default("keep").
 			EnumVar(&args.Filters.Sticky,
 				"keep", "zero")
-		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
+			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 			scanFunc, err := demuxScanTool(string(args.PackType))
 			if err != nil {
 				return err
@@ -251,7 +257,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			StringVar(&args.TargetWarehouseAddr)
 		cmd.Flag("source", "Warehouses from which to fetch the ware").
 			StringsVar(&args.SourceWarehouseAddrs)
-		bhvs[cmd.FullCommand()] = &behavior{&args, func() error {
+		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
+			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
+
 			wareID, err := api.ParseWareID(args.WareID)
 			if err != nil {
 				return err
