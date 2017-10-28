@@ -73,25 +73,35 @@ func TestTarFixtureUnpack(t *testing.T) {
 					wareID := "tar:5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"
 					source := "file://../../transmat/tar/fixtures/tar_withBase.tgz"
 					for _, fixture := range []unpackTest{
-						{"UnpackBasic", []string{
-							"rio",
-							"unpack",
-							tmpDir.String(),
-							wareID,
-							"--uid=keep", "--gid=keep",
-							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
-							fmt.Sprintf("--source=%s", source),
-						}, 0, wareID + "\n", ""},
-						{"UnpackJsonFormat", []string{
-							"rio",
-							"unpack",
-							tmpDir.String(),
-							wareID,
-							"--uid=keep", "--gid=keep",
-							fmt.Sprintf("--placer=%s", rio.Placement_Direct),
-							fmt.Sprintf("--source=%s", source),
-							fmt.Sprintf("--format=%s", format_Json),
-						}, 0, fmt.Sprintf(`{"log":null,"prog":null,"result":{"wareID":"%s","error":null}}`, wareID), ""},
+						{"UnpackBasic",
+							[]string{
+								"rio",
+								"unpack",
+								tmpDir.String(),
+								wareID,
+								"--uid=keep", "--gid=keep",
+								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
+								fmt.Sprintf("--source=%s", source),
+							},
+							0,
+							wareID + "\n",
+							"",
+						},
+						{"UnpackJsonFormat",
+							[]string{
+								"rio",
+								"unpack",
+								tmpDir.String(),
+								wareID,
+								"--uid=keep", "--gid=keep",
+								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
+								fmt.Sprintf("--source=%s", source),
+								fmt.Sprintf("--format=%s", format_Json),
+							},
+							0,
+							fmt.Sprintf(`{"log":null,"prog":null,"result":{"wareID":"%s","error":null}}`, wareID) + "\n",
+							"",
+						},
 					} {
 						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
 							stdin, stdout, stderr := stdBuffers()

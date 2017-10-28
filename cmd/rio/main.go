@@ -389,6 +389,7 @@ func (oc *outputController) WireMonitor(ctx context.Context, m rio.Monitor) rio.
 						return
 					}
 					err := marshaller.Marshal(evt)
+					oc.stdout.Write([]byte{'\n'})
 					if err != nil {
 						panic(err)
 					}
