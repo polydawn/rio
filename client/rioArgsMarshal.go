@@ -49,7 +49,7 @@ func UnpackArgs(
 	//  This is last so we can use the "--" to terminate acceptance of flags
 	//  (which is important because, well, what if someone really does want
 	//  to unpack into path "--lol"?).
-	args = append(args, "--", path, wareID.String())
+	args = append(args, "--", wareID.String(), path)
 
 	// Done!
 	return args, nil

@@ -78,8 +78,8 @@ func TestTarFixtureUnpack(t *testing.T) {
 							[]string{
 								"rio",
 								"unpack",
-								tmpDir.String(),
 								wareID,
+								tmpDir.String(),
 								"--uid=keep", "--gid=keep",
 								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 								fmt.Sprintf("--source=%s", source),
@@ -92,8 +92,8 @@ func TestTarFixtureUnpack(t *testing.T) {
 							[]string{
 								"rio",
 								"unpack",
-								tmpDir.String(),
 								wareID,
+								tmpDir.String(),
 								"--uid=keep", "--gid=keep",
 								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 								fmt.Sprintf("--source=%s", source),
