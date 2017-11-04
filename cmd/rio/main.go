@@ -140,12 +140,12 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			PlacementMode        string             // Placement mode enum
 			SourcesWarehouseAddr []string           // Warehouse address to fetch from
 		}{}
-		cmd.Arg("path", "Target path").
-			Required().
-			StringVar(&args.Path)
 		cmd.Arg("ware", "Ware ID").
 			Required().
 			StringVar(&args.WareID)
+		cmd.Arg("path", "Target path").
+			Required().
+			StringVar(&args.Path)
 		cmd.Flag("placer", "Placement mode to use [copy, direct, mount, none]").
 			EnumVar(&args.PlacementMode,
 				string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
