@@ -91,14 +91,17 @@ func OpenWriteController(
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// REVIEW ... Do I really have to parse this again?  is this sanely encapsulated?
+	if warehouseAddr == "" {
+		wc = warehouse.NullBlobstoreWriteController{}
+		return wc, nil
+	}
 	u, err := url.Parse(string(warehouseAddr))
 	if err != nil {
 		return nil, Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
 	}
 	switch u.Scheme {
 	case "":
-		wc = warehouse.NullBlobstoreWriteController{}
-		return wc, nil
+		return nil, Errorf(rio.ErrUsage, "urls must always have a scheme (e.g. start with 'file://', 'ca+file://', or similar)")
 	case "file", "ca+file":
 		whCtrl, err := kvfs.NewController(warehouseAddr)
 		switch Category(err) {
