@@ -38,7 +38,9 @@ func MustRelPath(p string) RelPath {
 func (p RelPath) String() string {
 	if p.path == "" {
 		return "."
-	} else if p.path[0] == '.' { // a '..' prefix
+	} else if len(p.path) == 2 && p.path[0:2] == ".." { // a '..' prefix
+		return p.path
+	} else if len(p.path) > 2 && p.path[0:3] == "../" { // a '..' prefix
 		return p.path
 	} else {
 		return "./" + p.path
