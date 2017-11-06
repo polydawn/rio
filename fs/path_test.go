@@ -36,6 +36,15 @@ func TestRelPath(t *testing.T) {
 			{"lone doubledot value",
 				MustRelPath("../"),
 				".."},
+			{"dotted value",
+				MustRelPath(".aa"),
+				"./.aa"},
+			{"dotted2 value",
+				MustRelPath("..aa"),
+				"./..aa"},
+			{"dotted3 value",
+				MustRelPath("...aa"),
+				"./...aa"},
 		} {
 			Convey(tr.title, func() {
 				v := fmt.Sprintf("%s", tr.p1)
@@ -150,6 +159,12 @@ func TestRelPathJoins(t *testing.T) {
 			{"long,up",
 				MustRelPath("r/el"), MustRelPath(".."),
 				MustRelPath("r")},
+			{"dotted,short",
+				MustRelPath(".dot"), MustRelPath("wonk"),
+				MustRelPath(".dot/wonk")},
+			{"dotted,dotted",
+				MustRelPath(".dot"), MustRelPath(".wonk"),
+				MustRelPath(".dot/.wonk")},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Join(tr.p2)
@@ -175,6 +190,9 @@ func TestRelPathSplits(t *testing.T) {
 			{"len=3 values",
 				MustRelPath("./a/bb/c"),
 				[]RelPath{RelPath{}, MustRelPath("a"), MustRelPath("a/bb"), MustRelPath("a/bb/c")}},
+			{"dotted values",
+				MustRelPath("./.a/bb/.c"),
+				[]RelPath{RelPath{}, MustRelPath(".a"), MustRelPath(".a/bb"), MustRelPath(".a/bb/.c")}},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.Split()
@@ -200,6 +218,9 @@ func TestRelPathSplitParent(t *testing.T) {
 			{"len=3 values",
 				MustRelPath("./a/bb/c"),
 				[]RelPath{RelPath{}, MustRelPath("a"), MustRelPath("a/bb")}},
+			{"dotted values",
+				MustRelPath("./.a/bb/.c"),
+				[]RelPath{RelPath{}, MustRelPath(".a"), MustRelPath(".a/bb")}},
 		} {
 			Convey(tr.title, func() {
 				v := tr.p1.SplitParent()
@@ -232,6 +253,15 @@ func TestAbsolutePath(t *testing.T) {
 			{"long value",
 				MustAbsolutePath("/a/bb/ccc"),
 				"/a/bb/ccc"},
+			{"dotted value",
+				MustAbsolutePath("/.aa"),
+				"/.aa"},
+			{"dotted2 value",
+				MustAbsolutePath("/..aa"),
+				"/..aa"},
+			{"dotted3 value",
+				MustAbsolutePath("/...aa"),
+				"/...aa"},
 		} {
 			Convey(tr.title, func() {
 				v := fmt.Sprintf("%s", tr.p1)
