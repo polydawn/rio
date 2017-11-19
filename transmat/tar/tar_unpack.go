@@ -177,7 +177,7 @@ func unpackTar(
 		for _, parent := range fmeta.Name.SplitParent() {
 			// If we already initialized this parent, superb; move along.
 			if _, exists := dirs[parent]; exists {
-				break
+				continue
 			}
 			// If we're missing a dir, conjure a node with defaulted values.
 			log.DirectoryInferred(mon, parent, fmeta.Name)
