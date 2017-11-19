@@ -81,6 +81,6 @@ func Scan(
 	// Extract.
 	//  For once we can actually discard the *prefilter* wareID, since we don't have
 	//  an expected one to assert against.
-	_, unpackedWareID, err := unpackTar(ctx, afs, filt2, reader)
+	_, unpackedWareID, err := unpackTar(ctx, afs, filt2, reader, mon)
 	return unpackedWareID, err
 }

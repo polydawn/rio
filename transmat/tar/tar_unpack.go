@@ -22,6 +22,7 @@ import (
 	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/transmat/util"
 )
 
@@ -86,7 +87,7 @@ func unpack(
 	afs := osfs.New(path2)
 
 	// Extract.
-	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt2, reader)
+	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt2, reader, mon)
 	if err != nil {
 		return unpackWareID, err
 	}
@@ -112,6 +113,7 @@ func unpackTar(
 	afs fs.FS,
 	filt apiutil.FilesetFilters,
 	reader io.Reader,
+	mon rio.Monitor,
 ) (
 	prefilterWareID api.WareID,
 	actualWareID api.WareID,
@@ -175,9 +177,10 @@ func unpackTar(
 		for _, parent := range fmeta.Name.SplitParent() {
 			// If we already initialized this parent, superb; move along.
 			if _, exists := dirs[parent]; exists {
-				break
+				continue
 			}
 			// If we're missing a dir, conjure a node with defaulted values.
+			log.DirectoryInferred(mon, parent, fmeta.Name)
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
 			prefilterBucket.AddRecord(conjuredFmeta, nil)

@@ -14,6 +14,7 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/rio/fs"
 )
 
 func CacheHasIt(mon rio.Monitor, ware api.WareID) {
@@ -99,6 +100,29 @@ func MirrorNoop(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
 			Detail: [][2]string{
 				{"warehouse", string(wh)},
 				{"wareID", ware.String()},
+			},
+		},
+	}
+}
+
+// Emit debug log entry for implicit parent dir creation.
+// This is mostly a tar thing and probably shouldn't be in the general mixins;
+// the fact that it's here is a hint that we need some serious refactor on logs.
+//
+// ALSO a FIXME: we would like to comment on the wareID here, but in calling contexts,
+// that's *not actually topically relevant*... we need logger helpers that handle this.
+func DirectoryInferred(mon rio.Monitor, inferred, path fs.RelPath) {
+	if mon.Chan == nil {
+		return
+	}
+	mon.Chan <- rio.Event{
+		Log: &rio.Event_Log{
+			Time:  time.Now(),
+			Level: rio.LogDebug,
+			Msg:   fmt.Sprintf("unpacking: inferring dir %q for parent of path %q", inferred, path),
+			Detail: [][2]string{
+				{"inferred", inferred.String()},
+				{"path", path.String()},
 			},
 		},
 	}
