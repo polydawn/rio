@@ -31,7 +31,8 @@ func NewOverlayPlacer(workDir fs.AbsolutePath) (Placer, error) {
 		}
 
 		// Determine desired type.
-		//  Jump out if it's a file!  Overlayfs doesn't handle plain files.
+		//  Jump to copy placer if it's a file!  Overlayfs doesn't handle plain files.
+		//  Jump to bind placer for any special files.
 		srcStat, err := rootFs.LStat(srcPath.CoerceRelative())
 		if err != nil {
 			return nil, Errorf(rio.ErrLocalCacheProblem, "error placing with overlay mount: %s", err)
@@ -42,8 +43,10 @@ func NewOverlayPlacer(workDir fs.AbsolutePath) (Placer, error) {
 			return CopyPlacer(srcPath, dstPath, writable)
 		case fs.Type_Dir:
 			// pass
+		case fs.Type_Symlink, fs.Type_NamedPipe, fs.Type_Socket, fs.Type_Device, fs.Type_CharDevice:
+			return BindPlacer(srcPath, dstPath, writable)
 		default:
-			return nil, Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is %s)", srcPath)
+			panic("unreachable file type enum")
 		}
 
 		// Make the destination path exist and be the right type to mount over.
