@@ -1,6 +1,8 @@
 package fshash
 
 import (
+	"fmt"
+
 	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/lib/treewalk"
@@ -36,6 +38,10 @@ type Record struct {
 */
 type ErrInvalidFilesystem struct {
 	Msg string
+}
+
+func (e ErrInvalidFilesystem) Error() string {
+	return fmt.Sprintf("invariant broken while traversing fshash bucket: %s", e.Msg)
 }
 
 // for sorting
