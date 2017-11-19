@@ -28,10 +28,14 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (Janitor, error) {
 		return nil, Errorf(rio.ErrLocalCacheProblem, "error placing with copy placer: %s", err)
 	}
 	switch srcStat.Type {
-	case fs.Type_File: // pass
-	case fs.Type_Dir: // pass
+	case fs.Type_File:
+		// pass
+	case fs.Type_Dir:
+		// pass
 	default:
-		return nil, Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is %s)", srcPath)
+		// Some of the other placers (namely, bind) can handle device files and such, but copy does not.
+		// Symlinks are on the wishlist for copyplacer support, PRs welcome.
+		return nil, Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is %s)", srcPath, srcStat.Type)
 	}
 
 	// Capture the parent dir mtime and defer its repair, because we're about to disrupt it.
@@ -45,7 +49,8 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (Janitor, error) {
 
 	// If plain file: handle that first and return early.
 	//  The non-recursive case is much easier.
-	if srcStat.Type == fs.Type_File {
+	switch srcStat.Type {
+	case fs.Type_File:
 		fmeta, body, err := fsOp.ScanFile(rootFs, srcPath.CoerceRelative())
 		if err != nil {
 			return nil, Errorf(rio.ErrLocalCacheProblem, "error placing with copy placer: %s", err)
@@ -55,6 +60,8 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (Janitor, error) {
 		return copyJanitor{
 			dstPath,
 		}, fsOp.PlaceFile(rootFs, *fmeta, body, false)
+	case fs.Type_Symlink:
+		panic("TODO copy placer support for symlinks")
 	}
 
 	// For dirs, do a treewalk and copy.  Mtime repair required following every node.

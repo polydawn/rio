@@ -25,12 +25,6 @@ func BindPlacer(srcPath, dstPath fs.AbsolutePath, writable bool) (Janitor, error
 	if err != nil {
 		return nil, Errorf(rio.ErrLocalCacheProblem, "error placing with bind mount: %s", err)
 	}
-	switch srcStat.Type {
-	case fs.Type_File: // pass
-	case fs.Type_Dir: // pass
-	default:
-		return nil, Errorf(rio.ErrAssemblyInvalid, "placer: source may only be dir or plain file (%s is %s)", srcPath)
-	}
 
 	// Make the destination path exist and be the right type to mount over.
 	if err := mkDest(dstPath, srcStat.Type); err != nil {

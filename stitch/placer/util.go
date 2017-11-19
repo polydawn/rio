@@ -37,6 +37,16 @@ func mkDest(dstPath fs.AbsolutePath, wantType fs.Type) error {
 	// We assume the parent dirs are all in place because you're almost
 	// certainly using this as part of an assembler.
 	switch wantType {
+	case fs.Type_Symlink:
+		fallthrough
+	case fs.Type_NamedPipe:
+		fallthrough
+	case fs.Type_Socket:
+		fallthrough
+	case fs.Type_Device:
+		fallthrough
+	case fs.Type_CharDevice:
+		fallthrough
 	case fs.Type_File:
 		var f *os.File
 		f, err = os.OpenFile(dstPath.String(), os.O_CREATE, 0644)
