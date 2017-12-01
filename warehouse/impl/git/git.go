@@ -94,8 +94,7 @@ type Controller struct {
 
 	  - `rio.ErrUsage` -- for unsupported addressses
 	  - `rio.ErrWarehouseUnavailable` -- if the warehouse doesn't exist
-	  - `rio.ErrWarehouseCorrupt` -- if unable to open local repository
-	  - `rio.ErrWarehouseUnwritable` -- if unable to create a cache directory
+	  - `rio.ErrLocalCacheProblem` -- if unable to create a cache directory
 */
 func NewController(workingDirectory riofs.FS, addr api.WarehouseAddr) (*Controller, error) {
 	var err error
@@ -126,9 +125,8 @@ func NewController(workingDirectory riofs.FS, addr api.WarehouseAddr) (*Controll
 				"cause":     err.Error(),
 				"warehouse": sanitizedAddr,
 			})
-			// return nil, Errorf(rio.ErrWarehouseUnavailable, "warehouse does not exist (%s)", err)
 		}
-		return nil, Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable (%s)", err)
+		return nil, Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable: %s", err)
 	}
 	err = whCtrl.setCacheStorage()
 	return whCtrl, err
@@ -216,7 +214,7 @@ func (c *Controller) setCacheStorage() error {
 	srcd_fs := srcd_osfs.New(path.String())
 	c.store, err = filesystem.NewStorage(srcd_fs)
 	if err != nil {
-		return Errorf(rio.ErrWarehouseUnwritable, "Could not create repository cache: %s", err)
+		return Errorf(rio.ErrLocalCacheProblem, "Could not create repository cache: %s", err)
 	}
 	return nil
 }
@@ -229,7 +227,7 @@ func (c *Controller) Clone(ctx context.Context) error {
 
 func (c *Controller) Update(ctx context.Context) error {
 	if c.repo == nil {
-		return Errorf(rio.ErrUsage, "cannot update repository before opening")
+		panic("cannot update repository before opening")
 	}
 	if c.allowFetch && !c.newClone {
 		return c.repo.FetchContext(ctx, &srcd_git.FetchOptions{
@@ -272,7 +270,7 @@ func (c *Controller) open(ctx context.Context, store storage.Storer, allowClone 
 		c.newClone = true
 		return repo, nil
 	} else if err != nil {
-		return nil, Errorf(rio.ErrWareCorrupt, "unable to open cached repository: %s", err)
+		return nil, Errorf(rio.ErrLocalCacheProblem, "unable to open cache repository: %s", err)
 	}
 	return repo, nil
 }

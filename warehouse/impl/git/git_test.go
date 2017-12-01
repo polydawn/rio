@@ -811,21 +811,6 @@ func TestClone(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
 		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
-		t.Run("update before open", func(t *testing.T) {
-			controller := mustNewController(t, nil, wareAddr)
-			if controller.repo != nil {
-				t.Error("expected nil repository")
-			}
-			ctx := context.Background()
-			err := controller.Update(ctx)
-			errc := err.(errcat.Error)
-			if errc.Category() != rio.ErrUsage {
-				t.Errorf("expected error category %s but got %s", rio.ErrCancelled, errc.Category())
-			}
-			if controller.repo != nil {
-				t.Errorf("expected nil repository")
-			}
-		})
 		testItems := []struct {
 			fetchAllowed bool // updates can be disabled for some conditions
 			isNewClone   bool // a fresh clone is fully up-to-date
@@ -940,10 +925,10 @@ func TestOpen(t *testing.T) {
 				t.Errorf("expected an error but got nil")
 			}
 			errc := err.(errcat.Error)
-			if errc.Category() != rio.ErrWareCorrupt {
-				t.Errorf("expected error category %s but got %s", rio.ErrWareCorrupt, errc.Category())
+			if errc.Category() != rio.ErrLocalCacheProblem {
+				t.Errorf("expected error category %s but got %s", rio.ErrLocalCacheProblem, errc.Category())
 			}
-			if errc.Message() != "unable to open cached repository: repository not exists" {
+			if errc.Message() != "unable to open cache repository: repository not exists" {
 				t.Errorf("unexpected error message: %s", errc.Message())
 			}
 			if repo != nil {
