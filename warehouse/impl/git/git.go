@@ -484,6 +484,14 @@ func (c *Controller) NewReader(commitHash string) (*Reader, error) {
 	return &Reader{tree.Files(), nil}, nil
 }
 
+func (c *Controller) NewTreeWalker(commitHash string) (*object.TreeWalker, error) {
+	tree, err := c.GetTree(commitHash)
+	if err != nil {
+		return nil, err
+	}
+	return object.NewTreeWalker(tree, true, nil), nil
+}
+
 /*
 	Reader is a utility for extracting files from the repository.
 	It is loosely based on the `archive/tar` package.
