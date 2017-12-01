@@ -15,6 +15,10 @@ import (
 )
 
 // Pick a warehouse.
+//
+// This function is not cheap; it actually does a ton of work,
+// including fetching full content and leaving a lot of it on disk.
+// We're not thrilled with this, but it's the way git works.
 func pick(
 	ctx context.Context,
 	wareID api.WareID,
