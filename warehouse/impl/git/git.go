@@ -62,6 +62,12 @@ const (
 	protocolFile  = "file"
 )
 
+/*
+	Combo of remote repo interactions and a local (possibly on-disk) cache;
+	these responsibilities are combined because in the case of "remote" repos
+	that are actually also local, we'll use their object stores directly
+	rather than replicating the entire object store again to our cache areas.
+*/
 type Controller struct {
 	// user's address retained for messages (minus leading/trailing whitespace)
 	addr string
