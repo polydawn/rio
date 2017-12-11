@@ -20,6 +20,7 @@ import (
 	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
+	gitWarehouse "go.polydawn.net/rio/warehouse/impl/git"
 )
 
 var (
@@ -86,20 +87,42 @@ func unpack(
 	if err != nil {
 		return api.WareID{}, err
 	}
+
+	// Open a tree to walk in the main repo.
+	//  We'll do submodule checkouts somewhere deep in the middle of this.
 	tr, err := whCtrl.GetTree(wareID.Hash)
 	if err != nil {
 		panic(err)
 	}
-	tw := object.NewTreeWalker(tr, true, nil)
 
 	// Construct filesystem wrapper to use for all our ops.
 	afs := osfs.New(path2)
 
+	// Walk.
+	if err := unpackOneRepo(ctx, tr, afs, true, filt2, nil, mon); err != nil {
+		return api.WareID{}, err
+	}
+
+	// That's it.  Checkout should have already checked the hash, so we just return it.
+	return wareID, nil
+}
+
+func unpackOneRepo(
+	ctx context.Context,
+	tr *object.Tree,
+	afs fs.FS,
+	isRoot bool, // if true, will recurse for submodules (with this set to false).
+	filt apiutil.FilesetFilters,
+	submoduleCtrls map[string]*gitWarehouse.Controller,
+	mon rio.Monitor,
+) (err error) {
+	tw := object.NewTreeWalker(tr, true, nil)
+
 	// Make the root dir.  Git doesn't have metadata for the tree root.
 	conjuredFmeta := fshash.DefaultDirMetadata()
-	filters.Apply(filt2, &conjuredFmeta)
-	if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt2.SkipChown); err != nil {
-		return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+	filters.Apply(filt, &conjuredFmeta)
+	if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
+		return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 
 	// Extract.
@@ -115,10 +138,10 @@ func unpack(
 			break // sucess!  end of archive.
 		}
 		if err != nil {
-			return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+			return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 		}
 		if ctx.Err() != nil {
-			return api.WareID{}, Errorf(rio.ErrCancelled, "cancelled")
+			return Errorf(rio.ErrCancelled, "cancelled")
 		}
 		//fmt.Fprintf(os.Stderr, "walking git tree %s -- %#v\n", name, te)
 
@@ -141,15 +164,15 @@ func unpack(
 			// Hang on, extracting a symlink is actually rough.
 			tf, err := tr.TreeEntryFile(&te)
 			if err != nil {
-				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
 			reader, err := tf.Blob.Reader()
 			if err != nil {
-				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
 			blob, err := ioutil.ReadAll(reader)
 			if err != nil {
-				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
 			fmeta.Linkname = string(blob)
 		case filemode.Submodule:
@@ -165,26 +188,26 @@ func unpack(
 		fmeta.Mtime = apiutil.DefaultMtime // git doesn't have time info
 
 		// Apply filters.
-		filters.Apply(filt2, &fmeta)
+		filters.Apply(filt, &fmeta)
 
 		// Place the file.
 		switch fmeta.Type {
 		case fs.Type_File:
 			tf, err := tr.TreeEntryFile(&te)
 			if err != nil {
-				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
 			reader, err := tf.Blob.Reader()
 			if err != nil {
-				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
-			if err := fsOp.PlaceFile(afs, fmeta, reader, filt2.SkipChown); err != nil {
-				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			if err := fsOp.PlaceFile(afs, fmeta, reader, filt.SkipChown); err != nil {
+				return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			reader.Close()
 		default:
-			if err := fsOp.PlaceFile(afs, fmeta, nil, filt2.SkipChown); err != nil {
-				return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			if err := fsOp.PlaceFile(afs, fmeta, nil, filt.SkipChown); err != nil {
+				return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 		}
 	}
@@ -193,10 +216,9 @@ func unpack(
 	//  Files and dirs placed inside dirs cause the parent's mtime to update, so we have to re-pave them.
 	for i := len(dirs) - 1; i >= 0; i-- {
 		if err := afs.SetTimesNano(dirs[i], fs.DefaultAtime, fs.DefaultAtime); err != nil {
-			return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 		}
 	}
 
-	// That's it.  Checkout should have already checked the hash, so we just return it.
-	return wareID, nil
+	return nil
 }
