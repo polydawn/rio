@@ -411,11 +411,36 @@ func SlugifyRemote(remoteURL string) string {
 	return url.QueryEscape(remoteURL)
 }
 
+type Submodule struct {
+	// Name module name
+	Name string
+	// Path defines the path, relative to the top-level directory of the Git
+	// working tree.
+	Path string
+	// URL defines a URL from which the submodule repository can be cloned.
+	URL string
+	// Branch is a remote branch name for tracking updates in the upstream
+	// submodule. Optional value.
+	Branch string
+	// Ye olde hash!
+	Hash string
+}
+
 /*
-	Returns the submodule map for a given commit hash string
+	Returns the submodule map for a given commit hash.
+
+	Keys in the map are submodules "names" as given in the committed
+	'.gitmodules' file; values contain the repeated name, the path,
+	the url from the '.gitmodules' file, and the hash as a string.
+
+	If a path specified in '.gitmodules' does not have a gitlink (i.e., no
+	real hash is there, or, some other kind of object is in the repo at that
+	path), we'll return an error.
+	It's also quite possible that there will be *more* gitlinks in the tree;
+	we won't notice this here, because this function does not do a full treewalk.
 */
-func (c *Controller) Submodules(commitHash string) (map[*config.Submodule]*object.TreeEntry, error) {
-	result := map[*config.Submodule]*object.TreeEntry{}
+func (c *Controller) Submodules(commitHash string) (map[string]Submodule, error) {
+	result := map[string]Submodule{}
 
 	commit, err := c.GetCommit(commitHash)
 	if err != nil {
@@ -440,34 +465,41 @@ func (c *Controller) Submodules(commitHash string) (map[*config.Submodule]*objec
 	if err != nil {
 		return result, Errorf(rio.ErrWareCorrupt, "found but could not parse %s", gitmodulesFile)
 	}
+	if cfgModules == nil {
+		return result, nil
+	}
 
 	/*
 		Due diligence for tracking submodules.
 		We expect the git submodule file to correspond to valid submodules entries in the commit tree.
 		We are going to return this mapping of file entries to tree entries.
 	*/
-	if cfgModules != nil {
-		tree, err := commit.Tree()
-		if err != nil {
-			return result, Errorf(rio.ErrWareCorrupt, "commit missing tree")
+	tree, err := commit.Tree()
+	if err != nil {
+		return result, Errorf(rio.ErrWareCorrupt, "commit missing tree")
+	}
+	for name, submodule := range cfgModules.Submodules {
+		if submodule == nil {
+			// Should protect against incomplete entries
+			return result, Errorf(rio.ErrWareCorrupt, "nil submodule")
 		}
 
-		for _, submodule := range cfgModules.Submodules {
-			if submodule == nil {
-				// Should protect against incomplete entries
-				return result, Errorf(rio.ErrWareCorrupt, "nil submodule")
-			}
+		entry, err := tree.FindEntry(submodule.Path)
+		if err != nil {
+			return result, Errorf(rio.ErrWareCorrupt, "submodule entry missing matching tree entry")
+		}
 
-			entry, err := tree.FindEntry(submodule.Path)
-			if err != nil {
-				return result, Errorf(rio.ErrWareCorrupt, "submodule entry missing matching tree entry")
-			}
+		if entry.Mode != filemode.Submodule {
+			return result, Errorf(rio.ErrWareCorrupt, "gitmodule entry is not a submodule")
+		}
 
-			if entry.Mode != filemode.Submodule {
-				return result, Errorf(rio.ErrWareCorrupt, "gitmodule entry is not a submodule")
-			}
-
-			result[submodule] = entry
+		// Mostly a translation struct, but adds the hash.
+		result[name] = Submodule{
+			Name:   submodule.Name,
+			Path:   submodule.Path,
+			URL:    submodule.URL,
+			Branch: submodule.Branch,
+			Hash:   entry.Hash.String(),
 		}
 	}
 	return result, nil

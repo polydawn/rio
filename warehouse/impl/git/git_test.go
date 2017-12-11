@@ -20,9 +20,7 @@ import (
 	riofs "go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/testutil"
 
-	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
@@ -1029,16 +1027,13 @@ func TestSubmodules(t *testing.T) {
 			t.Fatalf("expected %d submodules but got %d", expectedSubmodulesLength, len(result))
 		}
 		submoduleAbsPath := riofs.MustAbsolutePath(fixWd)
-		for key, value := range result {
-			assertSubmoduleEqual(t, key, &config.Submodule{
-				Path: "repo-b",
-				Name: "repo-b",
-				URL:  submoduleAbsPath.Join(RelPathRepoB).String(),
-			})
-			assertTreeEntryEqual(t, value, &object.TreeEntry{
-				Mode: filemode.Submodule,
-				Hash: plumbing.NewHash(hashB),
-				Name: "repo-b",
+		for _, value := range result {
+			assertSubmoduleEqual(t, value, Submodule{
+				Path:   "repo-b",
+				Name:   "repo-b",
+				URL:    submoduleAbsPath.Join(RelPathRepoB).String(),
+				Branch: "",
+				Hash:   hashB,
 			})
 		}
 	})
@@ -1125,19 +1120,22 @@ func assertTreeEntryEqual(t *testing.T, a, b *object.TreeEntry) {
 	}
 }
 
-func assertSubmoduleEqual(t *testing.T, a, b *config.Submodule) {
+func assertSubmoduleEqual(t *testing.T, a, b Submodule) {
 	t.Helper()
-	if a.Path != b.Path {
-		t.Errorf("Path %s not equal to Path %s", a.Path, b.Path)
-	}
 	if a.Name != b.Name {
 		t.Errorf("Name %s not equal to Name %s", a.Name, b.Name)
+	}
+	if a.Path != b.Path {
+		t.Errorf("Path %s not equal to Path %s", a.Path, b.Path)
 	}
 	if a.URL != b.URL {
 		t.Errorf("URL %s not equal to URL %s", a.URL, b.URL)
 	}
 	if a.Branch != b.Branch {
 		t.Errorf("Branch %s not equal to Branch %s", a.Branch, b.Branch)
+	}
+	if a.Hash != b.Hash {
+		t.Errorf("Hash %s not equal to Hash %s", a.Hash, b.Hash)
 	}
 }
 
