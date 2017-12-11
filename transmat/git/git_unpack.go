@@ -125,7 +125,7 @@ func unpack(
 		switch te.Mode {
 		case filemode.Dir:
 			fmeta.Type = fs.Type_Dir
-			fmeta.Perms = 0644
+			fmeta.Perms = 0755
 		case filemode.Regular:
 			fmeta.Type = fs.Type_File
 			fmeta.Perms = 0644
