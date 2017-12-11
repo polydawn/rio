@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	. "github.com/polydawn/go-errcat"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
@@ -134,7 +135,20 @@ func unpack(
 		case filemode.Symlink:
 			fmeta.Type = fs.Type_Symlink
 			fmeta.Perms = 0644
-			fmeta.Linkname = "TODO" // TODO ?!?!
+			// Hang on, extracting a symlink is actually rough.
+			tf, err := tr.TreeEntryFile(&te)
+			if err != nil {
+				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+			}
+			reader, err := tf.Blob.Reader()
+			if err != nil {
+				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+			}
+			blob, err := ioutil.ReadAll(reader)
+			if err != nil {
+				return api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
+			}
+			fmeta.Linkname = string(blob)
 		case filemode.Submodule:
 			// TODO
 			continue
