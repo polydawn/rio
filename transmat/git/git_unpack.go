@@ -104,6 +104,8 @@ func unpack(
 
 	// Extract.
 	// Iterate over each entry, mutating filesystem as we go.
+	dirs := make([]fs.RelPath, 1, 200) // Keep for dir time repair at end.
+	dirs[0] = fs.RelPath{}
 	for {
 		fmeta := fs.Metadata{}
 		name, te, err := tw.Next()
@@ -126,6 +128,7 @@ func unpack(
 		case filemode.Dir:
 			fmeta.Type = fs.Type_Dir
 			fmeta.Perms = 0755
+			dirs = append(dirs, fmeta.Name)
 		case filemode.Regular:
 			fmeta.Type = fs.Type_File
 			fmeta.Perms = 0644
@@ -188,7 +191,11 @@ func unpack(
 
 	// Cleanup dir times with a post-order traversal over the bucket.
 	//  Files and dirs placed inside dirs cause the parent's mtime to update, so we have to re-pave them.
-	// TODO we don't have the state kept for this
+	for i := len(dirs) - 1; i >= 0; i-- {
+		if err := afs.SetTimesNano(dirs[i], fs.DefaultAtime, fs.DefaultAtime); err != nil {
+			return api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+		}
+	}
 
 	// That's it.  Checkout should have already checked the hash, so we just return it.
 	return wareID, nil
