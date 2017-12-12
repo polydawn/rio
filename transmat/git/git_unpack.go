@@ -88,6 +88,27 @@ func unpack(
 		return api.WareID{}, err
 	}
 
+	// Get submodule config.  Fetch them all.
+	submodules, err := whCtrl.Submodules(wareID.Hash)
+	if err != nil {
+		return api.WareID{}, err
+	}
+	// We'll organize them by path now; only thing that's useful.
+	submoduleCtrls := map[string]*gitWarehouse.Controller{}
+	for _, submCfg := range submodules {
+		// TODO it would be dreamy to parallelize this.
+		whCtrl, err := pick(ctx,
+			api.WareID{"git", submCfg.Hash},
+			[]api.WarehouseAddr{api.WarehouseAddr(submCfg.URL)},
+			osfs.New(config.GetCacheBasePath().Join(fs.MustRelPath("git/objs"))),
+			mon,
+		)
+		if err != nil {
+			return api.WareID{}, err
+		}
+		submoduleCtrls[submCfg.Path] = whCtrl
+	}
+
 	// Open a tree to walk in the main repo.
 	//  We'll do submodule checkouts somewhere deep in the middle of this.
 	tr, err := whCtrl.GetTree(wareID.Hash)
@@ -99,7 +120,7 @@ func unpack(
 	afs := osfs.New(path2)
 
 	// Walk.
-	if err := unpackOneRepo(ctx, tr, afs, true, filt2, nil, mon); err != nil {
+	if err := unpackOneRepo(ctx, tr, afs, true, filt2, submoduleCtrls, mon); err != nil {
 		return api.WareID{}, err
 	}
 
@@ -176,7 +197,19 @@ func unpackOneRepo(
 			}
 			fmeta.Linkname = string(blob)
 		case filemode.Submodule:
-			// TODO
+			// Ooowee!  Recurse time!
+			submCtrl, ok := submoduleCtrls[name]
+			if !ok {
+				return Errorf(rio.ErrWareCorrupt, "gitlink found at path $q but no matching config in .gitmodules", name)
+			}
+			submTr, err := submCtrl.GetTree(te.Hash.String())
+			if err != nil {
+				panic(err)
+			}
+			submFs := osfs.New(afs.BasePath().Join(fmeta.Name))
+			if err := unpackOneRepo(ctx, submTr, submFs, false, filt, nil, mon); err != nil {
+				return err
+			}
 			continue
 		case filemode.Empty:
 			fallthrough
