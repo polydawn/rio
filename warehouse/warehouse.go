@@ -1,6 +1,7 @@
 package warehouse
 
 import (
+	"context"
 	"io"
 
 	"go.polydawn.net/go-timeless-api"
@@ -55,3 +56,17 @@ type NullBlobstoreWriteController struct{}
 func (NullBlobstoreWriteController) Write(bs []byte) (int, error)   { return len(bs), nil }
 func (NullBlobstoreWriteController) Close() error                   { return nil }
 func (NullBlobstoreWriteController) Commit(wareID api.WareID) error { return nil }
+
+/*
+	A repository-style warehouse generally supports multiple versions of files
+	stored in a custom format. We generally won't _write_ to these repositories
+	because they tend to not support idempotent commits.
+
+	Repository backing implementations typically have a cache of the current
+	contents and a method of fetching updates. They will have a method to
+	retrieve contents via hash.
+	Examples include 'git'
+*/
+type RepositoryController interface {
+	Clone(context.Context) error
+}

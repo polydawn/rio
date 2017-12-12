@@ -4,6 +4,7 @@ import (
 	. "github.com/polydawn/go-errcat"
 
 	"go.polydawn.net/go-timeless-api/rio"
+	"go.polydawn.net/rio/transmat/git"
 	"go.polydawn.net/rio/transmat/tar"
 )
 
@@ -20,6 +21,8 @@ func demuxUnpackTool(packType string) (rio.UnpackFunc, error) {
 	switch packType {
 	case "tar":
 		return tartrans.Unpack, nil
+	case "git":
+		return git.Unpack, nil
 	default:
 		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
 	}
