@@ -34,7 +34,7 @@ import (
 	riofs "go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/warehouse"
 
-	srcd_osfs "gopkg.in/src-d/go-billy.v3/osfs"
+	srcd_osfs "gopkg.in/src-d/go-billy.v4/osfs"
 	srcd_git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -113,7 +113,7 @@ func NewController(workingDirectory riofs.FS, addr api.WarehouseAddr) (*Controll
 		addr:             string(addr),
 		sanitizedAddr:    sanitizedAddr,
 		workingDirectory: workingDirectory,
-		protocol:         endpoint.Protocol(),
+		protocol:         endpoint.Protocol,
 	}
 
 	// ping the remote and see if it responds
@@ -325,7 +325,7 @@ func SanitizeRemote(remote string) (string, error) {
 		return "", Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
 	}
 
-	protocol := endpoint.Protocol()
+	protocol := endpoint.Protocol
 	if protocol == protocolFile {
 		// absolutize paths
 		if HasFoldedPrefix(remote, "file://") {
@@ -343,7 +343,7 @@ func SanitizeRemote(remote string) (string, error) {
 		}
 	} else if protocol == protocolHTTP {
 		// github will not send back a response over http so we force https in this case
-		if HasFoldedSuffix(endpoint.Host(), githubHostname) {
+		if HasFoldedSuffix(endpoint.Host, githubHostname) {
 			parsedUrl, err := url.Parse(remote)
 			if err != nil {
 				return "", Errorf(rio.ErrUsage, "failed to parse URI: %s", err)
@@ -354,7 +354,7 @@ func SanitizeRemote(remote string) (string, error) {
 	}
 	// using the git library may help mitigate things like ssh commands being executed
 	// but I haven't tested it and it's easy enough to say no
-	pathString := endpoint.Host() + endpoint.Path()
+	pathString := endpoint.Host + endpoint.Path
 	if pathString == "" {
 		return "", Errorf(rio.ErrUsage, "warehouse has empty path: %s", endpoint.String())
 	} else if pathString[0] == '-' {
