@@ -168,6 +168,8 @@ func unpackOneRepo(
 
 		// Reshuffle metainfo to our default format.
 		fmeta.Name = fs.MustRelPath(name)
+		fmeta.Uid = 1000
+		fmeta.Gid = 1000
 		switch te.Mode {
 		case filemode.Dir:
 			fmeta.Type = fs.Type_Dir
