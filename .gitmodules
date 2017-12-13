@@ -18,7 +18,7 @@
 	url = https://github.com/syndtr/gocapability
 [submodule ".gopath/src/gopkg.in/alecthomas/kingpin.v2"]
 	path = .gopath/src/gopkg.in/alecthomas/kingpin.v2
-	url = https://gopkg.in/alecthomas/kingpin.v2
+	url = https://github.com/alecthomas/kingpin
 [submodule ".gopath/src/github.com/alecthomas/template"]
 	path = .gopath/src/github.com/alecthomas/template
 	url = https://github.com/alecthomas/template
@@ -33,13 +33,13 @@
 	url = https://github.com/polydawn/go-timeless-api
 [submodule ".gopath/src/gopkg.in/warnings.v0"]
 	path = .gopath/src/gopkg.in/warnings.v0
-	url = https://gopkg.in/warnings.v0
+	url = https://github.com/go-warnings/warnings
 [submodule ".gopath/src/gopkg.in/src-d/go-billy.v3"]
 	path = .gopath/src/gopkg.in/src-d/go-billy.v3
-	url = https://gopkg.in/src-d/go-billy.v3
+	url = https://github.com/src-d/go-billy
 [submodule ".gopath/src/gopkg.in/src-d/go-git.v4"]
 	path = .gopath/src/gopkg.in/src-d/go-git.v4
-	url = https://gopkg.in/src-d/go-git.v4
+	url = https://github.com/src-d/go-git
 [submodule ".gopath/src/golang.org/x/crypto"]
 	path = .gopath/src/golang.org/x/crypto
 	url = https://go.googlesource.com/crypto
