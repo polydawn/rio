@@ -200,7 +200,7 @@ func unpackOneRepo(
 			// Ooowee!  Recurse time!
 			submCtrl, ok := submoduleCtrls[name]
 			if !ok {
-				return Errorf(rio.ErrWareCorrupt, "gitlink found at path $q but no matching config in .gitmodules", name)
+				return Errorf(rio.ErrWareCorrupt, "gitlink found at path %q but no matching config in .gitmodules", name)
 			}
 			submTr, err := submCtrl.GetTree(te.Hash.String())
 			if err != nil {
