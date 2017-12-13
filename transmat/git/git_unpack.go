@@ -168,6 +168,8 @@ func unpackOneRepo(
 
 		// Reshuffle metainfo to our default format.
 		fmeta.Name = fs.MustRelPath(name)
+		fmeta.Uid = 1000
+		fmeta.Gid = 1000
 		switch te.Mode {
 		case filemode.Dir:
 			fmeta.Type = fs.Type_Dir
@@ -198,9 +200,17 @@ func unpackOneRepo(
 			fmeta.Linkname = string(blob)
 		case filemode.Submodule:
 			// Ooowee!  Recurse time!
+			if !isRoot {
+				// Except of course if we're already a submodule, in which case no.
+				// Like git, we will make the empty dir, though.
+				fmeta.Type = fs.Type_Dir
+				fmeta.Perms = 0755
+				dirs = append(dirs, fmeta.Name)
+				break
+			}
 			submCtrl, ok := submoduleCtrls[name]
 			if !ok {
-				return Errorf(rio.ErrWareCorrupt, "gitlink found at path $q but no matching config in .gitmodules", name)
+				return Errorf(rio.ErrWareCorrupt, "gitlink found at path %q but no matching config in .gitmodules", name)
 			}
 			submTr, err := submCtrl.GetTree(te.Hash.String())
 			if err != nil {
