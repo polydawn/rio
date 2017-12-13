@@ -386,8 +386,8 @@ func TestSanitizeRemote(t *testing.T) {
 				if err != nil {
 					t.Errorf("could not create endpoint from remote: \"%s\"", remote)
 				}
-				if ep.Protocol() != item.protocol {
-					t.Errorf("expected \"%s\" but got \"%s\"", item.protocol, ep.Protocol())
+				if ep.Protocol != item.protocol {
+					t.Errorf("expected \"%s\" but got \"%s\"", item.protocol, ep.Protocol)
 				}
 				if ep.String() != item.out {
 					t.Errorf("expected \"%s\" but got \"%s\"", item.out, ep.String())
