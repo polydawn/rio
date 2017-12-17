@@ -88,6 +88,26 @@ func WareReaderOpened(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
 	}
 }
 
+// This logs a cache hit where the "object store" (as git calls it, for example)
+// has the object we need -- as opposed to our fileset cache, which presumably
+// has already missed, or we would've returned that already.
+// It means we *aren't* doing network ops, but an unpacking still needs to run.
+func WareObjCacheHit(mon rio.Monitor, ware api.WareID) {
+	if mon.Chan == nil {
+		return
+	}
+	mon.Chan <- rio.Event{
+		Log: &rio.Event_Log{
+			Time:  time.Now(),
+			Level: rio.LogInfo,
+			Msg:   fmt.Sprintf("raw objects for ware %q found cached, unpacking them to fileset", ware),
+			Detail: [][2]string{
+				{"wareID", ware.String()},
+			},
+		},
+	}
+}
+
 func MirrorNoop(mon rio.Monitor, wh api.WarehouseAddr, ware api.WareID) {
 	if mon.Chan == nil {
 		return
