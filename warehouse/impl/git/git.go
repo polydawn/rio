@@ -81,9 +81,6 @@ type Controller struct {
 	workingDirectory    riofs.FS
 	transportAuthMethod transport.AuthMethod
 	store               storage.Storer // git object storage
-	allowClone          bool           // clones are disabled for local files
-	allowFetch          bool           // fetch is disabled a clone is fresh (vs using a cached clone)
-	newClone            bool           // whether this controller created the clone in use
 	repo                *srcd_git.Repository
 }
 
@@ -98,38 +95,52 @@ type Controller struct {
 */
 func NewController(workingDirectory riofs.FS, addr api.WarehouseAddr) (*Controller, error) {
 	var err error
+
 	// Verify that the addr is sensible up front.
 	sanitizedAddr, err := SanitizeRemote(string(addr))
 	if err != nil {
 		return nil, err
 	}
+
 	endpoint, err := transport.NewEndpoint(sanitizedAddr)
 	if err != nil {
 		return nil, Errorf(rio.ErrUsage, "failed to create endpoint after sanitization")
 	}
+
 	// Stamp out a warehouse handle.
-	//  More values will be accumulated in shortly.
-	whCtrl := &Controller{
+	c := &Controller{
 		addr:             string(addr),
 		sanitizedAddr:    sanitizedAddr,
 		workingDirectory: workingDirectory,
 		protocol:         endpoint.Protocol,
 	}
 
-	// ping the remote and see if it responds
-	_, err = whCtrl.lsRemote()
+	// Find cached repository (or uses existing repo for file protocols)
+	if err := c.configureCacheStorage(); err != nil {
+		return nil, err
+	}
+
+	// open the repo if applicable
+	if err := c.open(); err != nil {
+		return nil, err
+	}
+	return c, err
+}
+
+// Ping the remote and see if it responds
+func (c *Controller) Ping() error {
+	_, err := c.lsRemote()
 	if err != nil {
-		if whCtrl.protocol == protocolFile {
+		if c.protocol == protocolFile {
 			// Unlike remote repositories, an error from a local repository pretty much means it doesn't exist
-			return nil, ErrorDetailed(rio.ErrWarehouseUnavailable, "warehouse does not exist", map[string]string{
+			return ErrorDetailed(rio.ErrWarehouseUnavailable, "warehouse does not exist", map[string]string{
 				"cause":     err.Error(),
-				"warehouse": sanitizedAddr,
+				"warehouse": c.sanitizedAddr,
 			})
 		}
-		return nil, Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable: %s", err)
+		return Errorf(rio.ErrWarehouseUnavailable, "warehouse unavailable: %s", err)
 	}
-	err = whCtrl.setCacheStorage()
-	return whCtrl, err
+	return nil
 }
 
 /*
@@ -185,7 +196,7 @@ func (c *Controller) GetTree(hash string) (*object.Tree, error) {
 	If a working directory is set, then we can clone repositories there and use them again later.
 	If a working directory is _not_ set, then we must clone into memory.
 */
-func (c *Controller) setCacheStorage() error {
+func (c *Controller) configureCacheStorage() error {
 	var err error
 	if c.store != nil {
 		return nil
@@ -201,13 +212,11 @@ func (c *Controller) setCacheStorage() error {
 		}
 		return nil
 	}
-	c.allowClone = true // non-local repositories are allowed to clone
 	if c.workingDirectory == nil {
 		// if no working directory is given then use memory to clone
 		c.store = memory.NewStorage()
 		return nil
 	}
-	c.allowFetch = true // cached repositories may be updated
 	workingDir := c.workingDirectory.BasePath()
 	remotePath := SlugifyRemote(c.sanitizedAddr)
 	path := workingDir.Join(riofs.MustRelPath(remotePath))
@@ -219,60 +228,98 @@ func (c *Controller) setCacheStorage() error {
 	return nil
 }
 
-func (c *Controller) Clone(ctx context.Context) error {
-	var err error
-	c.repo, err = c.open(ctx, c.store, c.allowClone)
-	return err
-}
-
-func (c *Controller) Update(ctx context.Context) error {
-	if c.repo == nil {
-		panic("cannot update repository before opening")
-	}
-	if c.allowFetch && !c.newClone {
-		return c.repo.FetchContext(ctx, &srcd_git.FetchOptions{
-			// Auth credentials, if required, to use with the remote repository.
-			Auth: c.transportAuthMethod,
-		})
+/*
+	Sets the controller repository on success.
+	Returns an error if a file addressed repository is not found.
+	If the repository does not use the file protocol then a non-existing repository is not an error, but will not set the controller's repository.
+	May return errors of category
+		- `rio.ErrWarehouseUnavailable` -- for file based repositories that cannot be found
+		- `rio.ErrLocalCacheProblem` -- for existing repositories that cannot be opened
+*/
+func (c *Controller) open() error {
+	repo, err := srcd_git.Open(c.store, nil)
+	if err == srcd_git.ErrRepositoryNotExists {
+		if c.protocol == protocolFile {
+			return ErrorDetailed(rio.ErrWarehouseUnavailable, "warehouse does not exist", map[string]string{
+				"cause":     err.Error(),
+				"warehouse": c.sanitizedAddr,
+			})
+		}
+		// not being able to open a non-file repo is fine.
+	} else if err != nil {
+		return Errorf(rio.ErrLocalCacheProblem, "unable to open repository: %s", err)
+	} else {
+		c.repo = repo
 	}
 	return nil
 }
 
 /*
-	Opens the repository or clones it if it is does not exist
-	Will not clone if allowClone is false.
-	If a clone occurs then controller.newClone will be set to true.
+	Creates a clones of the repository to the cache location
+	Sets controller repository to the cloned repo.
 
-	I'm not a huge fan of the way this function does things.
-	It's too complex and behaves sort of as a method and sort of as a function.
-	It makes some tests easier but not in any way that you can't do the same
-	from the calling function. I think it would be better to move all this to Clone
-	and delete it or make it a function entirely independent of controller.
+	May return errors of category
+		- `rio.ErrCancelled` -- for canceled contexts
+		- `rio.ErrWareCorrupt` -- if unable to clone the repository
 */
-func (c *Controller) open(ctx context.Context, store storage.Storer, allowClone bool) (*srcd_git.Repository, error) {
-	repo, err := srcd_git.Open(store, nil)
-	if err == srcd_git.ErrRepositoryNotExists && allowClone {
-		// checkout dir is nil for a bare clone
-		//FIXME: this should use the endpoint that we created. It has _special_ behaviour
-		repo, err = srcd_git.CloneContext(ctx, store, nil, &srcd_git.CloneOptions{
-			// The (possibly remote) repository URL to clone from.
-			URL: c.sanitizedAddr,
-			// Auth credentials, if required, to use with the remote repository.
-			Auth: c.transportAuthMethod,
-			// we handle submodule recursion ourselves.
-			RecurseSubmodules: srcd_git.NoRecurseSubmodules,
-		})
-		if ctx.Err() != nil {
-			return nil, Errorf(rio.ErrCancelled, "cancelled: %s", err)
-		} else if err != nil {
-			return nil, Errorf(rio.ErrWareCorrupt, "unable to clone repository: %s", err)
-		}
-		c.newClone = true
-		return repo, nil
+func (c *Controller) clone(ctx context.Context) error {
+	// checkout dir is nil for a bare clone
+	repo, err := srcd_git.CloneContext(ctx, c.store, nil, &srcd_git.CloneOptions{
+		// The (possibly remote) repository URL to clone from.
+		URL: c.sanitizedAddr,
+		// Auth credentials, if required, to use with the remote repository.
+		Auth: c.transportAuthMethod,
+		// we handle submodule recursion ourselves.
+		RecurseSubmodules: srcd_git.NoRecurseSubmodules,
+	})
+	if ctx.Err() != nil {
+		return Errorf(rio.ErrCancelled, "cancelled: %s", err)
 	} else if err != nil {
-		return nil, Errorf(rio.ErrLocalCacheProblem, "unable to open cache repository: %s", err)
+		return Errorf(rio.ErrWareCorrupt, "unable to clone repository: %s", err)
 	}
-	return repo, nil
+	c.repo = repo
+	return nil
+}
+
+/*
+	Runs a git fetch on the repository.
+
+	May return errors of category
+		- `rio.ErrCancelled` -- for canceled contexts
+		- `rio.ErrWareCorrupt` -- if unable to clone or update the repository
+*/
+func (c *Controller) fetch(ctx context.Context) error {
+	err := c.repo.FetchContext(ctx, &srcd_git.FetchOptions{
+		// Auth credentials, if required, to use with the remote repository.
+		Auth: c.transportAuthMethod,
+	})
+	if ctx.Err() != nil {
+		return Errorf(rio.ErrCancelled, "cancelled: %s", err)
+	} else if err != nil {
+		return Errorf(rio.ErrWareCorrupt, "unable to update repository: %s", err)
+	}
+	return nil
+}
+
+/*
+	Clones or updates the repository as needed.
+	Ignores file protocol repositories
+
+	May return errors of category
+		- `rio.ErrCancelled` -- for canceled contexts
+		- `rio.ErrWareCorrupt` -- if unable to clone or update the repository
+*/
+func (c *Controller) Update(ctx context.Context) error {
+	var err error
+	if c.protocol == protocolFile {
+		return nil
+	}
+	if c.repo == nil {
+		err = c.clone(ctx)
+	} else {
+		err = c.fetch(ctx)
+	}
+	return err
 }
 
 /*

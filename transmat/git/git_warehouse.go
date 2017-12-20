@@ -56,16 +56,15 @@ func pick(
 		default:
 			return nil, err
 		}
+
 		// Check if the local object store has the hash already; return early if so
 		if whCtrl.Contains(wareID.Hash) {
 			log.WareObjCacheHit(mon, wareID)
 			return whCtrl, nil // happy path return!
 		}
+
 		// Fetch from the remote.
-		err = whCtrl.Clone(ctx)
-		if err == nil {
-			err = whCtrl.Update(ctx)
-		}
+		err = whCtrl.Update(ctx)
 		switch Category(err) {
 		case nil:
 			anyWarehouses = true
@@ -76,6 +75,7 @@ func pick(
 		default:
 			return nil, err
 		}
+
 		// Check again if we have the object now after fetching.
 		if whCtrl.Contains(wareID.Hash) {
 			log.WareReaderOpened(mon, addr, wareID)

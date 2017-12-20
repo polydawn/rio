@@ -68,5 +68,5 @@ func (NullBlobstoreWriteController) Commit(wareID api.WareID) error { return nil
 	Examples include 'git'
 */
 type RepositoryController interface {
-	Clone(context.Context) error
+	Update(context.Context) error
 }
