@@ -163,7 +163,7 @@ func TestHasFoldedSuffix(t *testing.T) {
 	for _, item := range testItems {
 		t.Run(fmt.Sprintf("string %s has suffix %s", item.in, item.suffix), func(t *testing.T) {
 			if result := HasFoldedSuffix(item.in, item.suffix); result != item.out {
-				t.Errorf("expected %s but got %s", item.out, result)
+				t.Errorf("expected %v but got %v", item.out, result)
 			}
 		})
 	}
@@ -192,7 +192,7 @@ func TestHasFoldedPrefix(t *testing.T) {
 	for _, item := range testItems {
 		t.Run(fmt.Sprintf("string %s has prefix %s", item.in, item.prefix), func(t *testing.T) {
 			if result := HasFoldedPrefix(item.in, item.prefix); result != item.out {
-				t.Errorf("expected %s but got %s", item.out, result)
+				t.Errorf("expected %v but got %v", item.out, result)
 			}
 		})
 	}
@@ -663,7 +663,7 @@ func TestUpdate(t *testing.T) {
 				}
 				updated := checkRef.Hash() == plumbHash4
 				if item.doesUpdate != updated {
-					t.Log("reference: %v", checkRef)
+					t.Logf("reference: %v", checkRef)
 					t.Errorf("expected hashes (%s == %s) to be %v", checkRef.Hash(), plumbHash4, item.doesUpdate)
 				}
 			})
