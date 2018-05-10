@@ -5,7 +5,7 @@ import (
 	"strings"
 	"syscall"
 
-	. "github.com/polydawn/go-errcat"
+	. "github.com/warpfork/go-errcat"
 
 	"go.polydawn.net/rio/fs"
 )

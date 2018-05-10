@@ -3,8 +3,8 @@ package tests
 import (
 	"os"
 
-	"github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/warpfork/go-errcat"
 
 	"go.polydawn.net/rio/fs"
 )

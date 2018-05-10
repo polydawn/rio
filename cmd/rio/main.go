@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	. "github.com/polydawn/go-errcat"
 	"github.com/polydawn/refmt"
 	"github.com/polydawn/refmt/json"
+	. "github.com/warpfork/go-errcat"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"go.polydawn.net/go-timeless-api"

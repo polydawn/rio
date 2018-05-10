@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	. "github.com/polydawn/go-errcat"
+	. "github.com/warpfork/go-errcat"
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	riofs "go.polydawn.net/rio/fs"

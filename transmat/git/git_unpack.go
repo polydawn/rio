@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	. "github.com/polydawn/go-errcat"
+	. "github.com/warpfork/go-errcat"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 

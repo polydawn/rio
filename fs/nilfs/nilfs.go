@@ -3,7 +3,7 @@ package nilFS
 import (
 	"time"
 
-	. "github.com/polydawn/go-errcat"
+	. "github.com/warpfork/go-errcat"
 
 	"go.polydawn.net/rio/fs"
 )

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/polydawn/go-errcat"
 	. "github.com/smartystreets/goconvey/convey"
+	. "github.com/warpfork/go-errcat"
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
