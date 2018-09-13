@@ -108,7 +108,7 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 			return err
 		}
 	case fs.Type_Socket:
-		panic("todo unhandlable type error") // REVIEW is it?  we certainly can't make a *live* socket, but we could make the dead socket file exist.
+		return fmt.Sprintf("placefile: %q: sockets are not supported", fmeta.Name)// REVIEW is it?  we certainly can't make a *live* socket, but we could make the dead socket file exist.
 	case fs.Type_Device:
 		if err := afs.MkdevBlock(fmeta.Name, fmeta.Devmajor, fmeta.Devminor, fmeta.Perms); err != nil {
 			return err
@@ -118,9 +118,9 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 			return err
 		}
 	case fs.Type_Hardlink:
-		panic("todo hardlines not handled")
+		return fmt.Sprintf("placefile: %q: hardlinks are not supported", fmeta.Name)
 	default:
-		panic(fmt.Sprintf("placefile: unhandled file mode %q", fmeta.Type))
+		panic(fmt.Sprintf("placefile: %q: unhandled file mode %q", fmeta.Name, fmeta.Type))
 	}
 
 	// Set the UID and GID for all file and dir types.

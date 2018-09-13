@@ -84,7 +84,7 @@ func (t Type) String() string {
 	case Type_CharDevice:
 		return "chardev"
 	case Type_Hardlink:
-		return "hardline"
+		return "hardlink"
 	case Type_Invalid:
 		fallthrough
 	default:
