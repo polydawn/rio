@@ -13,7 +13,6 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
@@ -34,9 +33,9 @@ func Unpack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	wareID api.WareID, // What wareID to fetch for unpacking.
 	path string, // Where to unpack the fileset (absolute path).
-	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	filt api.FilesetUnpackFilter, // Optionally: filters we should apply while unpacking.
 	placementMode rio.PlacementMode, // Optionally: a placement mode (default is "copy").
-	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
+	warehouses []api.WarehouseLocation, // Warehouses we can try to fetch from.
 	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
 	if mon.Chan != nil {
@@ -47,6 +46,9 @@ func Unpack(
 	// Sanitize arguments.
 	if wareID.Type != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, wareID.Type)
+	}
+	if !filt.IsComplete() {
+		return api.WareID{}, Errorf(rio.ErrUsage, "filters must be completely specified")
 	}
 	if placementMode == "" {
 		placementMode = rio.Placement_Copy
@@ -62,19 +64,15 @@ func unpack(
 	ctx context.Context,
 	wareID api.WareID,
 	path string,
-	filt api.FilesetFilters,
+	filt api.FilesetUnpackFilter,
 	placementMode rio.PlacementMode,
-	warehouses []api.WarehouseAddr,
+	warehouses []api.WarehouseLocation,
 	mon rio.Monitor,
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
-	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
-	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
-	}
 
 	// Pick a warehouse and get a reader.
 	reader, err := PickReader(wareID, warehouses, false, mon)
@@ -87,7 +85,7 @@ func unpack(
 	afs := osfs.New(path2)
 
 	// Extract.
-	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt2, reader, mon)
+	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt, reader, mon)
 	if err != nil {
 		return unpackWareID, err
 	}
@@ -111,7 +109,7 @@ func unpack(
 func unpackTar(
 	ctx context.Context,
 	afs fs.FS,
-	filt apiutil.FilesetFilters,
+	filt api.FilesetUnpackFilter,
 	reader io.Reader,
 	mon rio.Monitor,
 ) (
@@ -184,10 +182,10 @@ func unpackTar(
 			conjuredFmeta := fshash.DefaultDirMetadata()
 			conjuredFmeta.Name = parent
 			prefilterBucket.AddRecord(conjuredFmeta, nil)
-			filters.Apply(filt, &conjuredFmeta)
+			filters.ApplyUnpackFilter(filt, &conjuredFmeta)
 			filteredBucket.AddRecord(conjuredFmeta, nil)
 			dirs[conjuredFmeta.Name] = struct{}{}
-			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
+			if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 		}
@@ -196,13 +194,24 @@ func unpackTar(
 		//  ... uck, to one copy of the meta.  We can't add either to their buckets
 		//  until after the file is placed because we need the content hash.
 		filteredFmeta := fmeta
-		filters.Apply(filt, &filteredFmeta)
+		//  The filter may reject things by returning an error;
+		//   or, instruct us to ignore things by setting the type to invalid.
+		if err := filters.ApplyUnpackFilter(filt, &filteredFmeta); err != nil {
+			return api.WareID{}, api.WareID{}, err
+		}
+		if fmeta.Type == fs.Type_Invalid {
+			// skip placing that file and continue processing...
+			//  but *do* still record it in the prefilter bucket for hashing.
+			//  (n.b. currently only non-files are ever ejected like this.)
+			prefilterBucket.AddRecord(fmeta, nil)
+			continue
+		}
 
 		// Place the file.
 		switch fmeta.Type {
 		case fs.Type_File:
 			reader := &util.HashingReader{tr, sha512.New384()}
-			if err := fsOp.PlaceFile(afs, filteredFmeta, reader, filt.SkipChown); err != nil {
+			if err := fsOp.PlaceFile(afs, filteredFmeta, reader, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			prefilterBucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
@@ -211,7 +220,7 @@ func unpackTar(
 			dirs[fmeta.Name] = struct{}{}
 			fallthrough
 		default:
-			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, filt.SkipChown); err != nil {
+			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			prefilterBucket.AddRecord(fmeta, nil)
@@ -226,7 +235,7 @@ func unpackTar(
 		if record.Metadata.Type != fs.Type_Dir {
 			return nil
 		}
-		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultAtime)
+		return afs.SetTimesNano(record.Metadata.Name, record.Metadata.Mtime, fs.DefaultTime)
 	}); err != nil {
 		return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
@@ -234,7 +243,7 @@ func unpackTar(
 	// Hash the thing!
 	prefilterHash := misc.Base58Encode(fshash.HashBucket(prefilterBucket, sha512.New384))
 	filteredHash := misc.Base58Encode(fshash.HashBucket(filteredBucket, sha512.New384))
-	if !filt.IsHashAltering() {
+	if !filt.Altering() {
 		// Paranoia check for new feature.
 		//  When paranoia reduced, replace with skipping the double computation.
 		if prefilterHash != filteredHash {

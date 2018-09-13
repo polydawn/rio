@@ -82,10 +82,10 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	{
 		cmd := app.Command("pack", "Pack a Fileset into a Ware.")
 		args := struct {
-			PackType            string             // Pack type
-			Path                string             // Pack target path, abs or rel
-			Filters             api.FilesetFilters // Filters for pack
-			TargetWarehouseAddr string             // Warehouse address to push to
+			PackType                string // Pack type
+			Path                    string // Pack target path, abs or rel
+			Filter                  string // Filters for pack
+			TargetWarehouseLocation string // Warehouse address to push to
 		}{}
 		cmd.Arg("pack", "Pack type").
 			Required().
@@ -94,17 +94,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			Required().
 			StringVar(&args.Path)
 		cmd.Flag("target", "Warehouse in which to place the ware").
-			StringVar(&args.TargetWarehouseAddr)
-		cmd.Flag("uid", "Set UID filter [keep, <int>]").
-			StringVar(&args.Filters.Uid)
-		cmd.Flag("gid", "Set GID filter [keep, <int>]").
-			StringVar(&args.Filters.Gid)
-		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
-			StringVar(&args.Filters.Mtime)
-		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
-			Default("keep").
-			EnumVar(&args.Filters.Sticky,
-				"keep", "zero")
+			StringVar(&args.TargetWarehouseLocation)
+		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default many of these attribute will be flattened.").
+			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -116,12 +108,17 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return Recategorize(rio.ErrUsage, err)
 			}
+			filt, err := api.ParseFilesetPackFilter(args.Filter)
+			if err != nil {
+				return Recategorize(rio.ErrUsage, err)
+			}
+			filt = filt.Apply(api.FilesetPackFilter_Conservative)
 			resultWareID, err := packFunc(
 				ctx,
 				api.PackType(args.PackType),
 				path,
-				args.Filters,
-				api.WarehouseAddr(args.TargetWarehouseAddr),
+				filt,
+				api.WarehouseLocation(args.TargetWarehouseLocation),
 				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
@@ -134,11 +131,11 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	{
 		cmd := app.Command("unpack", "Unpack a Ware into a Fileset on your local filesystem.")
 		args := struct {
-			WareID               string             // Ware id string "<kind>:<hash>"
-			Path                 string             // Unpack target path, may be abs or rel
-			Filters              api.FilesetFilters // Filters for unpack
-			PlacementMode        string             // Placement mode enum
-			SourcesWarehouseAddr []string           // Warehouse address to fetch from
+			WareID                   string   // Ware id string "<kind>:<hash>"
+			Path                     string   // Unpack target path, may be abs or rel
+			Filter                   string   // Filters for unpack
+			PlacementMode            string   // Placement mode enum
+			SourcesWarehouseLocation []string // Warehouse address to fetch from
 		}{}
 		cmd.Arg("ware", "Ware ID").
 			Required().
@@ -150,20 +147,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			EnumVar(&args.PlacementMode,
 				string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
 		cmd.Flag("source", "Warehouses from which to fetch the ware").
-			StringsVar(&args.SourcesWarehouseAddr)
-		cmd.Flag("uid", "Set UID filter [keep, mine, <int>]").
-			Default("mine").
-			StringVar(&args.Filters.Uid)
-		cmd.Flag("gid", "Set GID filter [keep, mine, <int>]").
-			Default("mine").
-			StringVar(&args.Filters.Gid)
-		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]").
-			Default("keep").
-			StringVar(&args.Filters.Mtime)
-		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
-			Default("zero").
-			EnumVar(&args.Filters.Sticky,
-				"keep", "zero")
+			StringsVar(&args.SourcesWarehouseLocation)
+		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default all of these will be kept, except any use of setuid, setgid, and device modes will be rejected.").
+			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -179,6 +165,11 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return Recategorize(rio.ErrInoperablePath, err)
 			}
+			filt, err := api.ParseFilesetUnpackFilter(args.Filter)
+			if err != nil {
+				return Recategorize(rio.ErrUsage, err)
+			}
+			filt = filt.Apply(api.FilesetUnpackFilter_LowPriv)
 			err = fsOp.RemoveDirContent(osfs.New(fs.MustAbsolutePath(path)), fs.RelPath{})
 			if err != nil {
 				return Recategorize(rio.ErrInoperablePath, err)
@@ -187,9 +178,9 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				ctx,
 				wareID,
 				path,
-				args.Filters,
+				filt,
 				rio.PlacementMode(args.PlacementMode),
-				convertWarehouseSlice(args.SourcesWarehouseAddr),
+				convertWarehouseSlice(args.SourcesWarehouseLocation),
 				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
@@ -202,25 +193,17 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	{
 		cmd := app.Command("scan", "Scan some existing data stream see if it's a known packed format, and compute its WareID if so.  (Mostly used for importing tars from the interweb.)")
 		args := struct {
-			PackType            string             // Pack type
-			Filters             api.FilesetFilters // Filters for pack
-			SourceWarehouseAddr string             // Warehouse address of data to scan
+			PackType                string // Pack type
+			Filter                  string // Filters as if unpacking
+			SourceWarehouseLocation string // Warehouse address of data to scan
 		}{}
 		cmd.Arg("pack", "Pack type").
 			Required().
 			StringVar(&args.PackType)
 		cmd.Flag("source", "Address to of the data to scan.").
-			StringVar(&args.SourceWarehouseAddr)
-		cmd.Flag("uid", "Set UID filter [keep, <int>]").
-			StringVar(&args.Filters.Uid)
-		cmd.Flag("gid", "Set GID filter [keep, <int>]").
-			StringVar(&args.Filters.Gid)
-		cmd.Flag("mtime", "Set mtime filter [keep, <@UNIX>, <RFC3339>]. Will be set to a date if not specified.").
-			StringVar(&args.Filters.Mtime)
-		cmd.Flag("sticky", "Keep setuid, setgid, and sticky bits [keep, zero]").
-			Default("keep").
-			EnumVar(&args.Filters.Sticky,
-				"keep", "zero")
+			StringVar(&args.SourceWarehouseLocation)
+		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.").
+			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -228,12 +211,17 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return err
 			}
+			filt, err := api.ParseFilesetUnpackFilter(args.Filter)
+			if err != nil {
+				return Recategorize(rio.ErrUsage, err)
+			}
+			filt = filt.Apply(api.FilesetUnpackFilter_LowPriv)
 			resultWareID, err := scanFunc(
 				ctx,
 				api.PackType(args.PackType),
-				args.Filters,
+				filt,
 				rio.Placement_Direct,
-				api.WarehouseAddr(args.SourceWarehouseAddr),
+				api.WarehouseLocation(args.SourceWarehouseLocation),
 				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
@@ -246,17 +234,17 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 	{
 		cmd := app.Command("mirror", "Store already-packed wares in one warehouse, copying from other warehouses.")
 		args := struct {
-			WareID               string   // WareID to mirror
-			TargetWarehouseAddr  string   // Warehouse to mirror into
-			SourceWarehouseAddrs []string // Warehouses we can fetch from
+			WareID                   string   // WareID to mirror
+			TargetWarehouseLocation  string   // Warehouse to mirror into
+			SourceWarehouseLocations []string // Warehouses we can fetch from
 		}{}
 		cmd.Arg("ware", "Ware ID").
 			Required().
 			StringVar(&args.WareID)
 		cmd.Flag("target", "Warehouse in which to place the ware").
-			StringVar(&args.TargetWarehouseAddr)
+			StringVar(&args.TargetWarehouseLocation)
 		cmd.Flag("source", "Warehouses from which to fetch the ware").
-			StringsVar(&args.SourceWarehouseAddrs)
+			StringsVar(&args.SourceWarehouseLocations)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
@@ -271,8 +259,8 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			resultWareID, err := mirrorFunc(
 				ctx,
 				wareID,
-				api.WarehouseAddr(args.TargetWarehouseAddr),
-				convertWarehouseSlice(args.SourceWarehouseAddrs),
+				api.WarehouseLocation(args.TargetWarehouseLocation),
+				convertWarehouseSlice(args.SourceWarehouseLocations),
 				oc.WireMonitor(ctx, rio.Monitor{}),
 			)
 			if err != nil {
@@ -326,10 +314,7 @@ type outputController struct {
 
 func (oc *outputController) EmitResult(wareID api.WareID, err error) {
 	oc.monWg.Wait()
-	result := &rio.Event_Result{}
-	result.WareID = wareID
-	result.SetError(err)
-	evt := rio.Event{Result: result}
+	evt := rio.Event_Result{wareID, err}
 	switch oc.format {
 	case "", format_Dumb:
 		if err != nil {
@@ -365,12 +350,12 @@ func (oc *outputController) WireMonitor(ctx context.Context, m rio.Monitor) rio.
 					if !ok {
 						return
 					}
-					switch {
-					case evt.Log != nil:
-						fmt.Fprintf(oc.stderr, "log: lvl=%s msg=%s\n", evt.Log.Level, evt.Log.Msg)
-					case evt.Progress != nil:
+					switch evt := evt.(type) {
+					case rio.Event_Log:
+						fmt.Fprintf(oc.stderr, "log: lvl=%s msg=%s\n", evt.Level, evt.Msg)
+					case rio.Event_Progress:
 						// pass... for now
-					case evt.Result != nil:
+					case rio.Event_Result:
 						// pass
 					}
 				case <-ctx.Done():
@@ -404,10 +389,10 @@ func (oc *outputController) WireMonitor(ctx context.Context, m rio.Monitor) rio.
 	return m
 }
 
-func convertWarehouseSlice(slice []string) []api.WarehouseAddr {
-	result := make([]api.WarehouseAddr, len(slice))
+func convertWarehouseSlice(slice []string) []api.WarehouseLocation {
+	result := make([]api.WarehouseLocation, len(slice))
 	for idx, item := range slice {
-		result[idx] = api.WarehouseAddr(item)
+		result[idx] = api.WarehouseLocation(item)
 	}
 	return result
 }

@@ -1,6 +1,10 @@
 package fs
 
-import "time"
+import (
+	"time"
+
+	"go.polydawn.net/go-timeless-api"
+)
 
 type Metadata struct {
 	Name     RelPath   // filename
@@ -93,5 +97,6 @@ func (t Type) String() string {
 }
 
 // Use this for the accessTime attribute when one is needed but no more
-// obvious value is at hand.
-var DefaultAtime = time.Date(2010, 01, 01, 0, 0, 0, 0, time.UTC)
+// obvious value is at hand, or for modifiedTime when doing things like
+// 'create a default dir' when no other value is at hand.
+var DefaultTime = time.Unix(api.DefaultTime, 0)

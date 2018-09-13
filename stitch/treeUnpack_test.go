@@ -34,7 +34,7 @@ func TestTreeUnpack(t *testing.T) {
 				assembler, err := NewAssembler(tartrans.Unpack)
 				So(err, ShouldBeNil)
 				defaultFillerProps := fs.Metadata{
-					Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultAtime,
+					Type: fs.Type_Dir, Perms: 0755, Uid: 0, Gid: 0, Mtime: fs.DefaultTime,
 				}
 
 				Convey("Single-entry unpack should work:", func() {
@@ -46,8 +46,8 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
 						defaultFillerProps,
@@ -72,14 +72,14 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 							{
 								Path:       fs.MustAbsolutePath("/bc"),
 								WareID:     api.WareID{"tar", "2jkqXaVWCdH7axj1XW56rxZ6WVQ8f46nqMf2BBX7kjLsU9DsvQCquEoy6GcBcQ1Fqc"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
 							},
 						},
 						defaultFillerProps,
@@ -127,14 +127,14 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 							{
 								Path:       fs.MustAbsolutePath("/mk/dir/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
 						defaultFillerProps,
@@ -175,8 +175,8 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 							{
 								Path:   fs.MustAbsolutePath("/bc"),
@@ -220,8 +220,8 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 							{
 								Path:   fs.MustAbsolutePath("/bc"),
@@ -230,8 +230,8 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/bc/nopenope"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
 						defaultFillerProps,
@@ -248,8 +248,8 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/only/deep"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
 						defaultFillerProps,
@@ -280,14 +280,14 @@ func TestTreeUnpack(t *testing.T) {
 							{
 								Path:       fs.MustAbsolutePath("/"),
 								WareID:     api.WareID{"tar", "2jkqXaVWCdH7axj1XW56rxZ6WVQ8f46nqMf2BBX7kjLsU9DsvQCquEoy6GcBcQ1Fqc"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_kitchenSink.tgz"},
 							},
 							{
 								Path:       fs.MustAbsolutePath("/deep/tree"),
 								WareID:     api.WareID{"tar", "5y6NvK6GBPQ6CcuNyJyWtSrMAJQ4LVrAcZSoCRAzMSk5o53pkTYiieWyRivfvhZwhZ"},
-								Filters:    api.Filter_NoMutation,
-								Warehouses: []api.WarehouseAddr{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
+								Filters:    api.FilesetUnpackFilter_Lossless,
+								Warehouses: []api.WarehouseLocation{"file://../transmat/tar/fixtures/tar_withBase.tgz"},
 							},
 						},
 						defaultFillerProps,

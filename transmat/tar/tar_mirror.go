@@ -9,7 +9,6 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs/nilfs"
 	"go.polydawn.net/rio/transmat/mixins/log"
 )
@@ -21,8 +20,8 @@ var (
 func Mirror(
 	ctx context.Context, // Long-running call.  Cancellable.
 	wareID api.WareID, // What wareID to mirror.
-	target api.WarehouseAddr, // Warehouse to ensure the ware is mirrored into.
-	sources []api.WarehouseAddr, // Warehouses we can try to fetch from.
+	target api.WarehouseLocation, // Warehouse to ensure the ware is mirrored into.
+	sources []api.WarehouseLocation, // Warehouses we can try to fetch from.
 	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
@@ -33,7 +32,7 @@ func Mirror(
 	// Try to read the ware from the target first; if successfull, no-op out.
 	//  We don't fully re-verify the content, because that requires a time
 	//  committment, and we want this command to be fast when run repeatedly.
-	reader, err := PickReader(wareID, []api.WarehouseAddr{target}, false, mon)
+	reader, err := PickReader(wareID, []api.WarehouseLocation{target}, false, mon)
 	if err == nil {
 		log.MirrorNoop(mon, target, wareID)
 		reader.Close()
@@ -63,10 +62,8 @@ func Mirror(
 	reader = flippingReader{reader, wc}
 	afs := nilFS.New()
 
-	// "unpack", scanningly.  This drives the copy.
-	filt, _ := apiutil.ProcessFilters(api.Filter_NoMutation, apiutil.FilterPurposeUnpack)
 	// We can ignore the pre/post filter wareIDs, since we know its a no-mutation filter.
-	gotWare, _, err := unpackTar(ctx, afs, filt, reader, mon)
+	gotWare, _, err := unpackTar(ctx, afs, api.FilesetUnpackFilter_Lossless, reader, mon)
 	if err != nil {
 		// If errors at this stage: still return a blank wareID, because
 		//  we haven't finished *uploading* it.

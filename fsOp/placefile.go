@@ -10,6 +10,11 @@ import (
 	"go.polydawn.net/rio/fs"
 )
 
+var (
+	myUid = uint32(os.Getuid())
+	myGid = uint32(os.Getgid())
+)
+
 /*
 	Places a file on the filesystem.
 	Replicates all attributes described in the metadata.
@@ -37,6 +42,10 @@ import (
 	If skipChown is true, it does what it says on the tin: skips setting ownership.
 	This will result in UIDs and GIDs from the rio process being in effect;
 	it's also a rough proxy for "don't require priviledged operations".
+	PlaceFile will also automatically skip any chown syscalls if it detects
+	that the current process is running with the same numeric uid and gid
+	specified in the the fs.Metadata struct, so you can almost always call
+	Placefile with skipChown=false unless you're doing something special.
 	(Ecosystemically: don't combine skipChown=true with content-addressable storage;
 	the result will be collision errors and incorrect behavior.
 	Similarly, Repeatr would *never* use the skipChown option, because
@@ -124,8 +133,10 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 	}
 
 	// Set the UID and GID for all file and dir types.
-	// Unless you asked for us to avoid using that (priviledge-requiring) syscall, of course.
-	if !skipChown {
+	//  Unless we can avoid it!  If we're already operating as these IDs,
+	//   not only *can* we skip it to save time, we *must*: the syscalls
+	//    require privileges, even if they would turn out to be no-ops.
+	if !skipChown && (fmeta.Uid != myUid || fmeta.Gid != myGid) {
 		if err := afs.Lchown(fmeta.Name, fmeta.Uid, fmeta.Gid); err != nil {
 			return err
 		}
@@ -152,11 +163,11 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 	//  on Macs as long as it doesn't include symlinks.  (Eyeroll.)
 	switch fmeta.Type {
 	case fs.Type_Symlink:
-		if err := afs.SetTimesLNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+		if err := afs.SetTimesLNano(fmeta.Name, fmeta.Mtime, fs.DefaultTime); err != nil {
 			return err
 		}
 	default:
-		if err := afs.SetTimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+		if err := afs.SetTimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultTime); err != nil {
 			return err
 		}
 	}

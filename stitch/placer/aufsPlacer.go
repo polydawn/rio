@@ -85,7 +85,7 @@ func NewAufsPlacer(workDir fs.AbsolutePath) (Placer, error) {
 		if err := rootFs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
 			return nil, Errorf(rio.ErrLocalCacheProblem, "error creating aufs layer area: %s", err)
 		}
-		if err := rootFs.SetTimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultAtime); err != nil {
+		if err := rootFs.SetTimesNano(fmeta.Name, fmeta.Mtime, fs.DefaultTime); err != nil {
 			return nil, Errorf(rio.ErrLocalCacheProblem, "error creating aufs layer area: %s", err)
 		}
 

@@ -60,7 +60,7 @@ type FilesetCache interface {
 		ctx context.Context,
 		wareID api.WareID,
 		filters api.FilesetFilters,
-		warehouses []api.WarehouseAddr,
+		warehouses []api.WarehouseLocation,
 		monitor rio.Monitor,
 	) (
 		api.WareID,

@@ -11,7 +11,6 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
@@ -25,14 +24,14 @@ func TestTarUnpack(t *testing.T) {
 			Convey("Using kvfs warehouse, in content-addressable mode:", func() {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 					osfs.New(tmpDir).Mkdir(fs.MustRelPath("bounce"), 0755)
-					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("ca+file://%s/bounce", tmpDir)))
+					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseLocation(fmt.Sprintf("ca+file://%s/bounce", tmpDir)))
 					// Following tests could be done in all modes, but isn't about warehouses, so would be redundant to do so.
-					tests.CheckCachePopulation(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("ca+file://%s/bounce", tmpDir)))
+					tests.CheckCachePopulation(PackType, Pack, Unpack, api.WarehouseLocation(fmt.Sprintf("ca+file://%s/bounce", tmpDir)))
 				})
 			})
 			Convey("Using kvfs warehouse, in *non*-content-addressable mode:", func() {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
-					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseAddr(fmt.Sprintf("file://%s/bounce", tmpDir)))
+					tests.CheckRoundTrip(PackType, Pack, Unpack, api.WarehouseLocation(fmt.Sprintf("file://%s/bounce", tmpDir)))
 				})
 			})
 		}),
@@ -54,9 +53,9 @@ func TestTarFixtureUnpack(t *testing.T) {
 						context.Background(),
 						wareID,
 						tmpDir.String(),
-						api.Filter_NoMutation,
+						api.FilesetUnpackFilter_Lossless,
 						rio.Placement_Direct,
-						[]api.WarehouseAddr{"file://./fixtures/tar_withBase.tgz"},
+						[]api.WarehouseLocation{"file://./fixtures/tar_withBase.tgz"},
 						rio.Monitor{},
 					)
 					So(err, ShouldBeNil)
@@ -92,9 +91,9 @@ func TestTarFixtureUnpack(t *testing.T) {
 						context.Background(),
 						wareID,
 						tmpDir.String(),
-						api.Filter_NoMutation,
+						api.FilesetUnpackFilter_Lossless,
 						rio.Placement_Direct,
-						[]api.WarehouseAddr{"file://./fixtures/tar_sansBase.tgz"},
+						[]api.WarehouseLocation{"file://./fixtures/tar_sansBase.tgz"},
 						rio.Monitor{},
 					)
 					So(err, ShouldBeNil)
@@ -114,7 +113,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(fmeta.Name, ShouldResemble, fs.MustRelPath("."))
 					So(fmeta.Type, ShouldResemble, fs.Type_Dir)
-					So(fmeta.Mtime.UTC(), ShouldResemble, apiutil.DefaultMtime)
+					So(fmeta.Mtime.UTC(), ShouldResemble, fs.DefaultTime)
 					So(reader, ShouldBeNil)
 				})
 			})

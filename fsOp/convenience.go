@@ -127,7 +127,7 @@ func RepairMtime(afs fs.FS, path fs.RelPath) func() {
 		return func() {}
 	}
 	return func() {
-		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultAtime)
+		afs.SetTimesLNano(path, fmeta.Mtime, fs.DefaultTime)
 	}
 }
 

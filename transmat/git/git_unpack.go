@@ -12,7 +12,6 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
@@ -31,9 +30,9 @@ func Unpack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	wareID api.WareID, // What wareID to fetch for unpacking.
 	path string, // Where to unpack the fileset (absolute path).
-	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
+	filt api.FilesetUnpackFilter, // Optionally: filters we should apply while unpacking.
 	placementMode rio.PlacementMode, // Optionally: a placement mode (default is "copy").
-	warehouses []api.WarehouseAddr, // Warehouses we can try to fetch from.
+	warehouses []api.WarehouseLocation, // Warehouses we can try to fetch from.
 	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
 	if mon.Chan != nil {
@@ -44,6 +43,9 @@ func Unpack(
 	// Sanitize arguments.
 	if wareID.Type != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, wareID.Type)
+	}
+	if !filt.IsComplete() {
+		return api.WareID{}, Errorf(rio.ErrUsage, "filters must be completely specified")
 	}
 	if placementMode == "" {
 		placementMode = rio.Placement_Copy
@@ -59,19 +61,15 @@ func unpack(
 	ctx context.Context,
 	wareID api.WareID,
 	path string,
-	filt api.FilesetFilters,
+	filt api.FilesetUnpackFilter,
 	placementMode rio.PlacementMode,
-	warehouses []api.WarehouseAddr,
+	warehouses []api.WarehouseLocation,
 	mon rio.Monitor,
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
 	// Sanitize arguments.
 	path2 := fs.MustAbsolutePath(path)
-	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
-	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
-	}
 
 	// Pick a warehouse and get a reader.
 	//  This is a *very* expensive operation for git.  It's less
@@ -99,7 +97,7 @@ func unpack(
 		// TODO it would be dreamy to parallelize this.
 		whCtrl, err := pick(ctx,
 			api.WareID{"git", submCfg.Hash},
-			[]api.WarehouseAddr{api.WarehouseAddr(submCfg.URL)},
+			[]api.WarehouseLocation{api.WarehouseLocation(submCfg.URL)},
 			osfs.New(config.GetCacheBasePath().Join(fs.MustRelPath("git/objs"))),
 			mon,
 		)
@@ -120,7 +118,7 @@ func unpack(
 	afs := osfs.New(path2)
 
 	// Walk.
-	if err := unpackOneRepo(ctx, tr, afs, true, filt2, submoduleCtrls, mon); err != nil {
+	if err := unpackOneRepo(ctx, tr, afs, true, filt, submoduleCtrls, mon); err != nil {
 		return api.WareID{}, err
 	}
 
@@ -133,7 +131,7 @@ func unpackOneRepo(
 	tr *object.Tree,
 	afs fs.FS,
 	isRoot bool, // if true, will recurse for submodules (with this set to false).
-	filt apiutil.FilesetFilters,
+	filt api.FilesetUnpackFilter,
 	submoduleCtrls map[string]*gitWarehouse.Controller,
 	mon rio.Monitor,
 ) (err error) {
@@ -141,8 +139,8 @@ func unpackOneRepo(
 
 	// Make the root dir.  Git doesn't have metadata for the tree root.
 	conjuredFmeta := fshash.DefaultDirMetadata()
-	filters.Apply(filt, &conjuredFmeta)
-	if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, filt.SkipChown); err != nil {
+	filters.ApplyUnpackFilter(filt, &conjuredFmeta)
+	if err := fsOp.PlaceFile(afs, conjuredFmeta, nil, false); err != nil {
 		return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 	}
 
@@ -167,9 +165,14 @@ func unpackOneRepo(
 		//fmt.Fprintf(os.Stderr, "walking git tree %s -- %#v\n", name, te)
 
 		// Reshuffle metainfo to our default format.
+		//  Git doesn't *have* several of our usual metadata, so for these
+		//   we define some defaults (and these will be the ones used in
+		//   any caching which is indexed by the git native hash; if you use
+		//   filters to override them, you'll cache miss in the usual way).
 		fmeta.Name = fs.MustRelPath(name)
 		fmeta.Uid = 1000
 		fmeta.Gid = 1000
+		fmeta.Mtime = fs.DefaultTime
 		switch te.Mode {
 		case filemode.Dir:
 			fmeta.Type = fs.Type_Dir
@@ -228,10 +231,11 @@ func unpackOneRepo(
 		default:
 			panic(fmt.Errorf("unknown git filemode %#v", te.Mode))
 		}
-		fmeta.Mtime = apiutil.DefaultMtime // git doesn't have time info
 
 		// Apply filters.
-		filters.Apply(filt, &fmeta)
+		//  Git can't contain either device nodes nor setid bits so there's
+		//  no need to check for the filters for any rejection errors.
+		filters.ApplyUnpackFilter(filt, &fmeta)
 
 		// Place the file.
 		switch fmeta.Type {
@@ -244,12 +248,12 @@ func unpackOneRepo(
 			if err != nil {
 				return Errorf(rio.ErrWareCorrupt, "corrupt git tree: %s", err)
 			}
-			if err := fsOp.PlaceFile(afs, fmeta, reader, filt.SkipChown); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, reader, false); err != nil {
 				return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			reader.Close()
 		default:
-			if err := fsOp.PlaceFile(afs, fmeta, nil, filt.SkipChown); err != nil {
+			if err := fsOp.PlaceFile(afs, fmeta, nil, false); err != nil {
 				return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 		}
@@ -258,7 +262,7 @@ func unpackOneRepo(
 	// Cleanup dir times with a post-order traversal over the bucket.
 	//  Files and dirs placed inside dirs cause the parent's mtime to update, so we have to re-pave them.
 	for i := len(dirs) - 1; i >= 0; i-- {
-		if err := afs.SetTimesNano(dirs[i], fs.DefaultAtime, fs.DefaultAtime); err != nil {
+		if err := afs.SetTimesNano(dirs[i], fs.DefaultTime, fs.DefaultTime); err != nil {
 			return Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 		}
 	}

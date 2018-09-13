@@ -296,7 +296,7 @@ func TestFixtures(t *testing.T) {
 }
 
 func TestNewControllerNonExistingWarehouse(t *testing.T) {
-	controller, err := NewController(nil, api.WarehouseAddr("bogus"))
+	controller, err := NewController(nil, api.WarehouseLocation("bogus"))
 	if err == nil {
 		t.Errorf("expected an error")
 	}
@@ -322,7 +322,7 @@ func TestNewControllerWithFixture(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
 		for _, item := range testItems {
 			t.Run(item.String(), func(t *testing.T) {
-				wareAddr := api.WarehouseAddr(absPath.Join(item).String())
+				wareAddr := api.WarehouseLocation(absPath.Join(item).String())
 				t.Log(wareAddr)
 				controller, err := NewController(nil, wareAddr)
 				if err != nil {
@@ -341,7 +341,7 @@ func TestNewControllerWithFixture(t *testing.T) {
 
 func TestGetCommit(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		t.Log(wareAddr)
 		controller := mustNewController(t, nil, wareAddr)
 		// test hapy path conditions
@@ -461,7 +461,7 @@ func TestGetCommit(t *testing.T) {
 
 func TestContains(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		controller := mustNewController(t, nil, wareAddr)
 		t.Run("invalid commit", func(t *testing.T) {
 			if controller.Contains("bogus") {
@@ -483,7 +483,7 @@ func TestContains(t *testing.T) {
 
 func TestGetTree(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		controller := mustNewController(t, nil, wareAddr)
 		t.Run("invalid commit", func(t *testing.T) {
 			tree, err := controller.GetTree("bogus")
@@ -524,7 +524,7 @@ func TestSetCacheStorage(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		t.Run("clone disabled", func(t *testing.T) {
 			controller := mustNewController(t, nil, wareAddr)
 			if controller.repo != nil {
@@ -605,7 +605,7 @@ func TestClone(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		testItems := []struct {
 			fetchAllowed bool // updates can be disabled for some conditions
 			isNewClone   bool // a fresh clone is fully up-to-date
@@ -673,7 +673,7 @@ func TestUpdate(t *testing.T) {
 
 func TestOpen(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		t.Run("clone non-existent", func(t *testing.T) {
 			controller := mustNewController(t, nil, wareAddr)
 			// Basically this means that the repo became unavailable _after_
@@ -756,7 +756,7 @@ func TestOpen(t *testing.T) {
 
 func TestLsRemote(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		controller := mustNewController(t, nil, wareAddr)
 		result, err := controller.lsRemote()
 		if err != nil {
@@ -793,7 +793,7 @@ func TestLsRemote(t *testing.T) {
 
 func TestSubmodules(t *testing.T) {
 	WithTarballTmpDir(t, func(absPath riofs.AbsolutePath) {
-		wareAddr := api.WarehouseAddr(absPath.Join(RelPathBare).String())
+		wareAddr := api.WarehouseLocation(absPath.Join(RelPathBare).String())
 		t.Log(wareAddr)
 		controller := mustNewController(t, nil, wareAddr)
 		for _, testItem := range []struct {
@@ -843,7 +843,7 @@ func TestReader(t *testing.T) {
 		// we will compare the files extracted from bare to the files in repo A
 		repoPath := absPath.Join(RelPathRepoA)
 		warePath := absPath.Join(RelPathBare)
-		wareAddr := api.WarehouseAddr(warePath.String())
+		wareAddr := api.WarehouseLocation(warePath.String())
 		controller := mustNewController(t, nil, wareAddr)
 		t.Run("test reader bad hash", func(t *testing.T) {
 			wareReader, err := controller.NewReader("bogus")
@@ -936,7 +936,7 @@ func assertSubmoduleEqual(t *testing.T, a, b Submodule) {
 	}
 }
 
-func mustNewController(t *testing.T, workingDir riofs.FS, wareAddr api.WarehouseAddr) *Controller {
+func mustNewController(t *testing.T, workingDir riofs.FS, wareAddr api.WarehouseLocation) *Controller {
 	t.Helper()
 	controller, err := NewController(workingDir, wareAddr)
 	if err != nil {
