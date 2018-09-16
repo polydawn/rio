@@ -314,7 +314,7 @@ type outputController struct {
 
 func (oc *outputController) EmitResult(wareID api.WareID, err error) {
 	oc.monWg.Wait()
-	var evt rio.Event = rio.Event_Result{wareID, err}
+	var evt rio.Event = rio.Event_Result{wareID, rio.ToError(err)}
 	switch oc.format {
 	case "", format_Dumb:
 		if err != nil {
