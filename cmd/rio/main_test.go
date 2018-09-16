@@ -80,7 +80,7 @@ func TestTarFixtureUnpack(t *testing.T) {
 								"unpack",
 								wareID,
 								tmpDir.String(),
-								"--uid=keep", "--gid=keep",
+								"--filter", "uid=follow,gid=follow",
 								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 								fmt.Sprintf("--source=%s", source),
 							},
@@ -94,21 +94,21 @@ func TestTarFixtureUnpack(t *testing.T) {
 								"unpack",
 								wareID,
 								tmpDir.String(),
-								"--uid=keep", "--gid=keep",
+								"--filter", "uid=follow,gid=follow",
 								fmt.Sprintf("--placer=%s", rio.Placement_Direct),
 								fmt.Sprintf("--source=%s", source),
 								fmt.Sprintf("--format=%s", format_Json),
 							},
 							0,
-							fmt.Sprintf(`{"log":null,"prog":null,"result":{"wareID":"%s","error":null}}`, wareID),
+							fmt.Sprintf(`{"result":{"wareID":"%s"}}`, wareID),
 							"",
 						},
 					} {
 						Convey(fmt.Sprintf("- test %q", fixture.Name), func() {
 							stdin, stdout, stderr := stdBuffers()
 							exitCode := Main(ctx, fixture.Args, stdin, stdout, stderr)
-							So(lastLine(string(stdout.Bytes())), ShouldEqual, fixture.ExpectedStdout)
 							So(lastLine(string(stderr.Bytes())), ShouldEqual, fixture.ExpectedStderr)
+							So(lastLine(string(stdout.Bytes())), ShouldEqual, fixture.ExpectedStdout)
 							So(exitCode, ShouldEqual, fixture.ExpectedExit)
 							if fixture.ExpectedExit != 0 {
 								Convey("The filesystem should not have things", func() {
@@ -156,6 +156,5 @@ func TestTarFixtureUnpack(t *testing.T) {
 func lastLine(str string) string {
 	str = strings.TrimRight(str, "\n")
 	ss := strings.Split(str, "\n")
-	fmt.Printf("::goddamnit \n\t%#v\n", ss)
 	return ss[len(ss)-1]
 }

@@ -99,4 +99,4 @@ func (t Type) String() string {
 // Use this for the accessTime attribute when one is needed but no more
 // obvious value is at hand, or for modifiedTime when doing things like
 // 'create a default dir' when no other value is at hand.
-var DefaultTime = time.Unix(api.DefaultTime, 0)
+var DefaultTime = time.Unix(api.DefaultTime, 0).UTC()

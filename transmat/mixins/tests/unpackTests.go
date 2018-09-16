@@ -90,7 +90,7 @@ func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.U
 				context.Background(),
 				packType,
 				fixturePath.String(),
-				api.MustParseFilesetPackFilter("uid=keep,gid=keep,mtime=keep"),
+				api.FilesetPackFilter_Lossless,
 				warehouseAddr,
 				rio.Monitor{},
 			)

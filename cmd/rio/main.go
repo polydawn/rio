@@ -314,7 +314,7 @@ type outputController struct {
 
 func (oc *outputController) EmitResult(wareID api.WareID, err error) {
 	oc.monWg.Wait()
-	evt := rio.Event_Result{wareID, err}
+	var evt rio.Event = rio.Event_Result{wareID, err}
 	switch oc.format {
 	case "", format_Dumb:
 		if err != nil {
@@ -327,7 +327,7 @@ func (oc *outputController) EmitResult(wareID api.WareID, err error) {
 			fmt.Fprintln(oc.stderr, err)
 		}
 		marshaller := refmt.NewMarshallerAtlased(json.EncodeOptions{}, oc.stdout, rio.Atlas)
-		err := marshaller.Marshal(evt)
+		err := marshaller.Marshal(&evt)
 		if err != nil {
 			panic(err)
 		}
@@ -373,7 +373,7 @@ func (oc *outputController) WireMonitor(ctx context.Context, m rio.Monitor) rio.
 					if !ok {
 						return
 					}
-					err := marshaller.Marshal(evt)
+					err := marshaller.Marshal(&evt)
 					oc.stdout.Write([]byte{'\n'})
 					if err != nil {
 						panic(err)
