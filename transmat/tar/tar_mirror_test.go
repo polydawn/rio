@@ -20,8 +20,8 @@ func TestTarMirror(t *testing.T) {
 				testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 					osfs.New(tmpDir).Mkdir(fs.MustRelPath("src"), 0755)
 					osfs.New(tmpDir).Mkdir(fs.MustRelPath("dst"), 0755)
-					srcAddr := api.WarehouseAddr(fmt.Sprintf("ca+file://%s/src", tmpDir))
-					dstAddr := api.WarehouseAddr(fmt.Sprintf("ca+file://%s/dst", tmpDir))
+					srcAddr := api.WarehouseLocation(fmt.Sprintf("ca+file://%s/src", tmpDir))
+					dstAddr := api.WarehouseLocation(fmt.Sprintf("ca+file://%s/dst", tmpDir))
 
 					tests.CheckMirror(PackType, Mirror, Pack, Unpack, dstAddr, srcAddr)
 				})

@@ -26,7 +26,7 @@ func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.Filter_NoMutation,
+						api.FilesetPackFilter_Lossless,
 						"",
 						rio.Monitor{},
 					)
@@ -36,7 +36,7 @@ func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.Filter_NoMutation,
+						api.FilesetPackFilter_Lossless,
 						"",
 						rio.Monitor{},
 					)
@@ -62,7 +62,7 @@ func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 			context.Background(),
 			packType,
 			tmpDir.String(),
-			api.Filter_NoMutation,
+			api.FilesetPackFilter_Lossless,
 			"",
 			rio.Monitor{},
 		)
@@ -89,7 +89,7 @@ func CheckPackHashVariesOnVariations(packType api.PackType, pack rio.PackFunc) {
 						context.Background(),
 						packType,
 						tmpDir.String(),
-						api.Filter_NoMutation,
+						api.FilesetPackFilter_Lossless,
 						"",
 						rio.Monitor{},
 					)
@@ -110,7 +110,7 @@ func CheckPackErrorsGracefully(packType api.PackType, pack rio.PackFunc) {
 					context.Background(),
 					packType,
 					tmpDir.String()+"/nonexistent",
-					api.Filter_NoMutation,
+					api.FilesetPackFilter_Lossless,
 					"",
 					rio.Monitor{},
 				)

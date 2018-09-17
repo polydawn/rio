@@ -20,7 +20,7 @@ import (
 //  With K/V warehouses, this takes the form of "pick the first one that answers".
 func PickReader(
 	wareID api.WareID,
-	warehouses []api.WarehouseAddr,
+	warehouses []api.WarehouseLocation,
 	requireMono bool,
 	mon rio.Monitor,
 ) (_ io.ReadCloser, err error) {
@@ -84,7 +84,7 @@ func PickReader(
 }
 
 func OpenWriteController(
-	warehouseAddr api.WarehouseAddr,
+	warehouseAddr api.WarehouseLocation,
 	packType api.PackType,
 	mon rio.Monitor,
 ) (wc warehouse.BlobstoreWriteController, err error) {

@@ -19,7 +19,7 @@ func TestTarFixtureScan(t *testing.T) {
 				gotWareID, err := Scan(
 					context.Background(),
 					PackType,
-					api.FilesetFilters{},
+					api.FilesetUnpackFilter_Lossless,
 					rio.Placement_Direct,
 					"file://./fixtures/tar_withBase.tgz",
 					rio.Monitor{},
@@ -31,7 +31,7 @@ func TestTarFixtureScan(t *testing.T) {
 				gotWareID, err := Scan(
 					context.Background(),
 					PackType,
-					api.FilesetFilters{},
+					api.FilesetUnpackFilter_Lossless,
 					rio.Placement_Direct,
 					"file://./fixtures/tar_sansBase.tgz",
 					rio.Monitor{},
@@ -43,7 +43,7 @@ func TestTarFixtureScan(t *testing.T) {
 				gotWareID, err := Scan(
 					context.Background(),
 					PackType,
-					api.FilesetFilters{},
+					api.FilesetUnpackFilter_Lossless,
 					rio.Placement_Direct,
 					"file://./fixtures/tar_kitchenSink.tgz",
 					rio.Monitor{},

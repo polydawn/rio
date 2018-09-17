@@ -22,8 +22,8 @@ import (
 type PackSpec struct {
 	Path      fs.AbsolutePath
 	PackType  api.PackType
-	Filters   api.FilesetFilters
-	Warehouse api.WarehouseAddr
+	Filter    api.FilesetPackFilter
+	Warehouse api.WarehouseLocation
 	Monitor   rio.Monitor
 }
 
@@ -58,7 +58,7 @@ func PackMulti(ctx context.Context, packTool rio.PackFunc, targetFs fs.FS, parts
 				ctx, // TODO fork em out
 				part.PackType,
 				rerootedPath.String(),
-				part.Filters,
+				part.Filter,
 				part.Warehouse,
 				part.Monitor,
 			)

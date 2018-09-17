@@ -8,7 +8,6 @@ import (
 
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	cacheapi "go.polydawn.net/rio/cache"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
@@ -42,9 +41,9 @@ func (c cache) Unpack(
 	ctx context.Context,
 	wareID api.WareID,
 	path string,
-	filt api.FilesetFilters,
+	filt api.FilesetUnpackFilter,
 	placementMode rio.PlacementMode,
-	warehouses []api.WarehouseAddr,
+	warehouses []api.WarehouseLocation,
 	monitor rio.Monitor,
 ) (_ api.WareID, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
@@ -53,11 +52,7 @@ func (c cache) Unpack(
 	//  result hash which is different than the requested ware hash.
 	//  Right now we deal with this simply/stupidly: if you used filters, no cache for you.
 	resultWareID := wareID
-	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposeUnpack)
-	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
-	}
-	if filt2.IsHashAltering() {
+	if filt.Altering() {
 		resultWareID = api.WareID{"-", "-"} // This value forces cache miss.
 	}
 
@@ -127,8 +122,8 @@ func (c cache) place(
 func (c cache) populate(
 	ctx context.Context,
 	wareID api.WareID,
-	filt api.FilesetFilters,
-	warehouses []api.WarehouseAddr,
+	filt api.FilesetUnpackFilter,
+	warehouses []api.WarehouseLocation,
 	monitor rio.Monitor,
 ) (_ api.WareID, _ fs.RelPath, err error) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))

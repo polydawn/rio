@@ -137,7 +137,7 @@ func PlaceFixture(afs fs.FS, fixture []FixtureFile) {
 	for i := len(fixture) - 1; i >= 0; i-- {
 		ff := fixture[i]
 		if ff.Metadata.Type == fs.Type_Dir {
-			if err := afs.SetTimesNano(ff.Metadata.Name, ff.Metadata.Mtime, fs.DefaultAtime); err != nil {
+			if err := afs.SetTimesNano(ff.Metadata.Name, ff.Metadata.Mtime, fs.DefaultTime); err != nil {
 				panic(err)
 			}
 		}

@@ -31,8 +31,8 @@ import (
 type UnpackSpec struct {
 	Path       fs.AbsolutePath
 	WareID     api.WareID
-	Filters    api.FilesetFilters
-	Warehouses []api.WarehouseAddr
+	Filters    api.FilesetUnpackFilter
+	Warehouses []api.WarehouseLocation
 	Monitor    rio.Monitor
 }
 

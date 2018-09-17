@@ -18,7 +18,7 @@ import (
 	"go.polydawn.net/rio/testutil"
 )
 
-func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
+func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseLocation) {
 	Convey("SPEC: Round-trip pack and unpack of fileset should work...", func() {
 		for _, fixture := range AllFixtures {
 			Convey(fmt.Sprintf("- Fixture %q", fixture.Name), func() {
@@ -26,27 +26,30 @@ func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackF
 					fixturePath := tmpDir.Join(fs.MustRelPath("fixture"))
 					// Set up fixture.
 					PlaceFixture(osfs.New(fixturePath), fixture.Files)
+
 					// Pack up into our warehouseaddr.
 					wareID, err := pack(
 						context.Background(),
 						packType,
 						fixturePath.String(),
-						api.Filter_NoMutation,
+						api.FilesetPackFilter_Lossless,
 						warehouseAddr,
 						rio.Monitor{},
 					)
 					So(err, ShouldBeNil)
+
 					// Unpack to a new path.
 					unpackPath := tmpDir.Join(fs.MustRelPath("unpack"))
 					wareID2, err := unpack(
 						context.Background(),
 						wareID,
 						unpackPath.String(),
-						api.Filter_NoMutation,
+						api.FilesetUnpackFilter_Lossless,
 						rio.Placement_Direct,
-						[]api.WarehouseAddr{warehouseAddr},
+						[]api.WarehouseLocation{warehouseAddr},
 						rio.Monitor{},
 					)
+
 					Convey("...and agree on hash and content", FailureContinues, func() {
 						So(err, ShouldBeNil)
 						// Should be same hash reported by unpack hashing process.
@@ -70,7 +73,7 @@ func CheckRoundTrip(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackF
 	})
 }
 
-func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseAddr) {
+func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.UnpackFunc, warehouseAddr api.WarehouseLocation) {
 	Convey("SPEC: Caching: unpack with 'none' placement should result in cache...", func() {
 		testutil.WithTmpdir(func(tmpDir fs.AbsolutePath) {
 			// Bonk our own config env vars to isolate cache.
@@ -87,7 +90,7 @@ func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.U
 				context.Background(),
 				packType,
 				fixturePath.String(),
-				api.FilesetFilters{Uid: "keep", Gid: "keep", Mtime: "keep"},
+				api.FilesetPackFilter_Lossless,
 				warehouseAddr,
 				rio.Monitor{},
 			)
@@ -99,9 +102,9 @@ func CheckCachePopulation(packType api.PackType, pack rio.PackFunc, unpack rio.U
 				context.Background(),
 				wareID,
 				unpackPath.String(),
-				api.Filter_NoMutation,
+				api.FilesetUnpackFilter_Lossless,
 				rio.Placement_None,
-				[]api.WarehouseAddr{warehouseAddr},
+				[]api.WarehouseLocation{warehouseAddr},
 				rio.Monitor{},
 			)
 			So(err, ShouldBeNil)

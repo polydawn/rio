@@ -22,7 +22,7 @@ import (
 func pick(
 	ctx context.Context,
 	wareID api.WareID,
-	warehouses []api.WarehouseAddr,
+	warehouses []api.WarehouseLocation,
 	objcacheWorkdir fs.FS,
 	mon rio.Monitor,
 ) (whCtrl *gitWarehouse.Controller, err error) {

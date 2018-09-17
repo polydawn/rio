@@ -82,7 +82,7 @@ func CopyPlacer(srcPath, dstPath fs.AbsolutePath, _ bool) (Janitor, error) {
 	}
 	postVisit := func(filenode *fs.FilewalkNode) error {
 		if filenode.Info.Type == fs.Type_Dir {
-			if err := dstFs.SetTimesNano(filenode.Info.Name, filenode.Info.Mtime, fs.DefaultAtime); err != nil {
+			if err := dstFs.SetTimesNano(filenode.Info.Name, filenode.Info.Mtime, fs.DefaultTime); err != nil {
 				return err
 			}
 		}

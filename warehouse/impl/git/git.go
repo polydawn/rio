@@ -96,7 +96,7 @@ type Controller struct {
 	  - `rio.ErrWarehouseUnavailable` -- if the warehouse doesn't exist
 	  - `rio.ErrLocalCacheProblem` -- if unable to create a cache directory
 */
-func NewController(workingDirectory riofs.FS, addr api.WarehouseAddr) (*Controller, error) {
+func NewController(workingDirectory riofs.FS, addr api.WarehouseLocation) (*Controller, error) {
 	var err error
 	// Verify that the addr is sensible up front.
 	sanitizedAddr, err := SanitizeRemote(string(addr))

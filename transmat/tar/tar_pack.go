@@ -13,7 +13,6 @@ import (
 	. "github.com/warpfork/go-errcat"
 	"go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/go-timeless-api/util"
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
@@ -29,8 +28,8 @@ func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	packType api.PackType, // The name of pack format.
 	pathStr string, // The fileset to scan and pack (absolute path).
-	filt api.FilesetFilters, // Optionally: filters we should apply while unpacking.
-	warehouseAddr api.WarehouseAddr, // Warehouse to save into (or blank to just scan).
+	filt api.FilesetPackFilter, // Filters we should apply while packing.
+	warehouseAddr api.WarehouseLocation, // Warehouse to save into (or blank to just scan).
 	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
 ) (_ api.WareID, err error) {
 	if mon.Chan != nil {
@@ -42,13 +41,12 @@ func Pack(
 	if packType != PackType {
 		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, packType)
 	}
+	if !filt.IsComplete() {
+		return api.WareID{}, Errorf(rio.ErrUsage, "filters must be completely specified")
+	}
 	path, err := fs.ParseAbsolutePath(pathStr)
 	if err != nil {
 		return api.WareID{}, Errorf(rio.ErrUsage, "pack must be called with absolute path: %s", err)
-	}
-	filt2, err := apiutil.ProcessFilters(filt, apiutil.FilterPurposePack)
-	if err != nil {
-		return api.WareID{}, Errorf(rio.ErrUsage, "invalid filter specification: %s", err)
 	}
 
 	// Short-circuit exit if the path does not exist.
@@ -83,7 +81,7 @@ func Pack(
 	tarWriter := tar.NewWriter(gzWriter)
 
 	// Scan and tarify!
-	wareID, err := packTar(ctx, afs, filt2, tarWriter)
+	wareID, err := packTar(ctx, afs, filt, tarWriter)
 	if err != nil {
 		return wareID, err
 	}
@@ -99,7 +97,7 @@ func Pack(
 func packTar(
 	ctx context.Context,
 	afs fs.FS,
-	filt apiutil.FilesetFilters,
+	filt api.FilesetPackFilter,
 	tw *tar.Writer,
 ) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
@@ -125,7 +123,14 @@ func packTar(
 		}
 
 		// Apply filters.
-		filters.Apply(filt, fmeta)
+		//  The filter may reject things by returning an error;
+		//   or, instruct us to ignore things by setting the type to invalid.
+		if err := filters.ApplyPackFilter(filt, fmeta); err != nil {
+			return err
+		}
+		if fmeta.Type == fs.Type_Invalid {
+			return nil // skip it and continue the walk
+		}
 
 		// Flatten time to seconds.  The tar writer impl doesn't do subsecond precision.
 		//  The writer will always flatten it internally, but we need to do it here as well

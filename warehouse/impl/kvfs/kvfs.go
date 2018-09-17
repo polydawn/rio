@@ -21,7 +21,7 @@ var (
 )
 
 type Controller struct {
-	addr     api.WarehouseAddr // user's string retained for messages
+	addr     api.WarehouseLocation // user's string retained for messages
 	basePath fs.AbsolutePath
 	ctntAddr bool
 }
@@ -34,7 +34,7 @@ type Controller struct {
 	  - `rio.ErrUsage` -- for unsupported addressses
 	  - `rio.ErrWarehouseUnavailable` -- if the warehouse doesn't exist
 */
-func NewController(addr api.WarehouseAddr) (warehouse.BlobstoreController, error) {
+func NewController(addr api.WarehouseLocation) (warehouse.BlobstoreController, error) {
 	// Stamp out a warehouse handle.
 	//  More values will be accumulated in shortly.
 	whCtrl := Controller{
