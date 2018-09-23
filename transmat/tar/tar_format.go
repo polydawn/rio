@@ -53,11 +53,14 @@ func fsTypeToTarType(fsType fs.Type) byte {
 
 // Mutate fs.Metadata fields to match the given tar header.
 // Does not check for names that go above '.'; caller may want to do that.
-func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
+func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) (skipMe error, haltMe error) {
 	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
-	fmeta.Type = tarTypeToFsType(hdr.Typeflag)
+	fmeta.Type, skipMe = tarTypeToFsType(hdr.Typeflag)
+	if skipMe != nil {
+		return skipMe, nil
+	}
 	if fmeta.Type == fs.Type_Invalid {
-		return Errorf(rio.ErrWareCorrupt, "corrupt tar: %q is not a known file type", hdr.Typeflag)
+		return nil, Errorf(rio.ErrWareCorrupt, "corrupt tar: %q is not a known file type", hdr.Typeflag)
 	}
 	fmeta.Perms = fs.Perms(hdr.Mode & 07777)
 	fmeta.Uid = uint32(hdr.Uid)
@@ -68,27 +71,29 @@ func TarHdrToMetadata(hdr *tar.Header, fmeta *fs.Metadata) error {
 	fmeta.Devminor = hdr.Devminor
 	fmeta.Mtime = hdr.ModTime
 	fmeta.Xattrs = hdr.Xattrs
-	return nil
+	return nil, nil
 }
 
-func tarTypeToFsType(tarType byte) fs.Type {
+func tarTypeToFsType(tarType byte) (_ fs.Type, skipMe error) {
 	switch tarType {
 	case tar.TypeReg, tar.TypeRegA:
-		return fs.Type_File
+		return fs.Type_File, nil
 	case tar.TypeLink:
-		return fs.Type_Hardlink
+		return fs.Type_Hardlink, nil
 	case tar.TypeSymlink:
-		return fs.Type_Symlink
+		return fs.Type_Symlink, nil
 	case tar.TypeChar:
-		return fs.Type_CharDevice
+		return fs.Type_CharDevice, nil
 	case tar.TypeBlock:
-		return fs.Type_Device
+		return fs.Type_Device, nil
 	case tar.TypeDir:
-		return fs.Type_Dir
+		return fs.Type_Dir, nil
 	case tar.TypeFifo:
-		return fs.Type_NamedPipe
+		return fs.Type_NamedPipe, nil
 	// Notice that tar does not have a type for socket files
+	case tar.TypeXGlobalHeader:
+		return fs.Type_Invalid, fmt.Errorf("tar type 'g' header entries ignored")
 	default:
-		return fs.Type_Invalid
+		return fs.Type_Invalid, nil
 	}
 }
