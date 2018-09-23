@@ -95,7 +95,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			StringVar(&args.Path)
 		cmd.Flag("target", "Warehouse in which to place the ware").
 			StringVar(&args.TargetWarehouseLocation)
-		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default many of these attribute will be flattened.").
+		cmd.Flag("filters", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default many of these attribute will be flattened.").
 			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
@@ -148,7 +148,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 				string(rio.Placement_Copy), string(rio.Placement_Direct), string(rio.Placement_Mount), string(rio.Placement_None))
 		cmd.Flag("source", "Warehouses from which to fetch the ware").
 			StringsVar(&args.SourcesWarehouseLocation)
-		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default all of these will be kept, except any use of setuid, setgid, and device modes will be rejected.").
+		cmd.Flag("filters", "Configure filters for file properties, such as mtime, uid, gid, etc.  By default all of these will be kept, except any use of setuid, setgid, and device modes will be rejected.").
 			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
@@ -202,7 +202,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			StringVar(&args.PackType)
 		cmd.Flag("source", "Address to of the data to scan.").
 			StringVar(&args.SourceWarehouseLocation)
-		cmd.Flag("filter", "Configure filters for file properties, such as mtime, uid, gid, etc.").
+		cmd.Flag("filters", "Configure filters for file properties, such as mtime, uid, gid, etc.").
 			StringVar(&args.Filter)
 		bhvs[cmd.FullCommand()] = &behavior{&args, func() (err error) {
 			defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
