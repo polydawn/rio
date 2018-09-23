@@ -215,7 +215,7 @@ func Parse(ctx context.Context, args []string, stdin io.Reader, stdout, stderr i
 			if err != nil {
 				return Recategorize(rio.ErrUsage, err)
 			}
-			filt = filt.Apply(api.FilesetUnpackFilter_LowPriv)
+			filt = filt.Apply(api.FilesetUnpackFilter_Conservative)
 			resultWareID, err := scanFunc(
 				ctx,
 				api.PackType(args.PackType),
