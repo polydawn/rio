@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/polydawn/refmt/misc"
 	. "github.com/warpfork/go-errcat"
@@ -158,8 +159,27 @@ func unpackTar(
 		}
 
 		// Reshuffle metainfo to our default format.
-		if err := TarHdrToMetadata(thdr, &fmeta); err != nil {
-			return api.WareID{}, api.WareID{}, err
+		skipMe, haltMe := TarHdrToMetadata(thdr, &fmeta)
+		if skipMe != nil {
+			// n.b. every time this happens in practice so far, it's a `g` header,
+			//  and it's got a git commit hash in the paxrecords -- purely advisory info.
+			//  It would be nice to turn those down into a debug message, and react
+			//  a little more startledly to any other values.  Until then, "warn"
+			//  even though every time we've seen this it's harmless.
+			mon.Send(rio.Event_Log{
+				Time:  time.Now(),
+				Level: rio.LogWarn,
+				Msg:   fmt.Sprintf("unpacking: skipping an entry: %s", skipMe),
+				Detail: [][2]string{
+					{"path", fmeta.Name.String()},
+					{"skipreason", skipMe.Error()},
+					{"tarhdr", fmt.Sprintf("%#v", thdr)},
+				},
+			})
+			continue
+		}
+		if haltMe != nil {
+			return api.WareID{}, api.WareID{}, haltMe
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
 			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
