@@ -1,12 +1,45 @@
 package fsOp
 
 import (
+	"context"
 	"os"
 
 	. "github.com/warpfork/go-errcat"
 
+	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
 )
+
+/*
+	Copy does a recursive copy from src to dst; it correctly handles most files
+	(e.g. symlinks, etc), but is fairly sloppy with attributes (does not chown
+	the dst, nor attempt to maintain timestamps).
+
+	Copy is here as a convenient library function if you need it, but note that
+	it's a lot less precise than a pair of "rio pack | rio unpack" commands, and
+	also this method does not hash.
+*/
+func Copy(ctx context.Context, srcFs, dstFs fs.FS) error {
+	return fs.Walk(srcFs, func(filenode *fs.FilewalkNode) error {
+		if filenode.Err != nil {
+			return filenode.Err
+		}
+
+		// Consider cancellation.
+		if ctx.Err() != nil {
+			return Errorf(rio.ErrCancelled, "cancelled")
+		}
+
+		// Scan & open file.
+		fmeta, file, err := ScanFile(srcFs, filenode.Info.Name) // FIXME : we already have the full metadata loaded; give ScanFile option to accept it!
+		if err != nil {
+			return err
+		}
+
+		// Place file.
+		return PlaceFile(dstFs, *fmeta, file, true)
+	}, nil)
+}
 
 /*
 	Makes dirs recursively so the requested path exists, applying the assigned metadata
