@@ -230,10 +230,14 @@ func (c *Controller) Update(ctx context.Context) error {
 		panic("cannot update repository before opening")
 	}
 	if c.allowFetch && !c.newClone {
-		return c.repo.FetchContext(ctx, &srcd_git.FetchOptions{
+		err := c.repo.FetchContext(ctx, &srcd_git.FetchOptions{
 			// Auth credentials, if required, to use with the remote repository.
 			Auth: c.transportAuthMethod,
 		})
+		if err == srcd_git.NoErrAlreadyUpToDate {
+			return nil
+		}
+		return err
 	}
 	return nil
 }
