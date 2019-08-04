@@ -73,3 +73,6 @@
 [submodule ".gopath/src/github.com/emirpasic/gods"]
 	path = .gopath/src/github.com/emirpasic/gods
 	url = https://github.com/emirpasic/gods
+[submodule ".gopath/src/golang.org/x/sys"]
+	path = .gopath/src/golang.org/x/sys
+	url = https://go.googlesource.com/sys

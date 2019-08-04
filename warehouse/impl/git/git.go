@@ -38,6 +38,7 @@ import (
 	srcd_git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
@@ -186,7 +187,6 @@ func (c *Controller) GetTree(hash string) (*object.Tree, error) {
 	If a working directory is _not_ set, then we must clone into memory.
 */
 func (c *Controller) setCacheStorage() error {
-	var err error
 	if c.store != nil {
 		return nil
 	}
@@ -195,10 +195,7 @@ func (c *Controller) setCacheStorage() error {
 		if !filepath.IsAbs(c.sanitizedAddr) {
 			return Errorf(rio.ErrUsage, "remote is not an absolute path")
 		}
-		c.store, err = filesystem.NewStorage(srcd_osfs.New(c.sanitizedAddr))
-		if err != nil {
-			return Errorf(rio.ErrWareCorrupt, "Could not open repository directory: %s", err)
-		}
+		c.store = filesystem.NewStorage(srcd_osfs.New(c.sanitizedAddr), cache.NewObjectLRUDefault())
 		return nil
 	}
 	c.allowClone = true // non-local repositories are allowed to clone
@@ -212,10 +209,7 @@ func (c *Controller) setCacheStorage() error {
 	remotePath := SlugifyRemote(c.sanitizedAddr)
 	path := workingDir.Join(riofs.MustRelPath(remotePath))
 	srcd_fs := srcd_osfs.New(path.String())
-	c.store, err = filesystem.NewStorage(srcd_fs)
-	if err != nil {
-		return Errorf(rio.ErrLocalCacheProblem, "Could not create repository cache: %s", err)
-	}
+	c.store = filesystem.NewStorage(srcd_fs, cache.NewObjectLRUDefault())
 	return nil
 }
 
