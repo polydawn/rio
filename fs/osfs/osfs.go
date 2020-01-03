@@ -338,8 +338,3 @@ func devModesJoin(major int64, minor int64) uint32 {
 	// Constants herein are not a joy: they're a workaround for https://github.com/golang/go/issues/8106
 	return uint32(((minor & 0xfff00) << 12) | ((major & 0xfff) << 8) | (minor & 0xff))
 }
-
-func devModesSplit(rdev uint64) (major int64, minor int64) {
-	// Constants herein are not a joy: they're a workaround for https://github.com/golang/go/issues/8106
-	return int64((rdev >> 8) & 0xff), int64((rdev & 0xff) | ((rdev >> 12) & 0xfff00))
-}
