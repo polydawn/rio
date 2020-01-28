@@ -6,12 +6,15 @@ import (
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/transmat/git"
 	"go.polydawn.net/rio/transmat/tar"
+	"go.polydawn.net/rio/transmat/zip"
 )
 
 func demuxPackTool(packType string) (rio.PackFunc, error) {
 	switch packType {
 	case "tar":
 		return tartrans.Pack, nil
+	case "zip":
+		return ziptrans.Pack, nil
 	default:
 		return nil, Errorf(rio.ErrUsage, "unsupported packtype %q", packType)
 	}

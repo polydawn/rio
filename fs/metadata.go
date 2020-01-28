@@ -1,7 +1,9 @@
 package fs
 
 import (
+	"os"
 	"time"
+
 
 	"go.polydawn.net/go-timeless-api"
 )
@@ -23,6 +25,40 @@ type Metadata struct {
 	//  - ctime -- it's pointless to keep; you can't set such a thing in any posix filesystem.
 	//  - atime -- similarly pointless; you can set it, but maybe, with asterisks, and it's
 	//     almost certain end up trampled again moments later.
+}
+
+// Mode computes the expected os.FileMode for the described Metadata Perms and Type.
+func (m *Metadata) Mode() os.FileMode {
+	mode := os.FileMode(0)
+	if m.Type == Type_Dir {
+		mode |= os.ModeDir
+	}
+	if m.Type == Type_Symlink {
+		mode |= os.ModeSymlink
+	}
+	if m.Type == Type_NamedPipe {
+		mode |= os.ModeNamedPipe
+	}
+	if m.Type == Type_Socket {
+		mode |= os.ModeSocket
+	}
+	if m.Type == Type_Device {
+		mode |= os.ModeDevice
+	}
+	if m.Type == Type_CharDevice {
+		mode |= os.ModeCharDevice
+	}
+	mode |= (os.FileMode(m.Perms) & os.ModePerm)
+	if m.Perms&Perms_Setuid != 0 {
+		mode |= os.ModeSetuid
+	}
+	if m.Perms&Perms_Setgid != 0 {
+		mode |= os.ModeSetgid
+	}
+	if m.Perms&Perms_Sticky != 0 {
+		mode |= os.ModeSticky
+	}
+	return mode
 }
 
 /*

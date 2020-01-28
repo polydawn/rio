@@ -7,10 +7,11 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api"
+	api "go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs/nilfs"
+	nilFS "go.polydawn.net/rio/fs/nilfs"
 	"go.polydawn.net/rio/transmat/mixins/log"
+	"go.polydawn.net/rio/transmat/util"
 )
 
 var (
@@ -32,7 +33,7 @@ func Mirror(
 	// Try to read the ware from the target first; if successfull, no-op out.
 	//  We don't fully re-verify the content, because that requires a time
 	//  committment, and we want this command to be fast when run repeatedly.
-	reader, err := PickReader(wareID, []api.WarehouseLocation{target}, false, mon)
+	reader, err := util.PickReader(wareID, []api.WarehouseLocation{target}, false, mon)
 	if err == nil {
 		log.MirrorNoop(mon, target, wareID)
 		reader.Close()
@@ -43,14 +44,14 @@ func Mirror(
 	//  During mirroring, unlike unpacking, we actually *do* know the hash
 	//  of what we'll be uploading... but there's nothing dramatically better
 	//  we can do with that knowledge.
-	wc, err := OpenWriteController(target, wareID.Type, mon)
+	wc, err := util.OpenWriteController(target, wareID.Type, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}
 	defer wc.Close()
 
 	// Pick a source warehouse and get a reader.
-	reader, err = PickReader(wareID, sources, false, mon)
+	reader, err = util.PickReader(wareID, sources, false, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}

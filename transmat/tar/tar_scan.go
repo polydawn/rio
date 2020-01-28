@@ -4,11 +4,12 @@ import (
 	"context"
 
 	. "github.com/warpfork/go-errcat"
-	"go.polydawn.net/go-timeless-api"
+	api "go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/nilfs"
+	nilFS "go.polydawn.net/rio/fs/nilfs"
 	"go.polydawn.net/rio/fs/osfs"
+	"go.polydawn.net/rio/transmat/util"
 )
 
 // A "scan" is roughly the same as an unpack to /dev/null,
@@ -56,7 +57,7 @@ func Scan(
 	// Dial warehouse.
 	//  Note how this is a subset of the usual accepted warehouses;
 	//  it must be a monowarehouse, not a legit CA storage bucket.
-	reader, err := PickReader(api.WareID{"tar", "-"}, []api.WarehouseLocation{addr}, true, mon)
+	reader, err := util.PickReader(api.WareID{"tar", "-"}, []api.WarehouseLocation{addr}, true, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}

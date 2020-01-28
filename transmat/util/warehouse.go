@@ -1,4 +1,4 @@
-package tartrans
+package util
 
 import (
 	"io"

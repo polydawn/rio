@@ -12,7 +12,7 @@ import (
 	"github.com/polydawn/refmt/misc"
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api"
+	api "go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
@@ -76,7 +76,7 @@ func unpack(
 	path2 := fs.MustAbsolutePath(path)
 
 	// Pick a warehouse and get a reader.
-	reader, err := PickReader(wareID, warehouses, false, mon)
+	reader, err := util.PickReader(wareID, warehouses, false, mon)
 	if err != nil {
 		return api.WareID{}, err
 	}
