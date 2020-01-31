@@ -4,8 +4,7 @@ import (
 	"os"
 	"time"
 
-
-	"go.polydawn.net/go-timeless-api"
+	api "go.polydawn.net/go-timeless-api"
 )
 
 type Metadata struct {
@@ -59,6 +58,39 @@ func (m *Metadata) Mode() os.FileMode {
 		mode |= os.ModeSticky
 	}
 	return mode
+}
+
+// TypeOf extracts the fs.Type from an os.FileMode
+func TypeOf(fm os.FileMode) Type {
+	if fm&os.ModeDir != 0 {
+		return Type_Dir
+	}
+	if fm&os.ModeSymlink != 0 {
+		return Type_Symlink
+	}
+	if fm&os.ModeNamedPipe != 0 {
+		return Type_NamedPipe
+	}
+	if fm&os.ModeSocket != 0 {
+		return Type_Socket
+	}
+	if fm&os.ModeDevice != 0 {
+		return Type_Device
+	}
+	if fm&os.ModeCharDevice != 0 {
+		return Type_CharDevice
+	}
+	if fm&os.ModeIrregular != 0 {
+		return Type_Invalid
+	}
+	return Type_File
+}
+
+// PermsOf extracts the fs.Perms from an os.FileMode
+func PermsOf(fm os.FileMode) Perms {
+	p := Perms(0)
+	p |= Perms(fm & (os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky))
+	return p
 }
 
 /*

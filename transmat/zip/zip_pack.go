@@ -80,7 +80,10 @@ func Pack(
 		return wareID, err
 	}
 	// Close all the intermediate writer layers to ensure they've flushed.
-	zipWriter.Close()
+	err = zipWriter.Close()
+	if err != nil {
+		return wareID, err
+	}
 
 	// If we made it all the way with no errors, commit.
 	//  (Otherwise, the write controller will be closed by default by our defers.)
