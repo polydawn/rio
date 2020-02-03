@@ -154,7 +154,7 @@ func ZipHdrToMetadata(hdr *zip.FileHeader, fmeta *fs.Metadata) (skipMe error, ha
 	fmeta.Size = finfo.Size()
 	// TODO: symbolic links (fmeta.Linkname)
 	// TODO: devices (fmeta.Devmajor / Devminor)
-	fmeta.Mtime = hdr.ModTime()
+	fmeta.Mtime = hdr.Modified
 	//TODO: xattrs
 	return nil, nil
 }

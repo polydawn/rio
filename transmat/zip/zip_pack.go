@@ -143,7 +143,15 @@ func packZip(
 
 		// If it's a file, stream the body into the file while hashing; for all,
 		//  record the metadata in the bucket for the total hash.
-		if file == nil {
+		if file == nil && fmeta.Type == fs.Type_Symlink {
+			hasher := sha512.New384()
+			tee := io.MultiWriter(fw, hasher)
+			_, err := tee.Write([]byte(fmeta.Linkname))
+			if err != nil {
+				return err
+			}
+			bucket.AddRecord(*fmeta, hasher.Sum(nil))
+		} else if file == nil {
 			fw.Write([]byte{})
 			bucket.AddRecord(*fmeta, nil)
 		} else {

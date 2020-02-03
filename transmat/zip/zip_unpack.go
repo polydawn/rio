@@ -2,6 +2,7 @@ package ziptrans
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha512"
 	"fmt"
@@ -231,22 +232,31 @@ func unpackZip(
 			if err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			reader := &util.HashingReader{r, sha512.New384()}
+			reader := &util.HashingReader{R: r, Hasher: sha512.New384()}
 			if err = fsOp.PlaceFile(afs, filteredFmeta, reader, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			prefilterBucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 			filteredBucket.AddRecord(filteredFmeta, reader.Hasher.Sum(nil))
-		case fs.Type_Dir:
-			dirs[fmeta.Name] = struct{}{}
-			fallthrough
-		default:
-			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
+			continue
+		case fs.Type_Symlink:
+			buf := new(bytes.Buffer)
+			r, err := f.Open()
+			if err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			prefilterBucket.AddRecord(fmeta, nil)
-			filteredBucket.AddRecord(filteredFmeta, nil)
+			buf.ReadFrom(r)
+			fmeta.Linkname = buf.String()
+			filteredFmeta.Linkname = fmeta.Linkname
+		case fs.Type_Dir:
+			dirs[fmeta.Name] = struct{}{}
+		default:
 		}
+		if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+		}
+		prefilterBucket.AddRecord(fmeta, nil)
+		filteredBucket.AddRecord(filteredFmeta, nil)
 	}
 
 	// Cleanup dir times with a post-order traversal over the bucket.
