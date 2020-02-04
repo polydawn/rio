@@ -136,6 +136,7 @@ func packZip(
 		// Flip our metadata to zip header format, and flush it.
 		zipHeader = new(zip.FileHeader)
 		MetadataToZipHdr(fmeta, zipHeader)
+
 		fw, err := zw.CreateHeader(zipHeader)
 		if err != nil {
 			return Errorf(rio.ErrWarehouseUnwritable, "error while writing pack: %s", err)

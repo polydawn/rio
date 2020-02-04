@@ -88,8 +88,16 @@ func TypeOf(fm os.FileMode) Type {
 
 // PermsOf extracts the fs.Perms from an os.FileMode
 func PermsOf(fm os.FileMode) Perms {
-	p := Perms(0)
-	p |= Perms(fm & (os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky))
+	p := Perms(fm & os.ModePerm)
+	if fm&os.ModeSetuid != 0 {
+		p |= Perms_Setuid
+	}
+	if fm&os.ModeSetgid != 0 {
+		p |= Perms_Setgid
+	}
+	if fm&os.ModeSticky != 0 {
+		p |= Perms_Sticky
+	}
 	return p
 }
 

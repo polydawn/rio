@@ -89,6 +89,17 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 			return fs.NormalizeIOError(err)
 		}
 		file.Close()
+		resultingStat, err := afs.Stat(fmeta.Name)
+		if err != nil {
+			return fs.NormalizeIOError(err)
+		}
+		// on some platforms (darwin/bsd), the permissions specified on OpenFile are not always
+		// respected - in particular sticky bits may be cleared and need to be reset.
+		if resultingStat.Perms != fmeta.Perms {
+			if err = afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+				return fs.NormalizeIOError(err)
+			}
+		}
 	case fs.Type_Dir:
 		if fmeta.Name == (fs.RelPath{}) {
 			// for the base dir only:

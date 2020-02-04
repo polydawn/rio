@@ -88,7 +88,7 @@ func TestZipFixtureUnpack(t *testing.T) {
 					})
 				*/
 				Convey("Unpack a fixture from zip3.0 which lacks a base dir", func() {
-					wareID := api.WareID{"zip", "2RLHdc3am6tMCFy56vfcHm5kWLoAtYBfiaQcq17vDm1tEzQn9CC6tcF2yzpAJvehPC"}
+					wareID := api.WareID{"zip", "6c1eVnQ9NutqZSMD5gimy72u3gZMcp4mFAVbQhAkpwTvTH1CCnGgL6yvBJ6MNkWUYZ"}
 					gotWareID, err := Unpack(
 						context.Background(),
 						wareID,
@@ -105,8 +105,8 @@ func TestZipFixtureUnpack(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(fmeta.Name, ShouldResemble, fs.MustRelPath("ab"))
 					So(fmeta.Type, ShouldResemble, fs.Type_File)
-					So(fmeta.Uid, ShouldEqual, 7000)
-					So(fmeta.Gid, ShouldEqual, 7000)
+					So(fmeta.Uid, ShouldEqual, 501)
+					So(fmeta.Gid, ShouldEqual, 20)
 					So(fmeta.Mtime.UTC(), ShouldResemble, time.Date(2015, 05, 30, 19, 11, 23, 0, time.UTC))
 					body, err := ioutil.ReadAll(reader)
 					So(string(body), ShouldResemble, "")
