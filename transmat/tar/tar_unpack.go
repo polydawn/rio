@@ -14,103 +14,20 @@ import (
 
 	api "go.polydawn.net/go-timeless-api"
 	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/config"
 	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/lib/treewalk"
-	"go.polydawn.net/rio/transmat/mixins/cache"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/transmat/util"
 )
 
-var (
-	_ rio.UnpackFunc = Unpack
-)
-
-func Unpack(
-	ctx context.Context, // Long-running call.  Cancellable.
-	wareID api.WareID, // What wareID to fetch for unpacking.
-	path string, // Where to unpack the fileset (absolute path).
-	filt api.FilesetUnpackFilter, // Optionally: filters we should apply while unpacking.
-	placementMode rio.PlacementMode, // Optionally: a placement mode (default is "copy").
-	warehouses []api.WarehouseLocation, // Warehouses we can try to fetch from.
-	mon rio.Monitor, // Optionally: callbacks for progress monitoring.
-) (_ api.WareID, err error) {
-	if mon.Chan != nil {
-		defer close(mon.Chan)
-	}
-	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
-
-	// Sanitize arguments.
-	if wareID.Type != PackType {
-		return api.WareID{}, Errorf(rio.ErrUsage, "this transmat implementation only supports packtype %q (not %q)", PackType, wareID.Type)
-	}
-	if !filt.IsComplete() {
-		return api.WareID{}, Errorf(rio.ErrUsage, "filters must be completely specified")
-	}
-	if placementMode == "" {
-		placementMode = rio.Placement_Copy
-	}
-	// Wrap the direct unpack func with cache behavior; call that.
-	return cache.Lrn2Cache(
-		osfs.New(config.GetCacheBasePath()),
-		unpack,
-	)(ctx, wareID, path, filt, placementMode, warehouses, mon)
-}
-
-func unpack(
-	ctx context.Context,
-	wareID api.WareID,
-	path string,
-	filt api.FilesetUnpackFilter,
-	placementMode rio.PlacementMode,
-	warehouses []api.WarehouseLocation,
-	mon rio.Monitor,
-) (_ api.WareID, err error) {
-	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
-
-	// Sanitize arguments.
-	path2 := fs.MustAbsolutePath(path)
-
-	// Pick a warehouse and get a reader.
-	reader, err := util.PickReader(wareID, warehouses, false, mon)
-	if err != nil {
-		return api.WareID{}, err
-	}
-	defer reader.Close()
-
-	// Construct filesystem wrapper to use for all our ops.
-	afs := osfs.New(path2)
-
-	// Extract.
-	prefilterWareID, unpackWareID, err := unpackTar(ctx, afs, filt, reader, mon)
-	if err != nil {
-		return unpackWareID, err
-	}
-
-	// Check for hash mismatch before returning, because that IS an error,
-	//  but also return the hash we got either way.
-	if prefilterWareID != wareID {
-		return unpackWareID, ErrorDetailed(
-			rio.ErrWareHashMismatch,
-			fmt.Sprintf("hash mismatch: expected %q, got %q (filtered %q)", wareID, prefilterWareID, unpackWareID),
-			map[string]string{
-				"expected": wareID.String(),
-				"actual":   prefilterWareID.String(),
-				"filtered": unpackWareID.String(),
-			},
-		)
-	}
-	return unpackWareID, nil
-}
-
 func unpackTar(
 	ctx context.Context,
 	afs fs.FS,
 	filt api.FilesetUnpackFilter,
+	_ api.WareID,
 	reader io.Reader,
 	mon rio.Monitor,
 ) (
