@@ -7,6 +7,7 @@ import (
 	. "github.com/warpfork/go-errcat"
 	"go.polydawn.net/go-timeless-api/rio"
 	"go.polydawn.net/rio/fs"
+	"go.polydawn.net/rio/fs/osfs"
 )
 
 // MetadataToZipHdr mutates zip.FileHeader fields to match the given fmeta.
@@ -21,7 +22,7 @@ func MetadataToZipHdr(fmeta *fs.Metadata, hdr *zip.FileHeader) {
 
 	hdr.UncompressedSize64 = uint64(fmeta.Size)
 	hdr.Extra = append(zipUnix2ExtraHeader(fmeta), zipUnix3ExtraHeader(fmeta)...)
-	hdr.SetMode(fmeta.Mode())
+	hdr.SetMode(osfs.ModeToOs(fmeta))
 	hdr.SetModTime(fmeta.Mtime)
 }
 
@@ -140,8 +141,8 @@ func ZipHdrToMetadata(hdr *zip.FileHeader, fmeta *fs.Metadata) (skipMe error, ha
 	finfo := hdr.FileInfo()
 
 	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
-	fmeta.Perms = fs.PermsOf(finfo.Mode())
-	fmeta.Type = fs.TypeOf(finfo.Mode())
+	fmeta.Perms = osfs.OsToPerms(finfo.Mode())
+	fmeta.Type = osfs.OsToType(finfo.Mode())
 	if fmeta.Type == fs.Type_Invalid {
 		return nil, Errorf(rio.ErrWareCorrupt, "corrupt zip: %q is not of a known file type", hdr.Name)
 	}
