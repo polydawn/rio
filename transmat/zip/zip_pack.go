@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha512"
 	"io"
-	"time"
 
 	"github.com/polydawn/refmt/misc"
 
@@ -127,11 +126,6 @@ func packZip(
 		if fmeta.Type == fs.Type_Invalid {
 			return nil // skip it and continue the walk
 		}
-
-		// Flatten time to seconds.  The tar writer impl doesn't do subsecond precision.
-		//  The writer will always flatten it internally, but we need to do it here as well
-		//  so that the hash and the serial form are describing the same thing.
-		fmeta.Mtime = fmeta.Mtime.Truncate(time.Second)
 
 		// Flip our metadata to zip header format, and flush it.
 		zipHeader = new(zip.FileHeader)

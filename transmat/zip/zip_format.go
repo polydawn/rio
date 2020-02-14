@@ -137,18 +137,18 @@ func zipFileOwnership(hdr *zip.FileHeader) (uint32, uint32, error) {
 }
 
 // ZipHdrToMetadata mutates fs.Metadata fields to match the given zip header.
-func ZipHdrToMetadata(hdr *zip.FileHeader, fmeta *fs.Metadata) (skipMe error, haltMe error) {
+func ZipHdrToMetadata(hdr *zip.FileHeader, fmeta *fs.Metadata) error {
 	finfo := hdr.FileInfo()
 
 	fmeta.Name = fs.MustRelPath(hdr.Name) // FIXME should not use the 'must' path
 	fmeta.Perms = osfs.OsToPerms(finfo.Mode())
 	fmeta.Type = osfs.OsToType(finfo.Mode())
 	if fmeta.Type == fs.Type_Invalid {
-		return nil, Errorf(rio.ErrWareCorrupt, "corrupt zip: %q is not of a known file type", hdr.Name)
+		return Errorf(rio.ErrWareCorrupt, "corrupt zip: %q is not of a known file type", hdr.Name)
 	}
 	uid, gid, err := zipFileOwnership(hdr)
 	if err != nil {
-		return nil, Errorf(rio.ErrWareCorrupt, "corrupt zip: %q does not specify owner: %v", hdr.Name, err)
+		return Errorf(rio.ErrWareCorrupt, "corrupt zip: %q does not specify owner: %v", hdr.Name, err)
 	}
 	fmeta.Uid = uid
 	fmeta.Gid = gid
@@ -157,5 +157,5 @@ func ZipHdrToMetadata(hdr *zip.FileHeader, fmeta *fs.Metadata) (skipMe error, ha
 	// TODO: devices (fmeta.Devmajor / Devminor)
 	fmeta.Mtime = hdr.Modified
 	//TODO: xattrs
-	return nil, nil
+	return nil
 }

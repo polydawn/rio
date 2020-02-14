@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/polydawn/refmt/misc"
 	. "github.com/warpfork/go-errcat"
@@ -39,12 +38,11 @@ func unpackZip(
 ) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
-	b := buffer.NewTemporaryBuffer()
-	defer b.Close()
-	readerAt, err := b.SectionReader(ctx, archiveWareID, reader, mon)
+	readerAt, closer, err := buffer.SectionReader(ctx, archiveWareID, reader, mon)
 	if err != nil {
 		return api.WareID{}, api.WareID{}, err
 	}
+	defer closer.Close()
 
 	// Convert the raw byte reader to a zip stream.
 	zr, err := zip.NewReader(readerAt, readerAt.Size())
@@ -63,7 +61,7 @@ func unpackZip(
 	dirs := map[fs.RelPath]struct{}{}
 
 	// Iterate over each entry, mutating filesystem as we go.
-	for _, f := range zr.File {
+	for _, zf := range zr.File {
 		fmeta := fs.Metadata{}
 
 		// Check for done.
@@ -78,27 +76,9 @@ func unpackZip(
 		}
 
 		// Reshuffle metainfo to our default format.
-		skipMe, haltMe := ZipHdrToMetadata(&f.FileHeader, &fmeta)
-		if skipMe != nil {
-			// n.b. every time this happens in practice so far, it's a `g` header,
-			//  and it's got a git commit hash in the paxrecords -- purely advisory info.
-			//  It would be nice to turn those down into a debug message, and react
-			//  a little more startledly to any other values.  Until then, "warn"
-			//  even though every time we've seen this it's harmless.
-			mon.Send(rio.Event_Log{
-				Time:  time.Now(),
-				Level: rio.LogWarn,
-				Msg:   fmt.Sprintf("unpacking: skipping an entry: %s", skipMe),
-				Detail: [][2]string{
-					{"path", fmeta.Name.String()},
-					{"skipreason", skipMe.Error()},
-					{"ziphdr", fmt.Sprintf("%#v", f)},
-				},
-			})
-			continue
-		}
-		if haltMe != nil {
-			return api.WareID{}, api.WareID{}, haltMe
+		err := ZipHdrToMetadata(&zf.FileHeader, &fmeta)
+		if err != nil {
+			return api.WareID{}, api.WareID{}, err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
 			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt zip: paths that use '../' to leave the base dir are invalid")
@@ -144,9 +124,9 @@ func unpackZip(
 		// Place the file.
 		switch fmeta.Type {
 		case fs.Type_File:
-			r, err := f.Open()
+			r, err := zf.Open()
 			if err != nil {
-				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
 			}
 			reader := &util.HashingReader{R: r, Hasher: sha512.New384()}
 			if err = fsOp.PlaceFile(afs, filteredFmeta, reader, false); err != nil {
@@ -154,25 +134,33 @@ func unpackZip(
 			}
 			prefilterBucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 			filteredBucket.AddRecord(filteredFmeta, reader.Hasher.Sum(nil))
-			continue
 		case fs.Type_Symlink:
 			buf := new(bytes.Buffer)
-			r, err := f.Open()
+			r, err := zf.Open()
 			if err != nil {
-				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
 			}
-			buf.ReadFrom(r)
+			_, err = buf.ReadFrom(r)
+			if err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
+			}
 			fmeta.Linkname = buf.String()
 			filteredFmeta.Linkname = fmeta.Linkname
+			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			}
+			prefilterBucket.AddRecord(fmeta, nil)
+			filteredBucket.AddRecord(filteredFmeta, nil)
 		case fs.Type_Dir:
 			dirs[fmeta.Name] = struct{}{}
+			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			}
+			prefilterBucket.AddRecord(fmeta, nil)
+			filteredBucket.AddRecord(filteredFmeta, nil)
 		default:
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrPackInvalid, "zip pack does not support files of type %v", fmeta.Type)
 		}
-		if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
-			return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
-		}
-		prefilterBucket.AddRecord(fmeta, nil)
-		filteredBucket.AddRecord(filteredFmeta, nil)
 	}
 
 	// Cleanup dir times with a post-order traversal over the bucket.
