@@ -1,12 +1,10 @@
-package tartrans
+package ziptrans
 
 import (
-	"archive/tar"
-	"compress/gzip"
+	"archive/zip"
 	"context"
 	"crypto/sha512"
 	"io"
-	"time"
 
 	"github.com/polydawn/refmt/misc"
 
@@ -25,6 +23,7 @@ var (
 	_ rio.PackFunc = Pack
 )
 
+// Pack transmutes a defined fileset into a given warehouse.
 func Pack(
 	ctx context.Context, // Long-running call.  Cancellable.
 	packType api.PackType, // The name of pack format.
@@ -71,42 +70,37 @@ func Pack(
 	}
 	defer wc.Close()
 
-	// Wrap writer stream to do compress on the way out.
-	//  Note on compression levels: The default is 6; and per http://tukaani.org/lzma/benchmarks.html
-	//  this appears quite reasonable: higher levels appear to have minimal size payoffs, but significantly rising compress time costs;
-	//  decompression time does not vary with compression level.
-	// Save a gzip reference just to close it; tar.Writer doesn't passthru its own close.
-	gzWriter := gzip.NewWriter(wc)
+	// Construct zip writer.
+	zipWriter := zip.NewWriter(wc)
 
-	// Construct tar writer.
-	tarWriter := tar.NewWriter(gzWriter)
-
-	// Scan and tarify!
-	wareID, err := packTar(ctx, afs, filt, tarWriter)
+	// Scan and zip!
+	wareID, err := packZip(ctx, afs, filt, zipWriter)
 	if err != nil {
 		return wareID, err
 	}
 	// Close all the intermediate writer layers to ensure they've flushed.
-	tarWriter.Close()
-	gzWriter.Close()
+	err = zipWriter.Close()
+	if err != nil {
+		return wareID, err
+	}
 
 	// If we made it all the way with no errors, commit.
 	//  (Otherwise, the write controller will be closed by default by our defers.)
 	return wareID, wc.Commit(wareID)
 }
 
-func packTar(
+func packZip(
 	ctx context.Context,
 	afs fs.FS,
 	filt api.FilesetPackFilter,
-	tw *tar.Writer,
+	zw *zip.Writer,
 ) (api.WareID, error) {
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
 	bucket := &fshash.MemoryBucket{}
 
-	// Walk the filesystem, emitting tar entries and filling the bucket as we go.
-	tarHeader := &tar.Header{}
+	// Walk the filesystem, emitting entries and filling the bucket as we go.
+	zipHeader := &zip.FileHeader{}
 	preVisit := func(filenode *fs.FilewalkNode) error {
 		if filenode.Err != nil {
 			return filenode.Err
@@ -133,31 +127,39 @@ func packTar(
 			return nil // skip it and continue the walk
 		}
 
-		// Flatten time to seconds.  The tar writer impl doesn't do subsecond precision.
-		//  The writer will always flatten it internally, but we need to do it here as well
-		//  so that the hash and the serial form are describing the same thing.
-		fmeta.Mtime = fmeta.Mtime.Truncate(time.Second)
+		// Flip our metadata to zip header format, and flush it.
+		zipHeader = new(zip.FileHeader)
+		MetadataToZipHdr(fmeta, zipHeader)
 
-		// Flip our metadata to tar header format, and flush it.
-		MetadataToTarHdr(fmeta, tarHeader)
-		if err := tw.WriteHeader(tarHeader); err != nil {
+		fw, err := zw.CreateHeader(zipHeader)
+		if err != nil {
 			return Errorf(rio.ErrWarehouseUnwritable, "error while writing pack: %s", err)
 		}
 
-		// If it's a file, stream the body into the tar while hashing; for all,
+		// If it's a file, stream the body into the file while hashing; for all,
 		//  record the metadata in the bucket for the total hash.
-		if file == nil {
+		if file == nil && fmeta.Type == fs.Type_Symlink {
+			hasher := sha512.New384()
+			tee := io.MultiWriter(fw, hasher)
+			_, err := tee.Write([]byte(fmeta.Linkname))
+			if err != nil {
+				return err
+			}
+			bucket.AddRecord(*fmeta, hasher.Sum(nil))
+		} else if file == nil {
+			fw.Write([]byte{})
 			bucket.AddRecord(*fmeta, nil)
 		} else {
 			defer file.Close()
 			hasher := sha512.New384()
-			tee := io.MultiWriter(tw, hasher)
+			tee := io.MultiWriter(fw, hasher)
 			_, err := io.Copy(tee, file)
 			if err != nil {
 				return err
 			}
 			bucket.AddRecord(*fmeta, hasher.Sum(nil))
 		}
+
 		return nil
 	}
 	if err := fs.Walk(afs, preVisit, nil); err != nil {
@@ -166,5 +168,5 @@ func packTar(
 
 	// Hash the thing!
 	hash := fshash.HashBucket(bucket, sha512.New384)
-	return api.WareID{"tar", misc.Base58Encode(hash)}, nil
+	return api.WareID{"zip", misc.Base58Encode(hash)}, nil
 }

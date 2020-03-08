@@ -11,6 +11,8 @@ import (
 	"time"
 	"unsafe"
 
+	"golang.org/x/sys/unix"
+
 	"go.polydawn.net/rio/fs"
 )
 
@@ -56,8 +58,8 @@ func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time
 	var attrbufSize uint32
 	var timesIn [2]syscall.Timespec
 	var timesOut [2]syscall.Timespec
-	timesIn[0] = syscall.NsecToTimespec(atime.UnixNano())
-	timesIn[1] = syscall.NsecToTimespec(mtime.UnixNano())
+	timesIn[0] = syscall.NsecToTimespec(mtime.UnixNano())
+	timesIn[1] = syscall.NsecToTimespec(atime.UnixNano())
 
 	var _path *byte
 	_path, err = syscall.BytePtrFromString(rpath)
@@ -75,7 +77,8 @@ func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time
 		return fs.NormalizeIOError(err)
 	}
 
-	return nil
+	// rio symlinks will be chmod 777 on mac, to behave equivalently to their linux (which doesn't support lchmod) counterparts
+	return unix.Fchmodat(unix.AT_FDCWD, rpath, uint32(0777), unix.AT_SYMLINK_NOFOLLOW)
 }
 
 func (afs *osFS) SetTimesNano(path fs.RelPath, mtime time.Time, atime time.Time) error {

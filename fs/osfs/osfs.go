@@ -334,7 +334,86 @@ func permsToOs(perms fs.Perms) (mode os.FileMode) {
 	return mode
 }
 
+// OsToPerms extracts the fs.Perms from an os.FileMode
+func OsToPerms(fm os.FileMode) fs.Perms {
+	p := fs.Perms(fm & os.ModePerm)
+	if fm&os.ModeSetuid != 0 {
+		p |= fs.Perms_Setuid
+	}
+	if fm&os.ModeSetgid != 0 {
+		p |= fs.Perms_Setgid
+	}
+	if fm&os.ModeSticky != 0 {
+		p |= fs.Perms_Sticky
+	}
+	return p
+}
+
 func devModesJoin(major int64, minor int64) uint32 {
 	// Constants herein are not a joy: they're a workaround for https://github.com/golang/go/issues/8106
 	return uint32(((minor & 0xfff00) << 12) | ((major & 0xfff) << 8) | (minor & 0xff))
+}
+
+// ModeToOs computes the expected os.FileMode for an fs.Metadata Perms and Type.
+func ModeToOs(m *fs.Metadata) os.FileMode {
+	mode := os.FileMode(0)
+	if m.Type == fs.Type_Dir {
+		mode |= os.ModeDir
+	}
+	if m.Type == fs.Type_Symlink {
+		mode |= os.ModeSymlink
+	}
+	if m.Type == fs.Type_NamedPipe {
+		mode |= os.ModeNamedPipe
+	}
+	if m.Type == fs.Type_Socket {
+		mode |= os.ModeSocket
+	}
+	if m.Type == fs.Type_Device {
+		mode |= os.ModeDevice
+	}
+	if m.Type == fs.Type_CharDevice {
+		mode |= os.ModeCharDevice
+	}
+	mode |= (os.FileMode(m.Perms) & os.ModePerm)
+	if m.Perms&fs.Perms_Setuid != 0 {
+		mode |= os.ModeSetuid
+	}
+	if m.Perms&fs.Perms_Setgid != 0 {
+		mode |= os.ModeSetgid
+	}
+	if m.Perms&fs.Perms_Sticky != 0 {
+		mode |= os.ModeSticky
+	}
+	return mode
+}
+
+// OsToType extracts the fs.Type from an os.FileMode
+func OsToType(fm os.FileMode) fs.Type {
+	if fm&os.ModeDir != 0 {
+		return fs.Type_Dir
+	}
+	if fm&os.ModeSymlink != 0 {
+		return fs.Type_Symlink
+	}
+	if fm&os.ModeNamedPipe != 0 {
+		return fs.Type_NamedPipe
+	}
+	if fm&os.ModeSocket != 0 {
+		return fs.Type_Socket
+	}
+	if fm&os.ModeDevice != 0 {
+		return fs.Type_Device
+	}
+	if fm&os.ModeCharDevice != 0 {
+		return fs.Type_CharDevice
+	}
+	if fm&os.ModeIrregular != 0 {
+		return fs.Type_Invalid
+	}
+	if fm&os.ModeType == 0 {
+		return fs.Type_File
+	}
+
+	return fs.Type_Invalid
 }

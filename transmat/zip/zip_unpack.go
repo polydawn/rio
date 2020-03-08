@@ -1,13 +1,13 @@
-package tartrans
+package ziptrans
 
 import (
-	"archive/tar"
+	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha512"
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/polydawn/refmt/misc"
 	. "github.com/warpfork/go-errcat"
@@ -17,17 +17,18 @@ import (
 	"go.polydawn.net/rio/fs"
 	"go.polydawn.net/rio/fsOp"
 	"go.polydawn.net/rio/lib/treewalk"
+	"go.polydawn.net/rio/transmat/mixins/buffer"
 	"go.polydawn.net/rio/transmat/mixins/filters"
 	"go.polydawn.net/rio/transmat/mixins/fshash"
 	"go.polydawn.net/rio/transmat/mixins/log"
 	"go.polydawn.net/rio/transmat/util"
 )
 
-func unpackTar(
+func unpackZip(
 	ctx context.Context,
 	afs fs.FS,
 	filt api.FilesetUnpackFilter,
-	_ api.WareID,
+	archiveWareID api.WareID,
 	reader io.Reader,
 	mon rio.Monitor,
 ) (
@@ -37,15 +38,17 @@ func unpackTar(
 ) {
 	defer RequireErrorHasCategory(&err, rio.ErrorCategory(""))
 
-	// Wrap input stream with decompression as necessary.
-	//  Which kind of decompression to use can be autodetected by magic bytes.
-	reader2, err := Decompress(reader)
+	readerAt, closer, err := buffer.SectionReader(ctx, archiveWareID, reader, mon)
 	if err != nil {
-		return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar compression: %s", err)
+		return api.WareID{}, api.WareID{}, err
 	}
+	defer closer.Close()
 
-	// Convert the raw byte reader to a tar stream.
-	tr := tar.NewReader(reader2)
+	// Convert the raw byte reader to a zip stream.
+	zr, err := zip.NewReader(readerAt, readerAt.Size())
+	if err != nil {
+		return api.WareID{}, api.WareID{}, err
+	}
 
 	// Allocate bucket for keeping each metadata entry and content hash;
 	// the full tree hash will be computed from this at the end.
@@ -55,60 +58,34 @@ func unpackTar(
 	filteredBucket := &fshash.MemoryBucket{}
 
 	// Also allocate a map for keeping records of which dirs we've created.
-	// This is necessary for correct bookkeepping in the face of the tar format's
-	// allowance for implicit parent dirs.
 	dirs := map[fs.RelPath]struct{}{}
 
-	// Iterate over each tar entry, mutating filesystem as we go.
-	for {
+	// Iterate over each entry, mutating filesystem as we go.
+	for _, zf := range zr.File {
 		fmeta := fs.Metadata{}
-		thdr, err := tr.Next()
 
 		// Check for done.
 		if err == io.EOF {
 			break // sucess!  end of archive.
 		}
 		if err != nil {
-			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: %s", err)
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt zip: %s", err)
 		}
 		if ctx.Err() != nil {
 			return api.WareID{}, api.WareID{}, Errorf(rio.ErrCancelled, "cancelled")
 		}
 
 		// Reshuffle metainfo to our default format.
-		skipMe, haltMe := TarHdrToMetadata(thdr, &fmeta)
-		if skipMe != nil {
-			// n.b. every time this happens in practice so far, it's a `g` header,
-			//  and it's got a git commit hash in the paxrecords -- purely advisory info.
-			//  It would be nice to turn those down into a debug message, and react
-			//  a little more startledly to any other values.  Until then, "warn"
-			//  even though every time we've seen this it's harmless.
-			mon.Send(rio.Event_Log{
-				Time:  time.Now(),
-				Level: rio.LogWarn,
-				Msg:   fmt.Sprintf("unpacking: skipping an entry: %s", skipMe),
-				Detail: [][2]string{
-					{"path", fmeta.Name.String()},
-					{"skipreason", skipMe.Error()},
-					{"tarhdr", fmt.Sprintf("%#v", thdr)},
-				},
-			})
-			continue
-		}
-		if haltMe != nil {
-			return api.WareID{}, api.WareID{}, haltMe
+		err := ZipHdrToMetadata(&zf.FileHeader, &fmeta)
+		if err != nil {
+			return api.WareID{}, api.WareID{}, err
 		}
 		if strings.HasPrefix(fmeta.Name.String(), "..") {
-			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt tar: paths that use '../' to leave the base dir are invalid")
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "corrupt zip: paths that use '../' to leave the base dir are invalid")
 		}
 
-		// Infer parents, if necessary.  The tar format allows implicit parent dirs.
-		//
-		// Note that if any of the implicitly conjured dirs is specified later, unpacking won't notice,
-		// but bucket hashing iteration will (correctly) blow up for repeat entries.
-		// It may well be possible to construct a tar like that, but it's already well established that
-		// tars with repeated filenames are just asking for trouble and shall be rejected without
-		// ceremony because they're just a ridiculous idea.
+		// Infer parents, if necessary.  The zip format should not allow implicit dirs, but we allow
+		// it for tars, so why not here.
 		for _, parent := range fmeta.Name.SplitParent() {
 			// If we already initialized this parent, superb; move along.
 			if _, exists := dirs[parent]; exists {
@@ -147,21 +124,42 @@ func unpackTar(
 		// Place the file.
 		switch fmeta.Type {
 		case fs.Type_File:
-			reader := &util.HashingReader{tr, sha512.New384()}
-			if err := fsOp.PlaceFile(afs, filteredFmeta, reader, false); err != nil {
+			r, err := zf.Open()
+			if err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
+			}
+			reader := &util.HashingReader{R: r, Hasher: sha512.New384()}
+			if err = fsOp.PlaceFile(afs, filteredFmeta, reader, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			prefilterBucket.AddRecord(fmeta, reader.Hasher.Sum(nil))
 			filteredBucket.AddRecord(filteredFmeta, reader.Hasher.Sum(nil))
-		case fs.Type_Dir:
-			dirs[fmeta.Name] = struct{}{}
-			fallthrough
-		default:
+		case fs.Type_Symlink:
+			buf := new(bytes.Buffer)
+			r, err := zf.Open()
+			if err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
+			}
+			_, err = buf.ReadFrom(r)
+			if err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrWareCorrupt, "error while unpacking: %s", err)
+			}
+			fmeta.Linkname = buf.String()
+			filteredFmeta.Linkname = fmeta.Linkname
 			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
 			prefilterBucket.AddRecord(fmeta, nil)
 			filteredBucket.AddRecord(filteredFmeta, nil)
+		case fs.Type_Dir:
+			dirs[fmeta.Name] = struct{}{}
+			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
+				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
+			}
+			prefilterBucket.AddRecord(fmeta, nil)
+			filteredBucket.AddRecord(filteredFmeta, nil)
+		default:
+			return api.WareID{}, api.WareID{}, Errorf(rio.ErrPackInvalid, "zip pack does not support files of type %v", fmeta.Type)
 		}
 	}
 
@@ -188,5 +186,5 @@ func unpackTar(
 		}
 	}
 
-	return api.WareID{"tar", prefilterHash}, api.WareID{"tar", filteredHash}, nil
+	return api.WareID{"zip", prefilterHash}, api.WareID{"zip", filteredHash}, nil
 }
