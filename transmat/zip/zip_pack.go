@@ -8,15 +8,15 @@ import (
 
 	"github.com/polydawn/refmt/misc"
 
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	"github.com/polydawn/rio/fsOp"
+	"github.com/polydawn/rio/transmat/mixins/filters"
+	"github.com/polydawn/rio/transmat/mixins/fshash"
+	"github.com/polydawn/rio/transmat/util"
 	. "github.com/warpfork/go-errcat"
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/fsOp"
-	"go.polydawn.net/rio/transmat/mixins/filters"
-	"go.polydawn.net/rio/transmat/mixins/fshash"
-	"go.polydawn.net/rio/transmat/util"
 )
 
 var (

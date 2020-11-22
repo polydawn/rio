@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"time"
 
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fsOp"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fsOp"
 )
 
 type FixtureFile struct {

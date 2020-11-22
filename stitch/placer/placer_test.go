@@ -7,10 +7,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	. "go.polydawn.net/rio/testutil"
-	. "go.polydawn.net/rio/transmat/mixins/tests"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	. "github.com/polydawn/rio/testutil"
+	. "github.com/polydawn/rio/transmat/mixins/tests"
 )
 
 func TestPlacers(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"go.polydawn.net/rio/testutil"
-	"go.polydawn.net/rio/transmat/mixins/tests"
+	"github.com/polydawn/rio/testutil"
+	"github.com/polydawn/rio/transmat/mixins/tests"
 )
 
 func TestTarPack(t *testing.T) {

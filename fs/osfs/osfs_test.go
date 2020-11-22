@@ -5,9 +5,9 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/tests"
-	"go.polydawn.net/rio/testutil"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/tests"
+	"github.com/polydawn/rio/testutil"
 )
 
 func TestAll(t *testing.T) {

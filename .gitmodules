@@ -28,8 +28,8 @@
 [submodule ".gopath/src/github.com/warpfork/go-errcat"]
 	path = .gopath/src/github.com/warpfork/go-errcat
 	url = https://github.com/warpfork/go-errcat
-[submodule ".gopath/src/go.polydawn.net/go-timeless-api"]
-	path = .gopath/src/go.polydawn.net/go-timeless-api
+[submodule ".gopath/src/github.com/polydawn/go-timeless-api"]
+	path = .gopath/src/github.com/polydawn/go-timeless-api
 	url = https://github.com/polydawn/go-timeless-api
 [submodule ".gopath/src/gopkg.in/warnings.v0"]
 	path = .gopath/src/gopkg.in/warnings.v0

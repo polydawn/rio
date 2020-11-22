@@ -8,8 +8,8 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
 )
 
 type tempRemover struct {

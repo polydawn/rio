@@ -57,15 +57,15 @@ Whether or not this is a good idea is a whole different question of course.
 code layout
 -----------
 
-- `go.polydawn.net/rio` -- main package.  Interface definitions.  Other projects using `rio` as a library should import this package -- and few others.
-- `go.polydawn.net/rio/fs` -- types for paths, and an abstract filesystem.  All `rio` code uses this when describing files and filesystem metadata.
-  - `go.polydawn.net/rio/fs/osfs` -- a concrete implementation of the `fs` interfaces, implemented with a regular filesystem.
-- `go.polydawn.net/rio/fsOp` -- operations on filesystems.  Distinct from `fs` because `fsOp` is more intention-oriented; `fs` is a fairly direct proxy to syscalls, and much less friendly.
-- `go.polydawn.net/rio/warehouse/*` -- implementations of storage warehouses.  Local filesystem, S3, GCS, IPFS... each get their own package under here.
-- `go.polydawn.net/transmat/*` -- implementations of filesystem packing formats.  E.g. `tar`.
+- `github.com/polydawn/rio` -- main package.  Interface definitions.  Other projects using `rio` as a library should import this package -- and few others.
+- `github.com/polydawn/rio/fs` -- types for paths, and an abstract filesystem.  All `rio` code uses this when describing files and filesystem metadata.
+  - `github.com/polydawn/rio/fs/osfs` -- a concrete implementation of the `fs` interfaces, implemented with a regular filesystem.
+- `github.com/polydawn/rio/fsOp` -- operations on filesystems.  Distinct from `fs` because `fsOp` is more intention-oriented; `fs` is a fairly direct proxy to syscalls, and much less friendly.
+- `github.com/polydawn/rio/warehouse/*` -- implementations of storage warehouses.  Local filesystem, S3, GCS, IPFS... each get their own package under here.
+- `github.com/polydawn/rio/transmat/*` -- implementations of filesystem packing formats.  E.g. `tar`.
   - REVIEW: so is this name a bug and the whole package should be `s/transmat/packing/`??  Probably
-- `go.polydawn.net/transmat/mixins/fshash` -- helper functions for accumulating a hash for a fileset.  Used in some of the transmat implementations.
-- `go.polydawn.net/lib/*` -- grabbag library functions; these are things that *probably* make sense even more broadly than rio, but are vendored here for simplicity's sake.
+- `github.com/polydawn/rio/transmat/mixins/fshash` -- helper functions for accumulating a hash for a fileset.  Used in some of the transmat implementations.
+- `github.com/polydawn/rio/lib/*` -- grabbag library functions; these are things that *probably* make sense even more broadly than rio, but are vendored here for simplicity's sake.
 
 Overall, seen from the outside (as a consumer of `rio`-as-a-library):
 

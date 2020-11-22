@@ -7,10 +7,10 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	nilFS "go.polydawn.net/rio/fs/nilfs"
-	"go.polydawn.net/rio/transmat/mixins/log"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	nilFS "github.com/polydawn/rio/fs/nilfs"
+	"github.com/polydawn/rio/transmat/mixins/log"
 )
 
 // CreateMirror provides basic mirroring logic used by both the tar and zip

@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"time"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
 )
 
 func CacheHasIt(mon rio.Monitor, ware api.WareID) {

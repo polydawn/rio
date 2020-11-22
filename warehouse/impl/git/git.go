@@ -28,11 +28,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	riofs "github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/warehouse"
 	. "github.com/warpfork/go-errcat"
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	riofs "go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/warehouse"
 
 	srcd_osfs "gopkg.in/src-d/go-billy.v4/osfs"
 	srcd_git "gopkg.in/src-d/go-git.v4"

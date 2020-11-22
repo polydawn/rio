@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 const (

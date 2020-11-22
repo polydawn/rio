@@ -7,11 +7,11 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/transmat/mixins/log"
-	gitWarehouse "go.polydawn.net/rio/warehouse/impl/git"
+	"github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/transmat/mixins/log"
+	gitWarehouse "github.com/polydawn/rio/warehouse/impl/git"
 )
 
 // Pick a warehouse.
