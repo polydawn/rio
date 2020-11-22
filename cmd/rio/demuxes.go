@@ -3,10 +3,10 @@ package main
 import (
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/transmat/git"
-	tartrans "go.polydawn.net/rio/transmat/tar"
-	ziptrans "go.polydawn.net/rio/transmat/zip"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/transmat/git"
+	tartrans "github.com/polydawn/rio/transmat/tar"
+	ziptrans "github.com/polydawn/rio/transmat/zip"
 )
 
 func demuxPackTool(packType string) (rio.PackFunc, error) {

@@ -3,7 +3,7 @@ package fs
 import (
 	"time"
 
-	api "go.polydawn.net/go-timeless-api"
+	api "github.com/polydawn/go-timeless-api"
 )
 
 type Metadata struct {

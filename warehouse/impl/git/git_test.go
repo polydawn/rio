@@ -14,11 +14,11 @@ import (
 	"strings"
 	"testing"
 
+	riofs "github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/testutil"
+	"github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
 	"github.com/warpfork/go-errcat"
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	riofs "go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/testutil"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -63,8 +63,8 @@ func TestSlugifyRemote(t *testing.T) {
 		out string
 	}{
 		{"http://codesource.google.com/project", "http%3A%2F%2Fcodesource.google.com%2Fproject"},
-		{"https://go.polydawn.net/rio", "https%3A%2F%2Fgo.polydawn.net%2Frio"},
-		{"https://go.polydawn.net/rio with spaces", "https%3A%2F%2Fgo.polydawn.net%2Frio+with+spaces"},
+		{"https://github.com/polydawn/rio", "https%3A%2F%2Fgithub.com%2Fpolydawn%2Frio"},
+		{"https://github.com/polydawn/rio with spaces", "https%3A%2F%2Fgithub.com%2Fpolydawn%2Frio+with+spaces"},
 	}
 	for _, remote := range testItems {
 		t.Run(fmt.Sprintf("Slugify %s", remote.in), func(t *testing.T) {

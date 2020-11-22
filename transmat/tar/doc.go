@@ -5,9 +5,9 @@
 package tartrans
 
 import (
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/transmat/util"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/transmat/util"
 )
 
 const PackType = api.PackType("tar")

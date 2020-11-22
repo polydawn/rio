@@ -6,11 +6,11 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/testutil"
-	"go.polydawn.net/rio/transmat/mixins/tests"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	"github.com/polydawn/rio/testutil"
+	"github.com/polydawn/rio/transmat/mixins/tests"
 )
 
 func TestZipMirror(t *testing.T) {

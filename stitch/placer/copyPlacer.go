@@ -6,10 +6,10 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/fsOp"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	"github.com/polydawn/rio/fsOp"
 )
 
 var _ Placer = CopyPlacer

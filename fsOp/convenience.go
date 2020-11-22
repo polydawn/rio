@@ -6,8 +6,8 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
 )
 
 /*

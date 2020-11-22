@@ -3,9 +3,9 @@ package cache
 import (
 	"fmt"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/rio/fs"
-	whutil "go.polydawn.net/rio/warehouse/util"
+	"github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/rio/fs"
+	whutil "github.com/polydawn/rio/warehouse/util"
 )
 
 func ShelfFor(wareID api.WareID) fs.RelPath {

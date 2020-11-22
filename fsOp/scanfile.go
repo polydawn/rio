@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 /*
