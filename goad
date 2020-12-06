@@ -113,23 +113,45 @@ else
 		done
 		;;
 	cover)
-		coverFile="$GOPATH/tmp/cover/cover.out"
+		[ -z "$GOPATH"] && {
+			>&2 echo "why is GOPATH empty?"
+			exit 3
+		}
+		coverDir="$GOPATH/tmp/cover"
+		coverFile="${coverDir}/cover.out"
+		tmpFile="${coverFile}.tmp"
+		rm -rf "$coverDir"
 		mkdir -p "$(dirname "$coverFile")"
+		touch "$coverFile"
 		for package in $(go list "$SUBSECTION" | sed "s#^_${PWD}#${pkg}#"); do
-			rm -f "$coverFile"
+			rm -f "$tmpFile"
 			echo "==== $package ===="
-			go test -coverprofile="$coverFile" "$package" && \
-			[ -f "$coverFile" ] && \
-			echo ---- && \
-			go tool cover -func="$coverFile" && \
-			echo ---- && \
-			go tool cover -html="$coverFile"
+			go test -coverprofile="$tmpFile" "$package"
+			[ -f "$tmpFile" ] && {
+				echo ----
+				go tool cover -func="$tmpFile"
+				echo ---- 
+				[ -x "$(which gocoverutil)" ] && {
+					gocoverutil -coverprofile="$coverFile" merge "$coverFile" "$tmpFile"
+				} || {
+					go tool cover -html="$tmpFile"
+				}
+			}
 			echo ====
 			echo
 		done
-		rm -f "$coverFile"
+		[ -f "$coverFile" ] && {
+			echo "=== TOTAL ==="
+			go tool cover -func="$coverFile"
+			go tool cover -html="$coverFile"
+		}
+		rm -f "$tmpFile"
 		;;
 	clean)
+		[ -z "$GOPATH"] && {
+			>&2 echo "why is GOPATH empty?"
+			exit 3
+		}
 		rm -rf "$GOBIN" "$GOPATH/pkg" "$GOPATH/tmp"
 		;;
 	*)
