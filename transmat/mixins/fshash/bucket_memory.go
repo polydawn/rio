@@ -24,6 +24,32 @@ func (b *MemoryBucket) AddRecord(metadata fs.Metadata, contentHash []byte) {
 	b.lines = append(b.lines, Record{name, metadata, contentHash})
 }
 
+func (b *MemoryBucket) HasRecord(metadata fs.Metadata) bool {
+	name := metadata.Name.String()
+	if metadata.Type == fs.Type_Dir {
+		name += "/"
+	}
+	for _, l := range b.lines {
+		if l.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *MemoryBucket) UpdateRecord(metadata fs.Metadata, contentHash []byte) {
+	name := metadata.Name.String()
+	if metadata.Type == fs.Type_Dir {
+		name += "/"
+	}
+	for n, l := range b.lines {
+		if l.Name == name {
+			b.lines[n].Metadata = metadata
+			b.lines[n].ContentHash = contentHash
+		}
+	}
+}
+
 /*
 	Get a `treewalk.Node` that starts at the root of the bucket.
 	The walk will be in deterministic, sorted order (and thus is appropriate

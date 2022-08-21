@@ -101,16 +101,13 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 			}
 		}
 	case fs.Type_Dir:
-		if fmeta.Name == (fs.RelPath{}) {
-			// for the base dir only:
-			// the dir may exist; we'll just chown+chmod+chtime it.
-			// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
-			if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
-				if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
-					return err
-				}
-				break
+		// the dir may exist; we'll just chown+chmod+chtime it.
+		// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
+		if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
+			if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+				return err
 			}
+			break
 		}
 		if err := afs.Mkdir(fmeta.Name, fmeta.Perms); err != nil {
 			return err

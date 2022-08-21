@@ -160,8 +160,16 @@ func unpackTar(
 			if err := fsOp.PlaceFile(afs, filteredFmeta, nil, false); err != nil {
 				return api.WareID{}, api.WareID{}, Errorf(rio.ErrInoperablePath, "error while unpacking: %s", err)
 			}
-			prefilterBucket.AddRecord(fmeta, nil)
-			filteredBucket.AddRecord(filteredFmeta, nil)
+			if prefilterBucket.HasRecord(fmeta) && fmeta.Type == fs.Type_Dir {
+				// It is possible that we have a duplicate entry for an inferred directory.
+				// In this case, adding a new record would cause a duplicate, which is not allowed,
+				// so we instead update the metadata to match the tar entry for the dir.
+				prefilterBucket.UpdateRecord(fmeta, nil)
+				filteredBucket.UpdateRecord(filteredFmeta, nil)
+			} else {
+				prefilterBucket.AddRecord(fmeta, nil)
+				filteredBucket.AddRecord(filteredFmeta, nil)
+			}
 		}
 	}
 
