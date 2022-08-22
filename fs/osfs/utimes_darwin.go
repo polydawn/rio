@@ -1,3 +1,4 @@
+//go:build darwin || openbsd || netbsd
 // +build darwin openbsd netbsd
 
 // We needed linx-specific syscalls not exported by the standard lib in order to get
@@ -13,7 +14,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 const (

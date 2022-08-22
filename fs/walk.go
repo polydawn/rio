@@ -3,7 +3,7 @@ package fs
 import (
 	"sort"
 
-	"go.polydawn.net/rio/lib/treewalk"
+	"github.com/polydawn/rio/lib/treewalk"
 )
 
 type WalkFunc func(filenode *FilewalkNode) error

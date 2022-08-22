@@ -9,7 +9,7 @@ import (
 
 	"github.com/smartystreets/goconvey/convey"
 
-	"go.polydawn.net/rio/caps"
+	"github.com/polydawn/rio/caps"
 )
 
 type ConveyRequirement struct {

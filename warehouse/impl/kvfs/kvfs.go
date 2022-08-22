@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/lib/guid"
+	"github.com/polydawn/rio/warehouse"
+	"github.com/polydawn/rio/warehouse/util"
 	. "github.com/warpfork/go-errcat"
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/lib/guid"
-	"go.polydawn.net/rio/warehouse"
-	"go.polydawn.net/rio/warehouse/util"
 )
 
 var (

@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/lib/treewalk"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/lib/treewalk"
 )
 
 var _ Bucket = &MemoryBucket{}

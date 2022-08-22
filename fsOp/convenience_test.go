@@ -9,9 +9,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	. "go.polydawn.net/rio/testutil"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	. "github.com/polydawn/rio/testutil"
 )
 
 func TestMkdirAll(t *testing.T) {

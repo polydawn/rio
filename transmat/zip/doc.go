@@ -4,9 +4,9 @@
 package ziptrans
 
 import (
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/transmat/util"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/transmat/util"
 )
 
 // PackType defines this as the zip packing type.

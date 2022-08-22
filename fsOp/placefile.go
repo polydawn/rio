@@ -7,7 +7,7 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 var (
