@@ -13,15 +13,21 @@ var _ Bucket = &MemoryBucket{}
 
 type MemoryBucket struct {
 	// my kingdom for a red-black tree or other sane sorted map implementation
-	lines []Record
+	names   []string
+	records map[string]Record
 }
 
 func (b *MemoryBucket) AddRecord(metadata fs.Metadata, contentHash []byte) {
+	if b.records == nil {
+		b.records = map[string]Record{}
+	}
+
 	name := metadata.Name.String()
 	if metadata.Type == fs.Type_Dir {
 		name += "/"
 	}
-	b.lines = append(b.lines, Record{name, metadata, contentHash})
+	b.names = append(b.names, name)
+	b.records[name] = Record{name, metadata, contentHash}
 }
 
 func (b *MemoryBucket) HasRecord(metadata fs.Metadata) bool {
@@ -29,12 +35,8 @@ func (b *MemoryBucket) HasRecord(metadata fs.Metadata) bool {
 	if metadata.Type == fs.Type_Dir {
 		name += "/"
 	}
-	for _, l := range b.lines {
-		if l.Name == name {
-			return true
-		}
-	}
-	return false
+	_, hasRecord := b.records[name]
+	return hasRecord
 }
 
 func (b *MemoryBucket) UpdateRecord(metadata fs.Metadata, contentHash []byte) {
@@ -42,12 +44,15 @@ func (b *MemoryBucket) UpdateRecord(metadata fs.Metadata, contentHash []byte) {
 	if metadata.Type == fs.Type_Dir {
 		name += "/"
 	}
-	for n, l := range b.lines {
-		if l.Name == name {
-			b.lines[n].Metadata = metadata
-			b.lines[n].ContentHash = contentHash
-		}
+	b.records[name] = Record{name, metadata, contentHash}
+}
+
+func (b *MemoryBucket) recordList() []Record {
+	var records []Record
+	for _, n := range b.names {
+		records = append(records, b.records[n])
 	}
+	return records
 }
 
 /*
@@ -64,23 +69,23 @@ func (b *MemoryBucket) UpdateRecord(metadata fs.Metadata, contentHash []byte) {
 	behavior is undefined.
 */
 func (b *MemoryBucket) Iterator() RecordIterator {
-	sort.Sort(recordsByFilename(b.lines))
-	if len(b.lines) > 0 {
-		firstPath := b.lines[0].Metadata.Name
+	sort.Sort(memoryBucketByFilename(*b))
+	if len(b.records) > 0 {
+		firstPath := b.Root().Metadata.Name
 		if firstPath != (fs.RelPath{}) {
 			panic(ErrInvalidFilesystem{fmt.Sprintf("missing root (first entry: %q)", firstPath)})
 		}
 	}
 	var that int
-	return &memoryBucketIterator{b.lines, 0, &that}
+	return &memoryBucketIterator{b.recordList(), 0, &that}
 }
 
 func (b *MemoryBucket) Root() Record {
-	return b.lines[0]
+	return b.records[b.names[0]]
 }
 
 func (b *MemoryBucket) Length() int {
-	return len(b.lines)
+	return len(b.records)
 }
 
 type memoryBucketIterator struct {
@@ -120,3 +125,9 @@ func (i *memoryBucketIterator) NextChild() treewalk.Node {
 func (i memoryBucketIterator) Record() Record {
 	return i.lines[i.this]
 }
+
+type memoryBucketByFilename MemoryBucket
+
+func (a memoryBucketByFilename) Len() int           { return len(a.records) }
+func (a memoryBucketByFilename) Swap(i, j int)      { a.names[i], a.names[j] = a.names[j], a.names[i] }
+func (a memoryBucketByFilename) Less(i, j int) bool { return a.names[i] < a.names[j] }
