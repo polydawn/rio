@@ -43,13 +43,6 @@ func (e ErrInvalidFilesystem) Error() string {
 	return fmt.Sprintf("invariant broken while traversing fshash bucket: %s", e.Msg)
 }
 
-// for sorting
-type recordsByFilename []Record
-
-func (a recordsByFilename) Len() int           { return len(a) }
-func (a recordsByFilename) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a recordsByFilename) Less(i, j int) bool { return a[i].Name < a[j].Name }
-
 /*
 	RecordIterator is used for walking Bucket contents in hash-ready order.
 

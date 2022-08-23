@@ -39,6 +39,11 @@ var (
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
 
+	When the metadata describes a directory, and the existing data on the filesystem
+	is also a directory, the attributes will be assigned without comment. For all
+	other types (files, symlinks, device nodes, etc), using PlaceFile will error
+	if there is existing data.
+
 	If skipChown is true, it does what it says on the tin: skips setting ownership.
 	This will result in UIDs and GIDs from the rio process being in effect;
 	it's also a rough proxy for "don't require priviledged operations".
@@ -101,16 +106,13 @@ func PlaceFile(afs fs.FS, fmeta fs.Metadata, body io.Reader, skipChown bool) err
 			}
 		}
 	case fs.Type_Dir:
-		if fmeta.Name == (fs.RelPath{}) {
-			// for the base dir only:
-			// the dir may exist; we'll just chown+chmod+chtime it.
-			// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
-			if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
-				if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
-					return err
-				}
-				break
+		// the dir may exist; we'll just chown+chmod+chtime it.
+		// there is no race-free path through this btw, unless you know of a way to lstat and mkdir in the same syscall.
+		if existingFmeta, err := afs.LStat(fmeta.Name); err == nil && existingFmeta.Type == fs.Type_Dir {
+			if err := afs.Chmod(fmeta.Name, fmeta.Perms); err != nil {
+				return err
 			}
+			break
 		}
 		if err := afs.Mkdir(fmeta.Name, fmeta.Perms); err != nil {
 			return err
