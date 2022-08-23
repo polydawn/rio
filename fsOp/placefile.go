@@ -39,6 +39,11 @@ var (
 	This may be considered a security concern; you should whitelist inputs
 	if using this to provision a sandbox.
 
+	When the metadata describes a directory, and the existing data on the filesystem
+	is also a directory, the attributes will be assigned without comment. For all
+	other types (files, symlinks, device nodes, etc), using PlaceFile will error
+	if there is existing data.
+
 	If skipChown is true, it does what it says on the tin: skips setting ownership.
 	This will result in UIDs and GIDs from the rio process being in effect;
 	it's also a rough proxy for "don't require priviledged operations".
