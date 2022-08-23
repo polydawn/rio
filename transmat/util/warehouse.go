@@ -6,12 +6,12 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/transmat/mixins/log"
-	"go.polydawn.net/rio/warehouse"
-	"go.polydawn.net/rio/warehouse/impl/kvfs"
-	"go.polydawn.net/rio/warehouse/impl/kvhttp"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/transmat/mixins/log"
+	"github.com/polydawn/rio/warehouse"
+	"github.com/polydawn/rio/warehouse/impl/kvfs"
+	"github.com/polydawn/rio/warehouse/impl/kvhttp"
 )
 
 // The shared bits of warehouseAddr parse and dial code.

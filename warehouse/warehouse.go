@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"go.polydawn.net/go-timeless-api"
+	api "github.com/polydawn/go-timeless-api"
 )
 
 /*

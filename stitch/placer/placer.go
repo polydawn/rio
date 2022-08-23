@@ -1,7 +1,7 @@
 package placer
 
 import (
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 type Placer func(srcPath, dstPath fs.AbsolutePath, writable bool) (Janitor, error)

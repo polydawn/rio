@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 func WithTmpdir(fn func(tmpDir fs.AbsolutePath)) {

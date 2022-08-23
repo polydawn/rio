@@ -3,12 +3,12 @@ package util
 import (
 	"context"
 
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	nilFS "github.com/polydawn/rio/fs/nilfs"
+	"github.com/polydawn/rio/fs/osfs"
 	. "github.com/warpfork/go-errcat"
-	api "go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	nilFS "go.polydawn.net/rio/fs/nilfs"
-	"go.polydawn.net/rio/fs/osfs"
 )
 
 // A "scan" is roughly the same as an unpack to /dev/null,

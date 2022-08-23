@@ -3,7 +3,7 @@ package testutil
 import (
 	"github.com/smartystreets/goconvey/convey"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 func ShouldStat(afs fs.FS, path fs.RelPath) fs.Metadata {

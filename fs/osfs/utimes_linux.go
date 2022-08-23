@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 // We needed linx-specific syscalls not exported by the standard lib in order to get
@@ -11,7 +12,7 @@ import (
 	"time"
 	"unsafe"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 func (afs *osFS) SetTimesLNano(path fs.RelPath, mtime time.Time, atime time.Time) error {

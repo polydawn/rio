@@ -6,11 +6,11 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/testutil"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	"github.com/polydawn/rio/testutil"
 )
 
 func CheckPackProducesConsistentHash(packType api.PackType, pack rio.PackFunc) {

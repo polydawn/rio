@@ -1,3 +1,4 @@
+//go:build darwin
 // +build darwin
 
 package placer
@@ -5,7 +6,7 @@ package placer
 import (
 	"errors"
 
-	"go.polydawn.net/rio/fs"
+	"github.com/polydawn/rio/fs"
 )
 
 func NewAufsPlacer(workDir fs.AbsolutePath) (Placer, error) {

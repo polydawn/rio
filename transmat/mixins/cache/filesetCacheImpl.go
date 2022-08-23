@@ -6,15 +6,15 @@ import (
 
 	. "github.com/warpfork/go-errcat"
 
-	"go.polydawn.net/go-timeless-api"
-	"go.polydawn.net/go-timeless-api/rio"
-	cacheapi "go.polydawn.net/rio/cache"
-	"go.polydawn.net/rio/fs"
-	"go.polydawn.net/rio/fs/osfs"
-	"go.polydawn.net/rio/fsOp"
-	"go.polydawn.net/rio/lib/guid"
-	"go.polydawn.net/rio/stitch/placer"
-	"go.polydawn.net/rio/transmat/mixins/log"
+	api "github.com/polydawn/go-timeless-api"
+	"github.com/polydawn/go-timeless-api/rio"
+	cacheapi "github.com/polydawn/rio/cache"
+	"github.com/polydawn/rio/fs"
+	"github.com/polydawn/rio/fs/osfs"
+	"github.com/polydawn/rio/fsOp"
+	"github.com/polydawn/rio/lib/guid"
+	"github.com/polydawn/rio/stitch/placer"
+	"github.com/polydawn/rio/transmat/mixins/log"
 )
 
 var ShelfFor = cacheapi.ShelfFor
