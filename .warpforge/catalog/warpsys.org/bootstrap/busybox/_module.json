@@ -1,0 +1,9 @@
+{
+	"catalogmodule.v1": {
+		"name": "warpsys.org/bootstrap/busybox",
+		"releases": {
+			"v1.35.0": "zM5K3Yt1mXmnBiLTAdJ89VwdUMMVmGYBSeVP5RAZ9W9MKxvf6qf63GjT5EnDEtdDPwvue3U"
+		},
+		"metadata": {}
+	}
+}

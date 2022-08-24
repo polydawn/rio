@@ -1,0 +1,41 @@
+{
+	"plot.v1": {
+		"inputs": {
+			"rootfs": "catalog:warpsys.org/bootstrap/debian:bullseye-1646092800:amd64",
+			"src": "catalog:warpsys.org/busybox:v1.35.0:src"
+		},
+		"steps": {
+			"build": {
+				"protoformula": {
+					"inputs": {
+						"/": "pipe::rootfs",
+						"/src": "pipe::src"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/bin/sh",
+							"contents": [
+								"mkdir /out",
+								"cd /src/*",
+								"export SOURCE_DATE_EPOCH=1262304000",
+								"make defconfig",
+								"sed -e 's/.*CONFIG_SELINUXENABLED.*/CONFIG_SELINUXENABLED=n/' -i .config",
+								"make",
+								"LDFLAGS='--static' make CONFIG_PREFIX=/out install"
+							]
+						}
+					},
+					"outputs": {
+						"out": {
+							"from": "/out",
+							"packtype": "tar"
+						}
+					}
+				}
+			}
+		},
+		"outputs": {
+			"amd64": "pipe:build:out"
+		}
+	}
+}

@@ -1,0 +1,137 @@
+{
+	"plot.v1": {
+		"inputs": {
+			"glibc": "catalog:warpsys.org/bootstrap/glibc:v2.35:amd64",
+			"ld": "catalog:warpsys.org/bootstrap/glibc:v2.35:ld-amd64",
+			"ldshim": "catalog:warpsys.org/bootstrap/ldshim:v1.0:amd64",
+			"make": "catalog:warpsys.org/bootstrap/make:v4.3:amd64",
+			"gcc": "catalog:warpsys.org/bootstrap/gcc:v11.2.0:amd64",
+			"grep": "catalog:warpsys.org/bootstrap/grep:v3.7:amd64",
+			"coreutils": "catalog:warpsys.org/bootstrap/coreutils:v9.1:amd64",
+			"binutils": "catalog:warpsys.org/bootstrap/binutils:v2.38:amd64",
+			"sed": "catalog:warpsys.org/bootstrap/sed:v4.8:amd64",
+			"gawk": "catalog:warpsys.org/bootstrap/gawk:v5.1.1:amd64",
+			"findutils": "catalog:warpsys.org/findutils:v4.9.0:amd64",
+			"zlib": "catalog:warpsys.org/zlib:v1.2.12:amd64",
+			"busybox": "catalog:warpsys.org/bootstrap/busybox:v1.35.0:amd64",
+			"gettext": "catalog:warpsys.org/gettext:v0.21:amd64",
+			"src": "catalog:warpsys.org/git:v2.37.2:src"
+		},
+		"steps": {
+			"build": {
+				"protoformula": {
+					"inputs": {
+						"/src": "pipe::src",
+						"/lib64": "pipe::ld",
+						"/pkg/glibc": "pipe::glibc",
+						"/pkg/make": "pipe::make",
+						"/pkg/coreutils": "pipe::coreutils",
+						"/pkg/binutils": "pipe::binutils",
+						"/pkg/gcc": "pipe::gcc",
+						"/pkg/sed": "pipe::sed",
+						"/pkg/grep": "pipe::grep",
+						"/pkg/gawk": "pipe::gawk",
+						"/pkg/zlib": "pipe::zlib",
+						"/pkg/busybox": "pipe::busybox",
+						"/pkg/findutils": "pipe::findutils",
+						"/pkg/gettext": "pipe::gettext",
+						"$PATH": "literal:/pkg/make/bin:/pkg/gcc/bin:/pkg/coreutils/bin:/pkg/binutils/bin:/pkg/sed/bin:/pkg/grep/bin:/pkg/gawk/bin:/pkg/busybox/bin:/pkg/findutils/bin:/pkg/gettext/bin",
+						"$CPATH": "literal:/pkg/glibc/include:/pkg/glibc/include/x86_64-linux-gnu:/pkg/zlib/include",
+						"$LIBRARY_PATH": "literal:/pkg/zlib/lib",
+						"$NO_TCLTK": "literal:1",
+						"$NO_PERL": "literal:1",
+						"$NO_PYTHON": "literal:1",
+						"$INSTALL_SYMLINKS": "literal:1"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/pkg/busybox/bin/sh",
+							"contents": [
+								"mkdir -p /bin /tmp /prefix /usr/include/",
+								"ln -s /pkg/glibc/lib /prefix/lib",
+								"ln -s /pkg/glibc/lib /lib",
+								"ln -s /pkg/busybox/bin/sh /bin/sh",
+								"ln -s /pkg/gcc/bin/cpp /lib/cpp",
+								"cd /src/*",
+								"export SOURCE_DATE_EPOCH=1262304000",
+								"./configure --prefix=/warpsys-placeholder-prefix LDFLAGS=-Wl,-rpath=XORIGIN/../lib ARFLAGS=rvD",
+								"make",
+								"make DESTDIR=/out install",
+								"sed -i '0,/XORIGIN/{s/XORIGIN/$ORIGIN/}' /out/warpsys-placeholder-prefix/bin/*"
+							]
+						}
+					},
+					"outputs": {
+						"out": {
+							"from": "/out/warpsys-placeholder-prefix",
+							"packtype": "tar"
+						}
+					}
+				}
+			},
+			"pack": {
+				"protoformula": {
+					"inputs": {
+						"/pack": "pipe:build:out",
+						"/pkg/glibc": "pipe::glibc",
+						"/pkg/ldshim": "pipe::ldshim",
+						"/pkg/zlib": "pipe::zlib",
+						"/pkg/busybox": "pipe::busybox",
+						"$PATH": "literal:/pkg/busybox/bin"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/pkg/busybox/bin/sh",
+							"contents": [
+								"mkdir -vp /pack/lib",
+								"mkdir -vp /pack/dynbin",
+								"cp /pkg/glibc/lib/libc.so.6 /pack/lib",
+								"cp /pkg/glibc/lib/libdl.so.2 /pack/lib",
+								"cp /pkg/glibc/lib/libm.so.6 /pack/lib",
+								"cp /pkg/zlib/lib/libz.so.1 /pack/lib",
+								"mv /pack/bin/git /pack/dynbin",
+								"mv /pack/bin/git-cvsserver /pack/dynbin",
+								"mv /pack/bin/git-receive-pack /pack/dynbin",
+								"mv /pack/bin/git-shell /pack/dynbin",
+								"mv /pack/bin/git-upload-archive /pack/dynbin",
+								"mv /pack/bin/git-upload-pack /pack/dynbin",
+								"cp /pkg/ldshim/ldshim /pack/bin/git",
+								"cp /pkg/ldshim/ldshim /pack/bin/git-cvsserver",
+								"cp /pkg/ldshim/ldshim /pack/bin/git-receive-pack",
+								"cp /pkg/ldshim/ldshim /pack/bin/git-shell",
+								"cp /pkg/ldshim/ldshim /pack/bin/git-upload-archive",
+								"cp /pkg/ldshim/ldshim /pack/bin/git-upload-pack",
+								"cp /pkg/glibc/lib/ld-linux-x86-64.so.2 /pack/lib"
+							]
+						}
+					},
+					"outputs": {
+						"out": {
+							"from": "/pack",
+							"packtype": "tar"
+						}
+					}
+				}
+			},
+			"test-run": {
+				"protoformula": {
+					"inputs": {
+						"/pkg/git": "pipe:pack:out"
+					},
+					"action": {
+						"exec": {
+							"command": [
+								"/pkg/git/bin/git",
+								"--version"
+							]
+						}
+					},
+					"outputs": {}
+				}
+			}
+		},
+		"outputs": {
+			"amd64": "pipe:pack:out"
+		}
+	}
+}

@@ -1,0 +1,50 @@
+{
+	"plot.v1": {
+		"inputs": {
+			"rootfs": "catalog:warpsys.org/bootstrap/debian:bullseye-1646092800:amd64",
+			"src": "catalog:warpsys.org/glibc:v2.35:src"
+		},
+		"steps": {
+			"build": {
+				"protoformula": {
+					"inputs": {
+						"/": "pipe::rootfs",
+						"/src": "pipe::src"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/bin/sh",
+							"contents": [
+								"mkdir -v /build",
+								"cd /build",
+								"/src/*/configure --prefix=/prefix/",
+								"make",
+								"make DESTDIR=/out install",
+								"rm /out/prefix/share/info/libc.info-8",
+								"cp -R /usr/include/x86_64-linux-gnu /out/prefix/include",
+								"cp -R /usr/include/asm-generic /out/prefix/include",
+								"cp -R /usr/include/linux /out/prefix/include",
+								"mkdir -vp /out/ld",
+								"cp /out/prefix/lib/ld-linux-x86-64.so.2 /out/ld"
+							]
+						}
+					},
+					"outputs": {
+						"glibc": {
+							"from": "/out/prefix",
+							"packtype": "tar"
+						},
+						"ld": {
+							"from": "/out/ld",
+							"packtype": "tar"
+						}
+					}
+				}
+			}
+		},
+		"outputs": {
+			"amd64": "pipe:build:glibc",
+			"ld-amd64": "pipe:build:ld"
+		}
+	}
+}

@@ -1,0 +1,73 @@
+{
+	"plot.v1": {
+		"inputs": {
+			"busybox": "catalog:warpsys.org/bootstrap/busybox:v1.35.0:amd64",
+			"ld": "catalog:warpsys.org/bootstrap/glibc:v2.35:ld-amd64",
+			"git": "catalog:warpsys.org/git:v2.37.2:amd64",
+			"go": "ware:tar:6ATn28CVxaUH1nXGC3QGspqjexYh1rRjyMYByMVi7HqZ2wexuF9RVk6otMPjnvjJXa",
+			"pwd": "ingest:git:.:HEAD"
+		},
+		"steps": {
+			"test": {
+				"protoformula": {
+					"inputs": {
+						"/pkg/busybox": "pipe::busybox",
+						"/lib64": "pipe::ld",
+						"/pkg/git": "pipe::git",
+						"/pkg/go": "pipe::go",
+						"/pwd": "pipe::pwd",
+						"$PATH": "literal:/pkg/busybox/bin:/pkg/go/bin:/pkg/git/bin"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/pkg/busybox/bin/sh",
+							"contents": [
+								"mkdir /tmp",
+								"cd /pwd",
+								"go test ./..."
+							],
+							"network": true
+						}
+					},
+					"outputs": {}
+				}
+			},
+			"build": {
+				"protoformula": {
+					"inputs": {
+						"/pkg/busybox": "pipe::busybox",
+						"/lib64": "pipe::ld",
+						"/pkg/git": "pipe::git",
+						"/pkg/go": "pipe::go",
+						"/pwd": "pipe::pwd",
+						"$PATH": "literal:/pkg/busybox/bin:/pkg/go/bin:/pkg/git/bin",
+						"$GOPATH": "literal:/gopath",
+						"$CGO_ENABLED": "literal:0",
+						"$LDFLAGS": "literal:-static"
+					},
+					"action": {
+						"script": {
+							"interpreter": "/pkg/busybox/bin/sh",
+							"contents": [
+								"mkdir /tmp /gopath",
+								"cd /pwd",
+								"go install ./...",
+								"ls /gopath"
+							],
+							"network": true
+						}
+					},
+					"outputs": {
+						"bin": {
+							"from": "/gopath/bin",
+							"packtype": "tar"
+						}
+					}
+				}
+			}
+		},
+		"outputs": {
+			"amd64": "pipe:build:bin"
+		}
+	}
+}
